@@ -23,7 +23,7 @@ jobs:
       - name: Build antora documentation
         run: devenv shell --command "cd docs && antora --fetch antora-playbook.yml"
       - name: Create an artifact for the built documentation
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: antora-docs
           path: docs/build/site
