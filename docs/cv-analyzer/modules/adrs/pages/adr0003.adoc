@@ -1,0 +1,22 @@
+= ADR-0003: Use of RabbitMQ for asynchronous communication
+
+Microservices in this project will use RabbitMQ for asynchronous communication.
+
+== Context
+
+In a microservices architecture, services need a channel and a language to communicate with each other. 
+
+Synchronous communication (e.g., HTTP REST) can lead to tight coupling and increased latency, while asynchronous communication allows services to operate independently and handle messages at their own pace.
+
+== Decision
+
+This project uses RabbitMQ as the message broker for asynchronous communication between microservices. 
+
+== Consequences
+
+Payloads will be sent as messages to RabbitMQ queues, and services will consume these messages asynchronously.
+
+== References
+
+* [RabbitMQ](https://www.rabbitmq.com/)
+* [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)

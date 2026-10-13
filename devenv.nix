@@ -25,6 +25,12 @@
   } // lib.optionalAttrs (!config.devenv.isTesting) {
     enable = true;
   };
+  services.rabbitmq = {
+    enable = false;
+  } // lib.optionalAttrs (!config.devenv.isTesting) {
+    enable = true;
+    managementPlugin.enable = true;
+  };
   processes = { } // lib.optionalAttrs (!config.devenv.isTesting) {
     backend = {
       exec = "task services:start";
