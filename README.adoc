@@ -1,6 +1,9 @@
-= CV Platform
+= CV Platform - draftline
 
 Microservice-based platform for managing and processing CVs (resumes).
+
+.Alpha version of UI
+image::product.png[]
 
 Written in Golang and React.
 
@@ -8,8 +11,12 @@ Optionally processes sent data through an AI model to assign a weight to the CV,
 
 == Running
 
-`OPENROUTER_API_KEY=sk-or-v1-YOURKEY devenv up`
+`cp .env.dist .env` <- copy the dist env vars
+
+`vi .env` <- set your keys, quit vim
+
+`devenv up` <- run the beast
 
 == Architecture
 
-.. TODO
+.. TODO but it's complicated
