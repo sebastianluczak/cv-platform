@@ -1,3 +1,5 @@
 .Architecture Decision Records
 * xref:adr0000.adoc[]
 * xref:adr0001.adoc[]
+* xref:adr0002.adoc[]
+* xref:adr0003.adoc[]
