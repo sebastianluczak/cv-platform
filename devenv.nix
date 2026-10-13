@@ -12,27 +12,28 @@
     pkgs.nodejs
     pkgs.antora
     pkgs.asciidoc
+    pkgs.go-task
   ];
+  dotenv.enable = true;
   languages.go.enable = true;
-  services ={
-    rustfs = {
-      enable = true;
-    };
+  enterTest = ''
+    echo "Starting devenv test..."
+    sh test.sh
+  '';
+  services.rustfs = {
+    enable = false;
+  } // lib.optionalAttrs (!config.devenv.isTesting) {
+    enable = true;
   };
-  scripts = {
-    build-docs = {
-      exec = "cd docs && antora antora-playbook.yml";
-    };
-  };
-  processes = {
+  processes = { } // lib.optionalAttrs (!config.devenv.isTesting) {
     backend = {
-      exec = "go -C services run .";
+      exec = "task services:start";
     };
     frontend = {
-      exec = "cd ui && npm ci && npm run dev";
+      exec = "task ui:install && task ui:start";
     };
     docs-builder = {
-      exec = "build-docs";
+      exec = "task docs:build-docs";
     };
   };
 }

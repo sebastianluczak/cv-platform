@@ -1,0 +1,55 @@
+name: Publish Antora Docs Preview
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - name: Install devenv.sh
+        run: nix profile add nixpkgs#devenv
+      - name: Build antora documentation
+        shell: devenv shell -- bash -e {0}
+        run: |
+          task docs:build-docs
+      - name: Create an artifact for the built documentation
+        id: upload-docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: antora-docs
+          path: docs/build/site
+      - name: Comment on PR with documentation preview
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactUrl = '${{ steps.upload-docs.outputs.artifact-url }}';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                '## 📚 Antora documentation preview',
+                '',
+                `**[Download the built documentation](${artifactUrl})**`,
+                '',
+                'Download and extract the ZIP, then open `cv-analyzer/index.html`.'
+              ].join('\n')
+            });

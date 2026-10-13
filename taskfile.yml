@@ -1,0 +1,29 @@
+version: 3
+
+tasks:
+  ui:install:
+    dir: ui
+    desc: Install the UI application dependencies
+    cmds:
+      - npm ci
+  ui:start:
+    deps: [ui:install]
+    dir: ui
+    desc: Start the UI application
+    cmds:
+      - npm run dev
+  ui:build:
+    deps: [ui:install]
+    dir: ui
+    desc: Build the UI application
+    cmds:
+      - npm run build
+  services:start:
+    desc: Start the backend services
+    cmds:
+      - go -C services run .
+  docs:build-docs:
+    dir: docs
+    desc: Build the documentation
+    cmds:
+      - antora --fetch antora-playbook.yml
