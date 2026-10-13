@@ -1,0 +1,15 @@
+= CV Platform
+
+Microservice-based platform for managing and processing CVs (resumes).
+
+Written in Golang and React.
+
+Optionally processes sent data through an AI model to assign a weight to the CV, but the core functionality works without any AI model.
+
+== Running
+
+`OPENROUTER_API_KEY=sk-or-v1-YOURKEY devenv up`
+
+== Architecture
+
+.. TODO
