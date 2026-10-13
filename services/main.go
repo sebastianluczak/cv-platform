@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"brodaty.dev/cv-platform/queue"
 	"brodaty.dev/cv-platform/uploader"
 	"brodaty.dev/cv-platform/uploader/buckets"
 )
@@ -31,5 +32,13 @@ func main() {
 
 	// Now AI stuff
 	// aiweighter.SendToWeighter("What is 2+2?") <- THIS WORKS!!!
+
+	// Now queue. It is not microservice without RabbitMq xD
+	conn, channel, err := queue.ConnectToQueue()
+	if err != nil {
+		log.Fatal("Failed to connect to queue:", err)
+	}
+	queue.PublishMessage(channel, "Hello from main.go!")
+	defer conn.Close()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -15,4 +15,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.20.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.3 // indirect
 	github.com/aws/smithy-go v1.28.5 // indirect
+	github.com/streadway/amqp v1.1.0 // indirect
 )
