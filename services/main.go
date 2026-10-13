@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 
-	"brodaty.dev/cv-platform/aiweighter"
 	"brodaty.dev/cv-platform/uploader"
 	"brodaty.dev/cv-platform/uploader/buckets"
 )
@@ -31,6 +30,6 @@ func main() {
 	buckets.ListOurBuckets()
 
 	// Now AI stuff
-	aiweighter.SendToWeighter("What is 2+2?")
+	// aiweighter.SendToWeighter("What is 2+2?") <- THIS WORKS!!!
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
