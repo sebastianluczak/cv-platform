@@ -14,12 +14,18 @@
     pkgs.asciidoc
     pkgs.go-task
   ];
+  dotenv.enable = true;
   languages.go.enable = true;
-  enterShell = ''
-    export $(cat .env | xargs)
+  enterTest = ''
+    echo "Starting devenv test..."
+    sh test.sh
   '';
-  services.rustfs.enable = true;
-  processes = {
+  services.rustfs = {
+    enable = false;
+  } // lib.optionalAttrs (!config.devenv.isTesting) {
+    enable = true;
+  };
+  processes = { } // lib.optionalAttrs (!config.devenv.isTesting) {
     backend = {
       exec = "task services:start";
     };
