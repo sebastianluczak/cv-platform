@@ -1,0 +1,8 @@
+name: cv-analyzer
+title: CV Analyzer
+version: ~
+start_page: ROOT:index.adoc
+
+nav:
+  - modules/ROOT/nav.adoc
+  - modules/adrs/nav.adoc

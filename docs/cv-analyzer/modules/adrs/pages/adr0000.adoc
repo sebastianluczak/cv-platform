@@ -1,0 +1,5 @@
+= ADR-0000: Language and framework choices
+
+Backend written in Golang, frontend written in React. 
+
+This is a microservice-based architecture.

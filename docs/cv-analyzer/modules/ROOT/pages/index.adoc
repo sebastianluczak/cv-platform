@@ -1,0 +1,5 @@
+= Overview
+
+Project CV Analyzer is a SaaS platform for managing and processing CVs (resumes).
+
+Technically, it is a microservice-based platform written in Golang and React.
