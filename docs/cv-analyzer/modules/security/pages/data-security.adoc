@@ -1,0 +1,8 @@
+= Data Security (PII)
+
+As the system is handling sensitive data, it is important to ensure that the data is protected and secure. 
+
+The following measures are in place to ensure data security:
+
+. We never store any sensitive data, including PII, in our system.
+

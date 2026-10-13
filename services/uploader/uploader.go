@@ -1,16 +1,20 @@
-package uploader
+package main
 
 import (
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	"brodaty.dev/cv-platform/uploader/buckets"
+	"brodaty.dev/cv-platform/uploader/queue"
 )
 
 const maxUploadSize = 10 << 20 // 10 MiB
 
-func UploadHandler(w http.ResponseWriter, r *http.Request) {
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -55,4 +59,36 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "Upload successful")
+}
+
+func main() {
+
+	http.HandleFunc("/upload", uploadHandler)
+
+	// This is a wildcard. Nice.
+	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		payload := r.URL.Path[1:]
+		if payload == "" {
+			payload = "Hello, World!"
+		}
+		log.Println("Received request:", r.Method, r.URL.Path)
+		fmt.Fprintf(w, "<h1>%s</h1>", html.EscapeString(payload))
+	}))
+
+	log.Println("Starting server on http://localhost:8080")
+
+	buckets.ListOurBuckets()
+
+	// Now AI stuff
+	// aiweighter.SendToWeighter("What is 2+2?") <- THIS WORKS!!!
+
+	// Now queue. It is not microservice without RabbitMq xD
+	conn, channel, err := queue.ConnectToQueue()
+	if err != nil {
+		log.Fatal("Failed to connect to queue:", err)
+	}
+	queue.PublishMessage(channel, "Hello from main.go!")
+	defer conn.Close()
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
