@@ -13,6 +13,13 @@
     pkgs.antora
     pkgs.asciidoc
     pkgs.go-task
+    pkgs.gdb
+    pkgs.pkg-config
+    pkgs.cmake
+    pkgs.meson
+    pkgs.ninja
+    pkgs.leptonica
+    pkgs.tesseract4
   ];
   dotenv.enable = true;
   languages.go.enable = true;

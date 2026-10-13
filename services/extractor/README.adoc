@@ -3,3 +3,9 @@
 Whatever was uploaded, we need to extract the information from it.
 
 This is the most crucial step.
+
+== Flow
+
+receives an information on RabbitMQ channel that there's a blob under path in storage
+downloads blob from given path and starts "extraction"
+saves the payload to the storage and informs channel RabbitMQ that something happened
