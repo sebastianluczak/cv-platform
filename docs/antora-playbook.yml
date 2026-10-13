@@ -1,0 +1,15 @@
+site:
+  title: CV Analyzer
+
+content:
+  sources:
+    - url: ./
+      start_path: ./
+
+ui:
+  bundle:
+    url: https://gitlab.com
+    snapshot: true
+
+output:
+  dir: ./build/site
