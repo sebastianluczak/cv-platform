@@ -1,0 +1,5 @@
+= extractor
+
+Whatever was uploaded, we need to extract the information from it.
+
+This is the most crucial step.

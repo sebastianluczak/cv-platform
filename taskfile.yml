@@ -18,12 +18,23 @@ tasks:
     desc: Build the UI application
     cmds:
       - npm run build
-  services:start:
-    desc: Start the backend services
+  services:uploader:start:
+    desc: Start the uploader service
     cmds:
-      - go -C services run .
+      - go -C services/uploader run .
+  services:aiweighter:start:
+    desc: Start the AI weighter service
+    cmds:
+      - go -C services/aiweighter run .
   docs:build-docs:
     dir: docs
     desc: Build the documentation
     cmds:
       - antora --fetch antora-playbook.yml
+  # BUILD SECTION #
+  services:uploader:build:
+    dir: services/uploader
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o uploader .
+      - docker build -t uploader .

@@ -32,8 +32,8 @@
     managementPlugin.enable = true;
   };
   processes = { } // lib.optionalAttrs (!config.devenv.isTesting) {
-    backend = {
-      exec = "task services:start";
+    uploader = {
+      exec = "sleep 3 && task services:uploader:start";
     };
     frontend = {
       exec = "task ui:install && task ui:start";

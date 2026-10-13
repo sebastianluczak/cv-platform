@@ -1,0 +1,33 @@
+= Architecture Drivers
+
+This project was born with the goal of:
+
+. Learning and experimenting with new technologies, tools and frameworks, Go in particular.
+. Self promotion and personal branding on GitHub and LinkedIn via building a portfolio of projects to showcase skills and experience.
+. Cementing a personal knowledge base and reference library of software engineering concepts, patterns, practices and principles.
+
+== Outside-in and Inside-out
+
+Due to the nature of this project, the architecture drivers are both outside-in and inside-out.
+
+=== Outside-in
+
+The outside-in drivers are the external forces that shape the architecture of the system.
+
+=== Inside-out
+
+The inside-out drivers are the internal forces that shape the architecture of the system.
+
+=== Leveraging drivers
+
+This project uses:
+
+. ADRs to capture and communicate architecture decisions.
+. Architecture drivers to capture and communicate the forces that shape the architecture of the system.
+. Incremental and iterative development to evolve the architecture of the system over time.
+
+This project is not:
+
+. A production system, but a learning and experimentation platform.
+. Using third-party services or APIs to achieve its goals, but rather building its own services and components from scratch.
+. A monolithic system, but a microservices-based system that is composed of small, independent services that communicate with each other via asynchronous messaging.

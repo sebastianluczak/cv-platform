@@ -1,4 +1,4 @@
-module brodaty.dev/cv-platform
+module brodaty.dev/cv-platform/uploader
 
 go 1.26.8
 
