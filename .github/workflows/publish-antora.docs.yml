@@ -21,7 +21,9 @@ jobs:
       - name: Install devenv.sh
         run: nix profile add nixpkgs#devenv
       - name: Build antora documentation
-        run: devenv shell --command "cd docs && antora --fetch antora-playbook.yml"
+        shell: devenv shell -- bash -e {0}
+        run: |
+          task docs:build-docs
       - name: Create an artifact for the built documentation
         uses: actions/upload-artifact@v4
         with:
