@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"brodaty.dev/cv-platform/uploader/buckets"
@@ -236,7 +237,8 @@ func main() {
 		if payload == "" {
 			payload = "Hello, World!"
 		}
-		log.Println("Received request:", r.Method, r.URL.Path)
+		// #nosec G706 -- Request fields have CR/LF removed by safeLogField.
+		log.Printf("Received request: %s %s", safeLogField(r.Method), safeLogField(r.URL.Path))
 		fmt.Fprintf(w, "<h1>%s</h1>", html.EscapeString(payload))
 	}))
 
@@ -245,6 +247,20 @@ func main() {
 		port = "8080"
 	}
 	addr := ":" + port
-	log.Printf("Starting uploader on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	// #nosec G706 -- The configured address has CR/LF removed by safeLogField.
+	log.Printf("Starting uploader on %s", safeLogField(addr))
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	// SSE responses are long-lived, so leave WriteTimeout unset.
+	log.Fatal(server.ListenAndServe())
+}
+
+func safeLogField(value string) string {
+	value = strings.ReplaceAll(value, "\r", " ")
+	return strings.ReplaceAll(value, "\n", " ")
 }

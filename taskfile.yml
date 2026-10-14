@@ -14,6 +14,16 @@ tasks:
       - cd services/piistripper && gofmt -l -e -w .
       - cd services/skillmatcher && gofmt -l -e -w .
       - cd services/uploader && gofmt -l -e -w .
+  security:scan:
+    dir: services
+    desc: Perform gosec scan on all projects
+    cmds:
+      - go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - cd aiweigher && gosec ./... || true
+      - cd extractor && gosec ./... || true
+      - cd piistripper && gosec ./... || true
+      - cd skillmatcher && gosec ./... || true
+      - cd uploader && gosec ./... || true
   ui:install:
     dir: ui
     desc: Install the UI application dependencies

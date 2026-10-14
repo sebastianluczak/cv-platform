@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -103,7 +104,8 @@ func moveToFailedQueue(
 	if err := delivery.Ack(false); err != nil {
 		return fmt.Errorf("acknowledge failed matching job: %w", err)
 	}
-	log.Printf("Matching job moved to %s: %v", failedQueue, cause)
+	// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
+	log.Printf("Matching job moved to %s: %s", safeLogField(failedQueue), safeLogField(fmt.Sprint(cause)))
 	return nil
 }
 
@@ -113,14 +115,24 @@ func retryCount(headers amqp.Table) int {
 	}
 	switch value := headers["x-retry-count"].(type) {
 	case int:
-		return value
+		return boundedRetryCount(int64(value))
 	case int32:
-		return int(value)
+		return boundedRetryCount(int64(value))
 	case int64:
-		return int(value)
+		return boundedRetryCount(value)
 	default:
 		return 0
 	}
+}
+
+func boundedRetryCount(count int64) int {
+	if count <= 0 {
+		return 0
+	}
+	if count > maxRetries {
+		return maxRetries + 1
+	}
+	return int(count)
 }
 
 func copyHeaders(headers amqp.Table) amqp.Table {
@@ -129,6 +141,11 @@ func copyHeaders(headers amqp.Table) amqp.Table {
 		copied[key] = value
 	}
 	return copied
+}
+
+func safeLogField(value string) string {
+	value = strings.ReplaceAll(value, "\r", " ")
+	return strings.ReplaceAll(value, "\n", " ")
 }
 
 func errorText(err error) string {
