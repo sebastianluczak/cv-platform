@@ -13,3 +13,4 @@ echo ""
 
 go -C services/uploader test -v
 go -C services/extractor test -v
+go -C services/piistripper test -v

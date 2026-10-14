@@ -8,12 +8,13 @@ An HTTP entry point for resume uploads. It:
 . responds with HTTP 202 and the job ID after RabbitMQ confirms the message
 . streams processing status to `GET /events?job_id=<job-id>` using Server-Sent Events
 
-The extractor stores the resulting text at `results/<job-id>.txt` in the same bucket.
-The extractor publishes status messages to the durable `<QUEUE_NAME>.events` queue; the uploader
-keeps the latest status in memory so an SSE client can reconnect and receive the current stage.
-Statuses include `queued`, `processing`, `retrying`, `completed`, and `failed`. The in-memory status
+The extractor stores extracted text at `results/<job-id>.txt`; piistripper stores a redacted copy at
+`results/<job-id>.redacted.txt` in the same bucket. The original extracted text is retained.
+The extractor and piistripper publish status messages to the durable `<QUEUE_NAME>.events` queue;
+the uploader keeps the latest status in memory so an SSE client can reconnect and receive the current stage.
+Statuses include `queued`, `processing`, `retrying`, `redacting`, `completed`, and `failed`. The in-memory status
 is retained for up to 24 hours (with a 10,000-job capacity), and is lost when the uploader restarts.
 Run one uploader instance with this queue-based status setup; multiple uploader replicas need a
 broadcast or shared status store so each instance can serve every connected client.
 
-Uploader and extractor must use the same `RUSTFS_BUCKET` (defaults to `cv-platform-uploads`), `RUSTFS_ENDPOINT_URL`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, `RUSTFS_SECRET_ACCESS_KEY`, `RABBITMQ_URL`, and `QUEUE_NAME`.
+Uploader, extractor, and piistripper must use the same `RUSTFS_BUCKET` (defaults to `cv-platform-uploads`), `RUSTFS_ENDPOINT_URL`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, `RUSTFS_SECRET_ACCESS_KEY`, `RABBITMQ_URL`, and `QUEUE_NAME`.

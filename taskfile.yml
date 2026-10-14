@@ -31,6 +31,10 @@ tasks:
     desc: Start the extractor service
     cmds:
       - go -C services/extractor run .
+  services:piistripper:start:
+    desc: Start the PII stripping service
+    cmds:
+      - go -C services/piistripper run .
   services:aiweighter:start:
     desc: Start the AI weighter service
     cmds:
@@ -53,3 +57,13 @@ tasks:
     cmds:
       - CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o extractor .
       - docker build -t extractor .
+  services:piistripper:build:
+    dir: services/piistripper
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o piistripper .
+      - docker build -t piistripper .
+  services:piistripper:test:
+    desc: Run the PII stripper tests
+    cmds:
+      - go -C services/piistripper test ./...

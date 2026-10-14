@@ -7,15 +7,16 @@
 . The uploader generates a UUID, stores the original at `uploads/<job-id>`, and publishes a persistent JSON message to `QUEUE_NAME`.
 . The uploader waits for RabbitMQ's publisher confirmation before returning HTTP `202 Accepted` with the job ID.
 . The extractor consumes the message with manual acknowledgement and prefetch set to one. It downloads the object, extracts text, and writes `results/<job-id>.txt`.
-. On success, the extractor publishes a `completed` event and acknowledges the job. The uploader consumes status events and updates its in-memory store.
+. The extractor publishes a persistent redaction job to `QUEUE_NAME.pii`; it acknowledges the extraction job only after RabbitMQ confirms that publish.
+. Piistripper reads the extraction result, writes a separate `results/<job-id>.redacted.txt` copy, publishes `completed`, and acknowledges the redaction job. The uploader consumes status events and updates its in-memory store.
 . The client connects to `GET /events?job_id=<job-id>`. SSE sends the current snapshot first, then subsequent updates, with a 20-second keep-alive comment.
 
 == Extraction failures and retries
 
-The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented `x-retry-count`, then the original delivery is acknowledged. 
-The initial attempt plus up to three retries means a job may be attempted four times. 
+The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented `x-retry-count`, then the original delivery is acknowledged. Piistripper similarly retries redaction failures.
+The initial attempt plus up to three retries means a job may be attempted four times at each stage. During redaction retries the status remains `redacting` and includes a retry message, keeping the UI progress step accurate.
 
-A job still failing after those attempts is published to `QUEUE_NAME.failed` and acknowledged from the work queue.
+A job still failing extraction is published to `QUEUE_NAME.failed`; a job still failing redaction is published to `QUEUE_NAME.pii.failed`.
 
 Malformed job JSON is also sent directly to the failed queue. 
 
@@ -25,7 +26,7 @@ The workflow is **at-least-once**, not exactly-once.
 
 If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job. 
 
-Result writes use a deterministic key (`results/<job-id>.txt`), so a repeated successful extraction overwrites that object's key.
+Result writes use deterministic keys (`results/<job-id>.txt` and `results/<job-id>.redacted.txt`), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.
 
 There is no separate deduplication store, operation is idempotent.
 

@@ -1,0 +1,44 @@
+= piistripper
+
+The `piistripper` consumes redaction jobs from RabbitMQ after extraction and reads
+`results/<job-id>.txt` from the shared S3-compatible bucket. It writes a separate
+redacted copy to `results/<job-id>.redacted.txt`; the extracted source is retained.
+
+It replaces common email, URL, phone-number, and street-address patterns and uses
+the local English named-entity recognizer in `github.com/jdkato/prose/v2` for
+person and organization names. Matches are represented by typed placeholders
+such as `[EMAIL]`, `[PHONE]`, `[PERSON]`, and `[ORGANIZATION]`. Resume text is
+not sent to a hosted model or external API.
+
+This is best-effort redaction, not guaranteed anonymization or a claim of GDPR
+compliance. Entity recognition is English-only and can miss direct, contextual,
+or indirect identifiers; pattern matching can also produce false positives.
+Because the original extracted text remains in storage, it continues to require
+the same access controls and retention/deletion policy as other personal data.
+
+== Queue contract
+
+The service consumes durable messages from `<QUEUE_NAME>.pii`:
+
+[source,json]
+----
+{
+  "id": "<job-id>",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/<job-id>.txt"
+}
+----
+
+The job ID must be a UUID, the bucket must match `RUSTFS_BUCKET`, and the object
+key must be exactly `results/<job-id>.txt`. Jobs are retried up to three times
+after the initial attempt, then sent to `<QUEUE_NAME>.pii.failed`. The service
+publishes progress to `<QUEUE_NAME>.events`; repeated deliveries overwrite the
+same deterministic redacted-result key. Source results are limited to 10 MiB;
+oversized results fail closed and are sent to the failed queue after retries.
+
+== Configuration
+
+`RABBITMQ_URL`, `QUEUE_NAME`, `RUSTFS_ENDPOINT_URL`, `RUSTFS_REGION`,
+`RUSTFS_BUCKET`, `RUSTFS_ACCESS_KEY_ID`, and `RUSTFS_SECRET_ACCESS_KEY` must
+match the extractor's settings. Development storage defaults match the other
+services; deployments must supply dedicated least-privilege credentials.

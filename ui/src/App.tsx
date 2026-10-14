@@ -3,7 +3,7 @@ import './App.css'
 
 type ProgressEvent = {
   job_id: string
-  stage: 'queued' | 'processing' | 'retrying' | 'completed' | 'failed'
+  stage: 'queued' | 'processing' | 'retrying' | 'redacting' | 'completed' | 'failed'
   message: string
   attempt: number
   updated_at: string
@@ -147,14 +147,14 @@ function App() {
                 </div>
                 <ol className="progress-steps">
                   <li className="is-complete"><span>01</span><div><strong>Queued</strong><small>{progress.stage === 'queued' ? progress.message : 'Your resume is safely in line.'}</small></div></li>
-                  <li className={progress.stage === 'processing' || progress.stage === 'retrying' ? 'is-active' : progress.stage === 'completed' ? 'is-complete' : progress.stage === 'failed' ? 'is-failed' : ''}>
+                  <li className={progress.stage === 'processing' || progress.stage === 'retrying' ? 'is-active' : progress.stage === 'redacting' || progress.stage === 'completed' ? 'is-complete' : progress.stage === 'failed' ? 'is-failed' : ''}>
                     <span>02</span>
                     <div>
-                      <strong>{progress.stage === 'retrying' ? 'Retrying extraction' : 'Reading your resume'}</strong>
+                      <strong>{progress.stage === 'retrying' ? 'Retrying processing' : 'Extracting text'}</strong>
                       <small>{progress.stage === 'queued' ? 'Waiting for extraction to start.' : progress.message}{progress.stage === 'retrying' && progress.attempt > 0 ? ` (attempt ${progress.attempt})` : ''}</small>
                     </div>
                   </li>
-                  <li className={progress.stage === 'completed' ? 'is-complete' : ''}><span>03</span><div><strong>{progress.stage === 'failed' ? 'Needs attention' : 'Extraction complete'}</strong><small>{progress.stage === 'failed' ? 'We could not process this file.' : 'Resume text is ready for the next step.'}</small></div></li>
+                  <li className={progress.stage === 'redacting' ? 'is-active' : progress.stage === 'completed' ? 'is-complete' : progress.stage === 'failed' ? 'is-failed' : ''}><span>03</span><div><strong>{progress.stage === 'failed' ? 'Needs attention' : progress.stage === 'completed' ? 'Redacted text ready' : 'Removing personal identifiers'}</strong><small>{progress.stage === 'failed' ? 'We could not prepare the redacted text.' : progress.stage === 'redacting' ? progress.message : progress.stage === 'completed' ? 'The redacted resume text is ready for the next step.' : 'Waiting for text extraction to finish.'}</small></div></li>
                 </ol>
               </section>
             )}

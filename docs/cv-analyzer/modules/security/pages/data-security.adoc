@@ -1,14 +1,16 @@
 = Data Security (PII)
 
-The current upload and extraction services process resume data, which may contain personal information. 
+The upload, extraction, and redaction services process resume data, which may contain personal information.
 
-IMPORTANT: They persist both the original file and extracted text in the configured S3-compatible bucket.
+IMPORTANT: They persist the original file, extracted text, and a separate best-effort redacted copy in the configured S3-compatible bucket.
 
 == Current implementation
 
-* The uploader and extractor use static S3 credentials from environment variables; local-development defaults are `rustfsadmin` / `rustfsadmin`.
+* The uploader, extractor, and piistripper use static S3 credentials from environment variables; local-development defaults are `rustfsadmin` / `rustfsadmin`.
 * Uploaded objects are stored under `uploads/<job-id>` and extracted text under `results/<job-id>.txt`.
-* The services do not implement deletion, expiration, or a retention policy for either object.
+* Piistripper writes `results/<job-id>.redacted.txt` without modifying or deleting the extracted source.
+* Piistripper performs local pattern matching and English named-entity recognition; it does not call a hosted model/API. Detection can miss direct, contextual, or indirect identifiers and can produce false positives.
+* The services do not implement deletion, expiration, or a retention policy for stored objects.
 * Temporary extractor files are created on the service host during processing and removed when processing finishes.
 * The uploader's HTTP endpoints do not implement authentication or authorization.
 
@@ -24,3 +26,5 @@ Before handling real resumes, operators must configure:
 NOTE: Protect the uploader behind an authenticated and appropriately restricted network boundary. 
 
 IMPORTANT: Do not use development credentials in a deployed environment.
+
+IMPORTANT: A redacted result is not guaranteed anonymization or GDPR compliance. Since the original extracted text is retained, it remains personal data and must continue to receive appropriate access control and retention/deletion handling. Obtain privacy/legal review before relying on this processing for a compliance obligation.

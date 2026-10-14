@@ -16,14 +16,29 @@
 |`results/<job-id>.txt`
 |Written by the `extractor` after extraction.
 
+|Redacted extracted text
+|Configured S3-compatible bucket
+|`results/<job-id>.redacted.txt`
+|Written by `piistripper` as a separate best-effort redacted copy; the original extracted text is retained.
+
 |Extraction job
 |RabbitMQ work queue
 |`QUEUE_NAME`
 |Persistent message in a durable queue, manually acknowledged after success, retry republish, or failed-queue republish.
 
+|Redaction job
+|RabbitMQ work queue
+|`QUEUE_NAME.pii`
+|Persistent message published by the extractor after storing the extracted text; manually acknowledged after redaction, retry republish, or failed-queue republish.
+
 |Failed job
 |RabbitMQ failed queue
 |`QUEUE_NAME.failed`
+|Persistent message retained for inspection or operator-managed requeue.
+
+|Failed redaction job
+|RabbitMQ failed queue
+|`QUEUE_NAME.pii.failed`
 |Persistent message retained for inspection or operator-managed requeue.
 
 |Processing status
@@ -38,6 +53,6 @@ The extractor downloads each input to a temporary file. For scanned PDFs it rend
 
 == Retention and privacy
 
-The services do not implement a retention schedule for uploaded resumes or extracted text. 
+The services do not implement a retention schedule for uploaded resumes, extracted text, or redacted results. The redacted result is not guaranteed to be anonymous, and the original extracted text remains unchanged.
 
 IMPORTANT: Storage administrators must configure lifecycle expiration and access controls appropriate to their data policy.

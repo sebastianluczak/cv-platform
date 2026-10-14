@@ -10,9 +10,14 @@
 |xref:uploader.adoc[Uploader]
 
 |`extractor`
-|RabbitMQ consumer for PDF and image text extraction
+|RabbitMQ consumer for PDF and image text extraction; queues redaction after extraction
 |Implemented; part of the running upload/extraction flow
 |xref:extractor.adoc[Extractor]
+
+|`piistripper`
+|RabbitMQ consumer that writes a separate best-effort redacted text result
+|Implemented; part of the extraction/redaction flow
+|xref:piistripper.adoc[PII stripper]
 
 |`skillmatcher`
 |Intended to match extracted skills against supplied sets

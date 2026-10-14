@@ -1,6 +1,6 @@
 = extractor
 
-The extractor consumes upload jobs from RabbitMQ and writes extracted text back to object storage.
+The extractor consumes upload jobs from RabbitMQ, writes extracted text to object storage, and queues a redaction job for the PII stripper.
 
 == Flow
 
@@ -8,8 +8,9 @@ The extractor consumes upload jobs from RabbitMQ and writes extracted text back 
 . downloads the referenced object from the shared RustFS/S3 bucket
 . extracts text from a PDF or runs OCR on an image/scanned PDF
 . stores the result at `results/<job-id>.txt`
-. publishes extraction, retry, and terminal status events to `<QUEUE_NAME>.events`
-. acknowledges the message only after the result has been stored
+. publishes extraction and retry status events to `<QUEUE_NAME>.events`
+. publishes a confirmed job to `<QUEUE_NAME>.pii` after storing the result
+. acknowledges the extraction message only after the redaction job is confirmed
 
 Failed jobs are retried up to three times, then moved to `<QUEUE_NAME>.failed` for inspection or manual requeue.
 
@@ -27,6 +28,6 @@ The uploader publishes jobs in this shape:
 
 == Configuration
 
-Both uploader and extractor must receive the same `RABBITMQ_URL`, `QUEUE_NAME`, `RUSTFS_ENDPOINT_URL`, `RUSTFS_BUCKET`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, and `RUSTFS_SECRET_ACCESS_KEY` environment variables. `RUSTFS_BUCKET` defaults to `cv-platform-uploads`.
+Uploader, extractor, and piistripper must receive the same `RABBITMQ_URL`, `QUEUE_NAME`, `RUSTFS_ENDPOINT_URL`, `RUSTFS_BUCKET`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, and `RUSTFS_SECRET_ACCESS_KEY` environment variables. `RUSTFS_BUCKET` defaults to `cv-platform-uploads`.
 
 The runtime requires Tesseract and Poppler utilities (`pdftotext`, `pdfinfo`, and `pdftoppm`). The extractor Docker image installs Poppler utilities.
