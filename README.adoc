@@ -28,6 +28,8 @@ Opens SSE connection to the client for real-time signals.
 
 Visit http://localhost:5173/
 
-== Architecture
+== Documentation
 
-.. TODO but it's complicated
+See link:https://sebastianluczak.github.io/cv-platform[CV Platform Documentation] hosted on GitHub Pages.
+
+NOTE: This site is automatically built from `./docs` directory on every merge to `main`.
