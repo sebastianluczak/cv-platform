@@ -159,6 +159,16 @@ def review(diff: str, model: str) -> dict:
             raise ValueError("Finding confidence must be between 0 and 1")
         if finding["line"] < 1:
             raise ValueError("Finding line numbers must be positive")
+        if not isinstance(finding["severity"], str) or finding["severity"] not in (
+            "critical",
+            "high",
+            "medium",
+            "low",
+        ):
+            raise ValueError("Finding severity must be critical, high, medium, or low")
+        for field in ("file", "title", "explanation", "suggested_fix"):
+            if not isinstance(finding[field], str):
+                raise ValueError(f"Finding {field} must be a string")
 
     return result
 
