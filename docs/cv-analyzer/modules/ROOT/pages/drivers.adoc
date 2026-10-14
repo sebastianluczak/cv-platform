@@ -1,33 +1,29 @@
 = Architecture Drivers
 
-This project was born with the goal of:
+This project began as a learning and portfolio application. Its architecture reflects an evolving prototype rather than a production-ready service.
 
-. Learning and experimenting with new technologies, tools and frameworks, Go in particular.
-. Self promotion and personal branding on GitHub and LinkedIn via building a portfolio of projects to showcase skills and experience.
-. Cementing a personal knowledge base and reference library of software engineering concepts, patterns, practices and principles.
+== Drivers
 
-== Outside-in and Inside-out
+=== Product drivers
 
-Due to the nature of this project, the architecture drivers are both outside-in and inside-out.
+* Accept a resume file from a browser and return promptly rather than keeping the user request open during extraction.
+* Support both text-based PDFs and scanned/image-based resumes.
+* Keep the initial backend workflow small and observable while it evolves.
 
-=== Outside-in
+=== Technical drivers
 
-The outside-in drivers are the external forces that shape the architecture of the system.
+* Use Go for backend services and React for the browser UI.
+* Use RabbitMQ for asynchronous job delivery and S3-compatible storage for uploaded files and extraction results.
+* Use Server-Sent Events (SSE) to deliver processing progress to the browser.
+* Capture consequential architecture choices in ADRs and publish documentation with Antora.
 
-=== Inside-out
+== Trade-offs and constraints
 
-The inside-out drivers are the internal forces that shape the architecture of the system.
+* Asynchronous processing keeps HTTP uploads separate from extraction latency, but requires durable job handling and status delivery.
+* The current status store is in-memory and single-instance oriented; it is not a resilient multi-replica status service.
+* Resume files and extracted text are persisted without service-managed expiration. Retention, authentication, and production hardening remain deployment concerns.
+* Skill matching and AI weighting are not yet integrated into the implemented workflow.
 
-=== Leveraging drivers
+== Architecture practices
 
-This project uses:
-
-. ADRs to capture and communicate architecture decisions.
-. Architecture drivers to capture and communicate the forces that shape the architecture of the system.
-. Incremental and iterative development to evolve the architecture of the system over time.
-
-This project is not:
-
-. A production system, but a learning and experimentation platform.
-. Using third-party services or APIs to achieve its goals, but rather building its own services and components from scratch.
-. A monolithic system, but a microservices-based system that is composed of small, independent services that communicate with each other via asynchronous messaging.
+ADRs capture selected decisions, while the architecture and service pages describe the current implementation. These should be revised together as component boundaries or runtime behavior change.

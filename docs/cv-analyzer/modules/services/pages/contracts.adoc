@@ -1,0 +1,67 @@
+= Service Contracts
+
+== Extraction job
+
+The uploader publishes a persistent JSON message to `QUEUE_NAME` after storing the upload and confirming the publish:
+
+[source,json]
+----
+{
+  "id": "<job-id>",
+  "bucket": "cv-platform-uploads",
+  "object_key": "uploads/<job-id>",
+  "content_type": "application/pdf"
+}
+----
+
+`id` is a generated UUID. The extractor requires the bucket to match its configured `RUSTFS_BUCKET` and requires `object_key` to equal `uploads/<id>`. The current consumer dispatches by `content_type`, not by filename.
+
+== Status event
+
+The extractor publishes status messages to the durable `QUEUE_NAME.events` queue. The uploader consumes these messages and retains the latest one per job in memory.
+
+[source,json]
+----
+{
+  "job_id": "<job-id>",
+  "stage": "processing",
+  "message": "We're reading your resume.",
+  "attempt": 1,
+  "updated_at": "2026-10-14T04:26:44Z"
+}
+----
+
+Stages are `queued`, `processing`, `retrying`, `completed`, and `failed`. `updated_at` is UTC. `attempt` is the attempt number represented by the status; `queued` is first recorded by the uploader after job publish confirmation.
+
+== Upload response
+
+[source,json]
+----
+{
+  "job_id": "<job-id>",
+  "status": "queued"
+}
+----
+
+The browser subscribes to `/events?job_id=<job-id>` and receives status event objects as SSE data frames. Status updates are not a durable client-facing event log.
+
+== Queue names and delivery
+
+[cols="1,2,2"]
+|===
+|Queue |Publisher |Consumer
+
+|`QUEUE_NAME`
+|Uploader
+|Extractor
+
+|`QUEUE_NAME.events`
+|Extractor
+|Uploader
+
+|`QUEUE_NAME.failed`
+|Extractor
+|None included in this repository; operator inspection or requeue is external to the services.
+|===
+
+Queues are durable and jobs/status/failure messages are published as persistent messages. Job, retry, and failed-queue publication uses publisher confirms. Extraction deliveries are manually acknowledged.

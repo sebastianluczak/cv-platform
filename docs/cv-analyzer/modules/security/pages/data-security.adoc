@@ -1,8 +1,18 @@
 = Data Security (PII)
 
-As the system is handling sensitive data, it is important to ensure that the data is protected and secure. 
+The current upload and extraction services process resume data, which may contain personal information. They persist both the original file and extracted text in the configured S3-compatible bucket.
 
-The following measures are in place to ensure data security:
+== Current implementation
 
-. We never store any sensitive data, including PII, in our system.
+* The uploader and extractor use static S3 credentials from environment variables; local-development defaults are `rustfsadmin` / `rustfsadmin`.
+* Uploaded objects are stored under `uploads/<job-id>` and extracted text under `results/<job-id>.txt`.
+* The services do not implement deletion, expiration, or a retention policy for either object.
+* Temporary extractor files are created on the service host during processing and removed when processing finishes.
+* The uploader's HTTP endpoints do not implement authentication or authorization.
+* The `aiweighter` prototype sends its input to OpenRouter if invoked, but it is not integrated into the processing pipeline.
 
+== Deployment responsibilities
+
+Before handling real resumes, operators must configure private storage access, dedicated least-privilege credentials, transport and network protections, and an explicit retention/deletion policy. Protect the uploader behind an authenticated and appropriately restricted network boundary. Do not use development credentials in a deployed environment.
+
+These are deployment requirements, not controls implemented by the services. See xref:architecture:data-lifecycle.adoc[Data and Persistence] for object keys and status lifetimes, and xref:services:configuration.adoc[Configuration] for service settings.

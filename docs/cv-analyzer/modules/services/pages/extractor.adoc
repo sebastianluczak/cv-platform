@@ -1,0 +1,25 @@
+= Extractor Service
+
+The extractor consumes JSON jobs from RabbitMQ, downloads the referenced upload, extracts text, stores the result, and publishes status events.
+
+== Extraction behavior
+
+* For PDFs, it first runs `pdftotext` with layout preservation and UTF-8 output. If the result is blank, it reads the page count with `pdfinfo`, renders pages at 200 DPI with `pdftoppm`, and runs Tesseract OCR on each page.
+* For PNG, JPEG, TIFF, and BMP inputs, it runs Tesseract OCR directly.
+* It writes non-empty extracted text as UTF-8 plain text to `results/<job-id>.txt`.
+
+The extractor validates that the job ID is non-empty, the bucket equals its configured bucket, and the object key is exactly `uploads/<job-id>`. Each processing attempt has a five-minute timeout.
+
+== Acknowledgement, retry, and failure
+
+The consumer uses manual acknowledgements and a prefetch of one. On success it publishes a `completed` status and acknowledges the delivery. On processing failure it publishes a `retrying` status and republishes the job with an incremented `x-retry-count`; after publisher confirmation it acknowledges the original. It makes up to three retries after the initial attempt. After the last failed attempt, or for malformed JSON, it republishes the message to `QUEUE_NAME.failed` and acknowledges the original.
+
+Retry and failed-queue republishing use publisher confirms. If a republish cannot be confirmed, the original delivery is negatively acknowledged and requeued. A terminal `failed` status is published on exhausted extraction attempts; malformed JSON has no usable job ID and therefore cannot produce a job status.
+
+Status publishing is best-effort. The extractor logs a status publish failure and continues with the job's normal acknowledgement or retry handling.
+
+== Runtime requirements
+
+The extractor requires `pdftotext`, `pdfinfo`, and `pdftoppm` on `PATH`, plus the Tesseract runtime and language data used by the `gosseract` binding. The provided Dockerfile installs Poppler utilities on top of the `otiai10/gosseract` image.
+
+The extractor checks the PDF tools at startup, then connects to RabbitMQ and object storage. See xref:configuration.adoc[configuration] and xref:operations.adoc[operations].
