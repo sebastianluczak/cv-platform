@@ -51,6 +51,7 @@ tasks:
     dir: docs
     desc: Build the documentation
     cmds:
+      - npm ci
       - antora --fetch antora-playbook.yml
   # BUILD SECTION #
   services:uploader:build:
