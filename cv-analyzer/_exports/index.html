@@ -835,6 +835,16 @@ Storage administrators must configure lifecycle expiration and access controls a
 </table>
 </div>
 </div>
+<div class="sect2">
+<h3 id="architecture:review"><a class="anchor" href="#architecture:review"></a>Automatic AI review process</h3>
+<div class="paragraph">
+<p>AI is reviewing the code and returning actionable items based on diff between different points in time of repository.</p>
+</div>
+<h4 id="architecture:review:::_implementation" class="discrete">Implementation</h4>
+<div class="paragraph">
+<p>See <code>./reviewer</code> in root of the repository.</p>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -912,6 +922,36 @@ Storage administrators must configure lifecycle expiration and access controls a
 <h4 id="adrs:adr0004:::_consequences" class="discrete">Consequences</h4>
 <div class="paragraph">
 <p>Browser creates a session with SSE.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="adrs:adr0005"><a class="anchor" href="#adrs:adr0005"></a>ADR-0005: Usage of AI in cv-analyzer</h3>
+<h4 id="adrs:adr0005:::_context" class="discrete">Context</h4>
+<div class="paragraph">
+<p>Nowadays, AI in IT is everywhere and we cannot escape it.</p>
+</div>
+<div class="paragraph">
+<p>We can accept it and go with the flow, learning new things or stay behind and hope to stay afloat.</p>
+</div>
+<h4 id="adrs:adr0005:::_decision" class="discrete">Decision</h4>
+<div class="paragraph">
+<p>This project heavily uses agentic workflows, tools, prompts, instructions and every other possible method of AI-influence to deliver code:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>faster</p>
+</li>
+<li>
+<p>without bugs</p>
+</li>
+<li>
+<p>with more checks and tests</p>
+</li>
+<li>
+<p>without exploding my family budget</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
