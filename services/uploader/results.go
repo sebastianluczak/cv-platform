@@ -18,7 +18,23 @@ import (
 const maxMatchResultSize = 1 << 20
 
 var resultJobIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
-var matchResultCategories = []string{"backend", "devops", "management", "architecture", "qa", "frontend", "data", "security"}
+var matchResultCategories = []string{
+	"backend",
+	"devops",
+	"management",
+	"architecture",
+	"qa",
+	"frontend",
+	"data",
+	"security",
+	"product",
+	"mobile",
+	"embedded",
+	"platform",
+	"support",
+	"business",
+}
+var legacyMatchResultCategories = matchResultCategories[:8]
 
 type storedMatchResult struct {
 	Version    int       `json:"version"`
@@ -86,11 +102,15 @@ func validMatchResult(content []byte, jobID string) bool {
 	if err := json.Unmarshal(content, &result); err != nil {
 		return false
 	}
-	if result.Version != 1 || result.JobID != jobID || result.ScoredAt.IsZero() || len(result.Categories) != len(matchResultCategories) {
+	categories := matchResultCategories
+	if len(result.Categories) == len(legacyMatchResultCategories) {
+		categories = legacyMatchResultCategories
+	}
+	if result.Version != 1 || result.JobID != jobID || result.ScoredAt.IsZero() || len(result.Categories) != len(categories) {
 		return false
 	}
 	for index, category := range result.Categories {
-		if category.Category != matchResultCategories[index] ||
+		if category.Category != categories[index] ||
 			category.Score < 1 || category.Score > 5 || category.Evidence == nil {
 			return false
 		}

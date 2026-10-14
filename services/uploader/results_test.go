@@ -59,4 +59,20 @@ func TestValidMatchResultRequiresVersionJobIDAndAllCategoryScores(t *testing.T) 
 	if validMatchResult(content, "123e4567-e89b-12d3-a456-426614174001") {
 		t.Fatal("result for another job should be rejected")
 	}
+
+	result["categories"] = append(result["categories"].([]map[string]any),
+		map[string]any{"category": "product", "score": 1, "evidence": []string{}},
+		map[string]any{"category": "mobile", "score": 1, "evidence": []string{}},
+		map[string]any{"category": "embedded", "score": 1, "evidence": []string{}},
+		map[string]any{"category": "platform", "score": 1, "evidence": []string{}},
+		map[string]any{"category": "support", "score": 1, "evidence": []string{}},
+		map[string]any{"category": "business", "score": 1, "evidence": []string{}},
+	)
+	content, err = json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !validMatchResult(content, jobID) {
+		t.Fatal("expected result with expanded categories to pass validation")
+	}
 }
