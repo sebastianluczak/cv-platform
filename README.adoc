@@ -33,3 +33,38 @@ Visit http://localhost:5173/
 See link:https://sebastianluczak.github.io/cv-platform[CV Platform Documentation] hosted on GitHub Pages.
 
 NOTE: This site is automatically built from `./docs` directory on every merge to `main`.
+
+== Agentic issue workflow
+
+Maintainers can request an implementation by applying the `agent:run` label to a GitHub issue. 
+
+IMPORTANT: The user applying the label must have repository write permission. 
+
+The workflow uses a restricted repository agent backed by OpenRouter, runs the applicable repository checks, and opens a pull request. The agent can read repository guidance and source, search files, and write code or documentation under `services/`, `ui/`, `docs/`, and `README.adoc`. 
+
+NOTE: It cannot run shell commands, delete or rename files, or modify workflow, reviewer, dependency-manifest, or build/test infrastructure files.
+
+=== Repository setup
+
+. Create the `agent:run` issue label.
+. Add repository secret `OPENROUTER_API_KEY`.
+. Add repository variable `OPENROUTER_MODEL` with the OpenRouter model identifier to use, for example a currently available `:free` model. The workflow does not silently change models; update this variable when choosing another model.
+. Create and install a GitHub App for this repository with `contents: write`, `issues: write`, `pull requests: write`, and `administration: read` permissions. Store its numeric ID in secret `AGENT_GITHUB_APP_ID` and its private key in secret `AGENT_GITHUB_APP_PRIVATE_KEY`. The app token is only used after agent execution and validation, to create a PR that triggers normal PR checks.
+. Enable GitHub auto-merge and squash merging, and configure default-branch protection to require the existing CI job check named `build`. Add any other checks that should also block merging to the required-check list. The agent workflow will not request auto-merge unless it can confirm the required `build` check is protected.
+
+The agent limits the issue title plus description to 12,000 characters, 30 tool calls per attempt, and 45 minutes per workflow run. It makes at most one repair attempt after failed checks. Backend changes run `devenv test`; UI changes run `npm ci`, build, and lint; documentation changes run `npm ci` and the Antora build. A failed agent run or validation is reported on the issue and does not create an auto-merged PR.
+
+The OpenRouter key is available only to the file-editing agent process and that process has:
+. no shell, 
+. no GitHub write token, 
+. and no tools for executing repository code. 
+
+Validation runs after that process exits with a filtered environment, and the GitHub App token is created in a later job. 
+
+Issue text and repository files are still being treated as untrusted input, and source/context needed for the task is sent to the selected OpenRouter model and its serving provider. 
+
+CAUTION: Do not use this automation for tasks involving data that must not leave those services. 
+
+Free model availability and tool-calling support can change!
+
+IMPORTANT: Unsupported models fail rather than being silently substituted!

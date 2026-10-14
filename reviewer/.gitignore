@@ -1,2 +1,3 @@
 .venv
 review.json
+__pycache__/
