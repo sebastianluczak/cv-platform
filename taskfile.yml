@@ -74,3 +74,22 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o piistripper .
       - docker build -t piistripper .
+
+  
+  # AI CODE REVIEW #
+  review:install:
+    dir: reviewer
+    desc: Set up the Python AI reviewer
+    cmds:
+      - python3 -m venv .venv
+      - .venv/bin/python -m pip install -r reviewer/requirements.txt
+    status:
+      - test -x .venv/bin/python
+      - .venv/bin/python -c "import requests"
+
+  review:
+    dir: reviewer
+    desc: Review current branch with OpenRouter AI
+    deps: [review:install]
+    cmds:
+      - .venv/bin/python reviewer.py --base "{{.BASE | default "origin/main"}}" --model "{{.MODEL | default "nvidia/nemotron-3-super-120b-a12b:free"}}"

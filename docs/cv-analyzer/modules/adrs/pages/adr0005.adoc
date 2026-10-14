@@ -1,0 +1,16 @@
+= ADR-0005: Usage of AI in cv-analyzer
+
+== Context
+
+Nowadays, AI in IT is everywhere and we cannot escape it.
+
+We can accept it and go with the flow, learning new things or stay behind and hope to stay afloat.
+
+== Decision
+
+This project heavily uses agentic workflows, tools, prompts, instructions and every other possible method of AI-influence to deliver code:
+
+. faster
+. without bugs
+. with more checks and tests
+. without exploding my family budget

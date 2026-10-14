@@ -1,4 +1,4 @@
-name: Publish Antora Docs Preview
+name: Publish project documentation
 
 on:
   pull_request:
@@ -8,6 +8,10 @@ on:
     branches:
       - main
   workflow_dispatch:
+
+concurrency:
+  group: docs-publish-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -62,7 +66,7 @@ jobs:
 
             const body = [
               marker,
-              `📚 **[Antora documentation preview](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)**`
+              `📚 **[Antora documentation preview #${issue_number}@${{ github.sha }}](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)**`
             ].join('\n');
 
             const comments = await github.paginate(
