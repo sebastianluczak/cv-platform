@@ -1,4 +1,4 @@
-name: AI Code Review
+name: AI code review process
 
 on:
   pull_request:
@@ -8,6 +8,10 @@ permissions:
   contents: read
   issues: write
   pull-requests: write
+
+concurrency:
+  group: ai-code-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   review:
