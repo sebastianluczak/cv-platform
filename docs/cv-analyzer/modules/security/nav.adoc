@@ -1,2 +1,0 @@
-.Security
-* xref:data-security.adoc[]

@@ -1,5 +1,0 @@
-= skillmatcher
-
-After extraction, skill matcher tries to match found skills to the given sets.
-
-TODO: buckets and labels

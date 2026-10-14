@@ -1,4 +1,0 @@
-= ADR-0001: Use Antora for documentation
-
-This is obvious - we will use Antora for internal documentation.
-
