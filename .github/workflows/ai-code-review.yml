@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: "3.x"
 
-      # - name: Install trusted reviewer
+      # - name: Install trusted reviewer - TODO in final version uncomment this
       #   env:
       #     BASE_SHA: ${{ github.event.pull_request.base.sha }}
       #   run: |
@@ -44,8 +44,7 @@ jobs:
           REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free' }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          mkdir -p reviewer
-          python /tmp/trusted-reviewer/reviewer.py \
+          python reviewer/reviewer.py \
             --base "${BASE_SHA}" \
             --model "${REVIEW_MODEL}" \
             --output reviewer/reviewer.json
