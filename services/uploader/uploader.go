@@ -221,6 +221,7 @@ func main() {
 	mux := http.NewServeMux()
 	statusStore := progress.NewStore()
 	mux.HandleFunc("/upload", uploadHandler(storageClient, bucketConfig.Bucket, publisher, statusStore))
+	mux.HandleFunc("/results", resultHandler(storageClient, bucketConfig.Bucket))
 	statusQueue := os.Getenv("QUEUE_NAME") + ".events"
 	statusChannel, statusEvents, err := queue.ConsumeStatusEvents(conn, statusQueue)
 	if err != nil {

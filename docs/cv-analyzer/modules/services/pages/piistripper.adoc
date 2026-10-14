@@ -12,8 +12,8 @@ This is best-effort redaction, not guaranteed anonymization. The English-only en
 
 The extractor publishes the redaction job only after storing the extracted result and acknowledges its original queue delivery only after RabbitMQ confirms the redaction publish. Piistripper validates that the job ID is a UUID, the bucket matches its configured bucket, and the object key is exactly `results/<job-id>.txt`.
 
-The worker uses manual acknowledgements, a prefetch of one, deterministic output keys, a 10 MiB source-result limit, and up to three retries after the initial attempt. It republishes exhausted or malformed jobs to `QUEUE_NAME.pii.failed`. Terminal progress is published to `QUEUE_NAME.events`; the user-facing job becomes `completed` only after the redacted output is stored. Delivery is at-least-once, so duplicate work may occur.
+The worker uses manual acknowledgements, a prefetch of one, deterministic output keys, a 10 MiB source-result limit, and up to three retries after the initial attempt. It republishes exhausted or malformed jobs to `QUEUE_NAME.pii.failed`. After storing redacted text, it publishes a confirmed job to `QUEUE_NAME.skills`; the skill matcher later publishes terminal `completed` after storing scores. Delivery is at-least-once, so duplicate work may occur.
 
 == Configuration
 
-Piistripper shares `RABBITMQ_URL`, `QUEUE_NAME`, and all `RUSTFS_*` settings with the uploader and extractor. It reads objects from `RUSTFS_BUCKET`; deployment credentials should be limited to reading the extracted result and writing the redacted result. See xref:configuration.adoc[configuration] and xref:operations.adoc[operations].
+Piistripper shares `RABBITMQ_URL`, `QUEUE_NAME`, and all `RUSTFS_*` settings with the uploader, extractor, and skill matcher. It reads objects from `RUSTFS_BUCKET`; deployment credentials should be limited to reading the extracted result and writing the redacted result. See xref:configuration.adoc[configuration] and xref:operations.adoc[operations].

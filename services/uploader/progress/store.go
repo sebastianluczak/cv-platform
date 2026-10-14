@@ -126,7 +126,7 @@ func (s *Store) removeJob(jobID string) {
 
 func validStage(stage string) bool {
 	switch stage {
-	case "queued", "processing", "retrying", "redacting", "completed", "failed":
+	case "queued", "processing", "retrying", "redacting", "matching", "completed", "failed":
 		return true
 	default:
 		return false

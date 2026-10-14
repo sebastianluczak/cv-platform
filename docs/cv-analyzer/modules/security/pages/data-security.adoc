@@ -10,6 +10,7 @@ IMPORTANT: They persist the original file, extracted text, and a separate best-e
 * Uploaded objects are stored under `uploads/<job-id>` and extracted text under `results/<job-id>.txt`.
 * Piistripper writes `results/<job-id>.redacted.txt` without modifying or deleting the extracted source.
 * Piistripper performs local pattern matching and English named-entity recognition; it does not call a hosted model/API. Detection can miss direct, contextual, or indirect identifiers and can produce false positives.
+* The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.
 * The services do not implement deletion, expiration, or a retention policy for stored objects.
 * Temporary extractor files are created on the service host during processing and removed when processing finishes.
 * The uploader's HTTP endpoints do not implement authentication or authorization.

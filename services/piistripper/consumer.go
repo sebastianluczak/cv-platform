@@ -53,6 +53,7 @@ func run() error {
 	defer conn.Close()
 
 	workQueue := queueName + ".pii"
+	skillQueue := queueName + ".skills"
 	failedQueue := workQueue + ".failed"
 	statusQueue := queueName + ".events"
 	consumerChannel, err := conn.Channel()
@@ -60,7 +61,7 @@ func run() error {
 		return fmt.Errorf("open RabbitMQ consumer channel: %w", err)
 	}
 	defer consumerChannel.Close()
-	for _, name := range []string{workQueue, failedQueue, statusQueue} {
+	for _, name := range []string{workQueue, failedQueue, skillQueue, statusQueue} {
 		if _, err := consumerChannel.QueueDeclare(name, true, false, false, false, nil); err != nil {
 			return fmt.Errorf("declare queue %q: %w", name, err)
 		}
@@ -88,7 +89,7 @@ func run() error {
 	for delivery := range deliveries {
 		if err := handleDelivery(
 			consumerChannel, publisherChannel, confirmations, delivery,
-			workQueue, failedQueue, statusQueue, storageClient, config.bucket,
+			workQueue, failedQueue, skillQueue, statusQueue, storageClient, config.bucket,
 		); err != nil {
 			log.Printf("Handle redaction delivery: %v", err)
 		}
@@ -100,7 +101,7 @@ func handleDelivery(
 	consumerChannel, publisherChannel *amqp.Channel,
 	confirmations <-chan amqp.Confirmation,
 	delivery amqp.Delivery,
-	workQueue, failedQueue, statusQueue string,
+	workQueue, failedQueue, skillQueue, statusQueue string,
 	storageClient *s3.Client,
 	bucket string,
 ) error {
@@ -123,16 +124,24 @@ func handleDelivery(
 	err := redactResult(ctx, storageClient, bucket, job)
 	cancel()
 	if err == nil {
-		if err := publishStatus(publisherChannel, confirmations, statusQueue, statusEvent{
-			JobID: job.ID, Stage: "completed", Message: "Redacted resume text is ready.", Attempt: attempt,
-		}); err != nil {
+		skillJob, err := json.Marshal(redactionJob{
+			ID: job.ID, Bucket: bucket, ObjectKey: "results/" + job.ID + ".redacted.txt",
+		})
+		if err != nil {
 			_ = delivery.Nack(false, true)
-			return fmt.Errorf("publish completed status for job %s: %w", job.ID, err)
+			return fmt.Errorf("encode skill matching job %s: %w", job.ID, err)
 		}
+		if err := publishAndConfirm(publisherChannel, confirmations, skillQueue, skillJob, nil); err != nil {
+			_ = delivery.Nack(false, true)
+			return fmt.Errorf("queue skill matching job %s: %w", job.ID, err)
+		}
+		publishStatusBestEffort(publisherChannel, confirmations, statusQueue, statusEvent{
+			JobID: job.ID, Stage: "matching", Message: "Redacted resume is ready; comparing role profiles.", Attempt: attempt,
+		})
 		if err := delivery.Ack(false); err != nil {
 			return fmt.Errorf("acknowledge redaction job %s: %w", job.ID, err)
 		}
-		log.Printf("Redacted job %s; output stored at %s/results/%s.redacted.txt", job.ID, bucket, job.ID)
+		log.Printf("Redacted job %s and queued role matching; source stored at %s/results/%s.redacted.txt", job.ID, bucket, job.ID)
 		return nil
 	}
 

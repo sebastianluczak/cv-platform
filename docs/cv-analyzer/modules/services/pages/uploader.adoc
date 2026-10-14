@@ -36,6 +36,8 @@ The upload body is limited to 10 MiB plus 64 KiB for multipart framing. The uplo
 
 `GET /events?job_id=<job-id>` streams status event JSON in SSE `data:` frames. It returns `404` if the uploader has no retained status for that job. The latest snapshot is sent immediately; terminal `completed` and `failed` states end the stream. Clients may reconnect while the status remains in the same uploader process.
 
+`GET /results?job_id=<job-id>` serves the stored JSON role-match result for a valid UUID job ID. It returns `404` if the result artifact does not exist and rejects invalid IDs before reading object storage.
+
 == Runtime behavior
 
 At startup the uploader creates an S3-compatible client, checks for the configured bucket and creates it if absent, connects to RabbitMQ, declares the durable work queue, and consumes the durable `<QUEUE_NAME>.events` queue.
