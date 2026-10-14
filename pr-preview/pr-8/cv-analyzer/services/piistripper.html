@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>PII Stripper Service :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="operations.html">Operations</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="prototypes.html">Prototype components</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Services</li>
+    <li><a href="piistripper.html">PII stripper</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/services/pages/piistripper.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">PII Stripper Service</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The piistripper consumes durable redaction jobs from <code>QUEUE_NAME.pii</code> and reads the extracted text from the shared S3-compatible bucket. After successful redaction it writes <code>results/&lt;job-id&gt;.redacted.txt</code>; it does not overwrite or delete <code>results/&lt;job-id&gt;.txt</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_detection_and_output"><a class="anchor" href="#_detection_and_output"></a>Detection and output</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The service runs without external model/API calls. It applies local patterns for email addresses, URLs, phone numbers, and common street-address forms, plus the local English named-entity recognizer in <code>github.com/jdkato/prose/v2</code> for person and organization names. It replaces matches with typed placeholders such as <code>[EMAIL]</code>, <code>[ADDRESS]</code>, <code>[PERSON]</code>, and <code>[ORGANIZATION]</code>.</p>
+</div>
+<div class="paragraph">
+<p>This is best-effort redaction, not guaranteed anonymization. The English-only entity recognizer and patterns can miss direct, contextual, or indirect identifiers and can produce false positives. The separate original text remains personal data and is still subject to the applicable access-control and retention/deletion policy. Do not describe this service alone as GDPR compliance.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_delivery_and_failure_behavior"><a class="anchor" href="#_delivery_and_failure_behavior"></a>Delivery and failure behavior</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The extractor publishes the redaction job only after storing the extracted result and acknowledges its original queue delivery only after RabbitMQ confirms the redaction publish. Piistripper validates that the job ID is a UUID, the bucket matches its configured bucket, and the object key is exactly <code>results/&lt;job-id&gt;.txt</code>.</p>
+</div>
+<div class="paragraph">
+<p>The worker uses manual acknowledgements, a prefetch of one, deterministic output keys, a 10 MiB source-result limit, and up to three retries after the initial attempt. It republishes exhausted or malformed jobs to <code>QUEUE_NAME.pii.failed</code>. Terminal progress is published to <code>QUEUE_NAME.events</code>; the user-facing job becomes <code>completed</code> only after the redacted output is stored. Delivery is at-least-once, so duplicate work may occur.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_configuration"><a class="anchor" href="#_configuration"></a>Configuration</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Piistripper shares <code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and all <code>RUSTFS_*</code> settings with the uploader and extractor. It reads objects from <code>RUSTFS_BUCKET</code>; deployment credentials should be limited to reading the extracted result and writing the redacted result. See <a href="configuration.html" class="xref page">configuration</a> and <a href="operations.html" class="xref page">operations</a>.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

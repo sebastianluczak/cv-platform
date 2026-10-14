@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Processing Workflow :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="context.html">System context</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="data-lifecycle.html">Data and persistence</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/operations.html">Operations</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/prototypes.html">Prototype components</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Architecture</li>
+    <li><a href="workflow.html">Processing workflow</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/architecture/pages/workflow.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Processing Workflow</h1>
+<div class="sect1">
+<h2 id="_successful_upload_and_extraction"><a class="anchor" href="#_successful_upload_and_extraction"></a>Successful upload and extraction</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>A client sends <code>POST /upload</code> with a multipart field named <code>file</code>.</p>
+</li>
+<li>
+<p>The uploader accepts PDF, PNG, JPEG, TIFF, or BMP content up to 10 MiB. It detects the content type from the uploaded bytes.</p>
+</li>
+<li>
+<p>The uploader generates a UUID, stores the original at <code>uploads/&lt;job-id&gt;</code>, and publishes a persistent JSON message to <code>QUEUE_NAME</code>.</p>
+</li>
+<li>
+<p>The uploader waits for RabbitMQ&#8217;s publisher confirmation before returning HTTP <code>202 Accepted</code> with the job ID.</p>
+</li>
+<li>
+<p>The extractor consumes the message with manual acknowledgement and prefetch set to one. It downloads the object, extracts text, and writes <code>results/&lt;job-id&gt;.txt</code>.</p>
+</li>
+<li>
+<p>The extractor publishes a persistent redaction job to <code>QUEUE_NAME.pii</code>; it acknowledges the extraction job only after RabbitMQ confirms that publish.</p>
+</li>
+<li>
+<p>Piistripper reads the extraction result, writes a separate <code>results/&lt;job-id&gt;.redacted.txt</code> copy, publishes <code>completed</code>, and acknowledges the redaction job. The uploader consumes status events and updates its in-memory store.</p>
+</li>
+<li>
+<p>The client connects to <code>GET /events?job_id=&lt;job-id&gt;</code>. SSE sends the current snapshot first, then subsequent updates, with a 20-second keep-alive comment.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_extraction_failures_and_retries"><a class="anchor" href="#_extraction_failures_and_retries"></a>Extraction failures and retries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented <code>x-retry-count</code>, then the original delivery is acknowledged. Piistripper similarly retries redaction failures.
+The initial attempt plus up to three retries means a job may be attempted four times at each stage. During redaction retries the status remains <code>redacting</code> and includes a retry message, keeping the UI progress step accurate.</p>
+</div>
+<div class="paragraph">
+<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>.</p>
+</div>
+<div class="paragraph">
+<p>Malformed job JSON is also sent directly to the failed queue.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_delivery_semantics"><a class="anchor" href="#_delivery_semantics"></a>Delivery semantics</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The workflow is <strong>at-least-once</strong>, not exactly-once.</p>
+</div>
+<div class="paragraph">
+<p>If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job.</p>
+</div>
+<div class="paragraph">
+<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code> and <code>results/&lt;job-id&gt;.redacted.txt</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
+</div>
+<div class="paragraph">
+<p>There is no separate deduplication store, operation is idempotent.</p>
+</div>
+<div class="sect2">
+<h3 id="_sse_status_durability"><a class="anchor" href="#_sse_status_durability"></a>SSE status durability</h3>
+<div class="paragraph">
+<p>SSE status events are <strong>not a durable history for clients</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>they are consumed by the <code>uploader</code>,</p>
+</li>
+<li>
+<p>retained only in <strong>that</strong> <code>uploader</code> process.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>A reconnect to the same live instance receives the latest snapshot, but an <code>uploader</code> <strong>after restart</strong> or <strong>another replica</strong> will not have the job&#8217;s status.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+This is serious and needs proper addressing.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
