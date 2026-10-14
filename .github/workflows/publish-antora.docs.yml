@@ -66,7 +66,7 @@ jobs:
 
             const body = [
               marker,
-              `📚 **[Antora documentation preview](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)**`
+              `📚 **[Antora documentation preview ${issue_number}#${prNumber} ${{ github.sha }}](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)**`
             ].join('\n');
 
             const comments = await github.paginate(

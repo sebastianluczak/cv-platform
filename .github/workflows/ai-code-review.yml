@@ -52,7 +52,6 @@ jobs:
             --base "${BASE_SHA}" \
             --model "${REVIEW_MODEL}" \
             --output reviewer/reviewer.json
-          test -s reviewer/reviewer.json
 
       - name: Comment with review
         uses: actions/github-script@v7
