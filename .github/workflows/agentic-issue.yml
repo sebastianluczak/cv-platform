@@ -1,0 +1,335 @@
+name: Agentic issue implementation
+
+on:
+  issues:
+    types: [labeled]
+
+concurrency:
+  group: agentic-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  authorize:
+    if: >-
+      github.event.label.name == 'agent:run' &&
+      !github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a trusted maintainer to trigger the agent
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const actor = context.payload.sender.login;
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner,
+              repo,
+              username: actor
+            });
+            if (!['admin', 'maintain', 'write'].includes(data.permission)) {
+              core.setFailed(`User ${actor} needs write permission to start the issue agent.`);
+              return;
+            }
+
+            const title = context.payload.issue.title || '';
+            const body = context.payload.issue.body || '';
+            if (title.length + body.length > 12000) {
+              core.setFailed('Issue title and description exceed the 12,000-character agent limit.');
+              return;
+            }
+
+            await github.rest.issues.removeLabel({
+              owner,
+              repo,
+              issue_number: context.issue.number,
+              name: 'agent:run'
+            });
+
+  implement:
+    needs: authorize
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out the default branch without persisting credentials
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Test the restricted agent tools
+        run: python -m unittest reviewer.test_issue_agent
+
+      - name: Run the issue agent
+        id: agent
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          AGENT_SUMMARY_FILE: ${{ runner.temp }}/agent-summary.md
+        run: python reviewer/issue_agent.py
+
+      - name: Validate the agent's file changes
+        id: changes
+        run: |
+          python reviewer/issue_agent.py --validate
+          git diff HEAD --check
+          echo "patch_sha=$(git diff HEAD --binary | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Configure the devenv cache
+        uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+
+      - name: Install devenv
+        run: nix profile add nixpkgs#devenv
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run applicable repository checks
+        id: checks
+        continue-on-error: true
+        run: python reviewer/run_issue_checks.py
+
+      - name: Ask the agent to address failed checks
+        id: repair
+        if: steps.checks.outcome == 'failure'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          VALIDATION_FEEDBACK_FILE: ${{ runner.temp }}/agent-validation.log
+          AGENT_SUMMARY_FILE: ${{ runner.temp }}/agent-summary.md
+        run: python reviewer/issue_agent.py
+
+      - name: Revalidate repaired changes
+        id: repaired-changes
+        if: steps.checks.outcome == 'failure'
+        run: |
+          python reviewer/issue_agent.py --validate
+          git diff HEAD --check
+          echo "patch_sha=$(git diff HEAD --binary | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Rerun applicable repository checks
+        id: retry-checks
+        if: steps.checks.outcome == 'failure'
+        continue-on-error: true
+        run: python reviewer/run_issue_checks.py
+
+      - name: Require successful validation
+        if: always()
+        env:
+          INITIAL_CHECKS: ${{ steps.checks.outcome }}
+          REPAIR_STEP: ${{ steps.repair.outcome }}
+          RETRY_STEP: ${{ steps.retry-checks.outcome }}
+          ORIGINAL_PATCH_SHA: ${{ steps.changes.outputs.patch_sha }}
+          REPAIRED_PATCH_SHA: ${{ steps.repaired-changes.outputs.patch_sha }}
+        run: |
+          if [[ "$INITIAL_CHECKS" == "success" ]]; then
+            expected="$ORIGINAL_PATCH_SHA"
+          elif [[ "$REPAIR_STEP" == "success" && "$RETRY_STEP" == "success" ]]; then
+            expected="$REPAIRED_PATCH_SHA"
+          else
+            echo "Applicable checks did not pass after the single repair attempt." >&2
+            exit 1
+          fi
+
+          actual="$(git diff HEAD --binary | sha256sum | cut -d' ' -f1)"
+          if [[ -z "$expected" || "$actual" != "$expected" ]]; then
+            echo "Repository files changed during validation; refusing to create a PR." >&2
+            exit 1
+          fi
+          exit 0
+
+      - name: Validate the final patch after test execution
+        run: |
+          python reviewer/issue_agent.py --validate
+          git diff HEAD --check
+
+      - name: Export the validated patch
+        run: git diff HEAD --binary --no-ext-diff > "$RUNNER_TEMP/agent.patch"
+
+      - name: Upload the patch for PR creation
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-issue-${{ github.event.issue.number }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/agent.patch
+            ${{ runner.temp }}/agent-summary.md
+          if-no-files-found: error
+          retention-days: 1
+
+  create-pull-request:
+    needs: [authorize, implement]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out the default branch without persisting credentials
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Download the validated patch
+        uses: actions/download-artifact@v4
+        with:
+          name: agent-issue-${{ github.event.issue.number }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/agent
+
+      - name: Apply and revalidate the patch
+        run: |
+          git apply --check --binary "$RUNNER_TEMP/agent/agent.patch"
+          git apply --binary "$RUNNER_TEMP/agent/agent.patch"
+          python reviewer/issue_agent.py --validate
+          git diff --check
+
+      - name: Create a repository-scoped GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.AGENT_GITHUB_APP_ID }}
+          private-key: ${{ secrets.AGENT_GITHUB_APP_PRIVATE_KEY }}
+          permission-administration: read
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Open or update the issue pull request
+        id: pull-request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          branch: agent/issue-${{ github.event.issue.number }}-run-${{ github.run_number }}
+          base: ${{ github.event.repository.default_branch }}
+          title: "Agent implementation for #${{ github.event.issue.number }}"
+          commit-message: "feat: address issue #${{ github.event.issue.number }}"
+          body: |
+            Automated implementation for #${{ github.event.issue.number }}.
+
+            This pull request was created by the repository issue agent. Applicable repository checks passed before the pull request was opened. GitHub auto-merge will be enabled only when the default branch requires the repository's `build` check.
+          draft: false
+
+      - name: Check branch protection before enabling auto-merge
+        id: merge-guard
+        if: steps.pull-request.outputs.pull-request-number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const branch = context.payload.repository.default_branch;
+            try {
+              const { data } = await github.rest.repos.getBranchProtection({
+                owner,
+                repo,
+                branch
+              });
+              const checks = data.required_status_checks;
+              const names = [
+                ...(checks?.contexts || []),
+                ...(checks?.checks || []).map(check => check.context)
+              ];
+              const hasBuild = names.some(name =>
+                name.toLowerCase() === 'build' ||
+                /build and test services.*\/ build$/i.test(name)
+              );
+              core.setOutput('eligible', hasBuild ? 'true' : 'false');
+              if (!hasBuild) {
+                core.setOutput(
+                  'reason',
+                  'Default branch protection must require the existing CI job named "build".'
+                );
+              }
+            } catch (error) {
+              if (error.status === 403 || error.status === 404) {
+                core.setOutput('eligible', 'false');
+                core.setOutput(
+                  'reason',
+                  'Branch protection could not be read or is not configured; auto-merge was not enabled.'
+                );
+                return;
+              }
+              throw error;
+            }
+
+      - name: Enable GitHub auto-merge
+        id: auto-merge
+        if: steps.merge-guard.outputs.eligible == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PULL_REQUEST_NUMBER: ${{ steps.pull-request.outputs.pull-request-number }}
+        run: gh pr merge "$PULL_REQUEST_NUMBER" --auto --squash --repo "$GITHUB_REPOSITORY"
+
+      - name: Report pull request and merge status on the issue
+        if: always() && steps.app-token.outcome == 'success' && steps.pull-request.outcome == 'success'
+        uses: actions/github-script@v7
+        env:
+          AGENT_SUMMARY_PATH: ${{ runner.temp }}/agent/agent-summary.md
+          PULL_REQUEST_URL: ${{ steps.pull-request.outputs.pull-request-url }}
+          MERGE_REASON: ${{ steps.merge-guard.outputs.reason }}
+          MERGE_RESULT: ${{ steps.auto-merge.outcome }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const fs = require('fs');
+            const url = process.env.PULL_REQUEST_URL;
+            const summary = fs.existsSync(process.env.AGENT_SUMMARY_PATH)
+              ? fs.readFileSync(process.env.AGENT_SUMMARY_PATH, 'utf8').slice(0, 8000)
+              : '';
+            const message = url
+              ? `Agent summary:\n\n${summary || '(No summary was provided.)'}\n\nPull request: ${url}\n\n${process.env.MERGE_RESULT === 'success' ? 'GitHub auto-merge is enabled and will wait for required checks.' : `Auto-merge was not enabled. ${process.env.MERGE_REASON || 'GitHub could not enable auto-merge; check repository settings and the pull request status.'}`}`
+              : 'The issue agent finished validation but could not create a pull request.';
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+
+  report-failure:
+    needs: [authorize, implement, create-pull-request]
+    if: >-
+      always() &&
+      needs.authorize.result == 'success' &&
+      (needs.implement.result == 'failure' || needs.create-pull-request.result == 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Report the failed automation run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: context.issue.number,
+              body: `The issue agent did not complete successfully. Review the [workflow run](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}) for the exact failure. No pull request was auto-merged. Apply the \`agent:run\` label again to retry after addressing the failure.`
+            });
