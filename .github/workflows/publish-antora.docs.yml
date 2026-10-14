@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
@@ -28,6 +28,13 @@ jobs:
         shell: devenv shell -- bash -e {0}
         run: |
           task docs:build-docs
+      - name: Publish PR documentation preview
+        if: github.event_name == 'pull_request'
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: docs/build/site
+          preview-branch: gh-pages
+          qr-code: true
       - name: Create an artifact for the built documentation
         id: upload-docs
         uses: actions/upload-artifact@v4
