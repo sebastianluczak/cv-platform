@@ -1,6 +1,10 @@
 site:
   title: CV Platform
 
+antora:
+  extensions:
+  - '@antora/html-single-extension'
+  
 content:
   sources:
     - url: ..

@@ -12,6 +12,7 @@
     pkgs.nodejs
     pkgs.antora
     pkgs.asciidoc
+    pkgs.asciidoctor
     pkgs.go-task
     pkgs.gdb
     pkgs.pkg-config
