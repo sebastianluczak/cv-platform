@@ -23,9 +23,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prepare-gosec:
+    name: Prepare gosec
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: services/common/go.mod
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+
+      - name: Stage gosec binary
+        run: |
+          mkdir -p "$RUNNER_TEMP/gosec"
+          cp "$(go env GOPATH)/bin/gosec" "$RUNNER_TEMP/gosec/gosec"
+
+      - name: Upload gosec binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosec-binary
+          path: ${{ runner.temp }}/gosec/gosec
+          retention-days: 1
+
   gosec:
     name: Scan ${{ matrix.service }}
     runs-on: ubuntu-latest
+    needs: prepare-gosec
     strategy:
       fail-fast: false
       matrix:
@@ -38,9 +66,18 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: services/${{ matrix.service }}/go.mod
+          cache-dependency-path: services/${{ matrix.service }}/go.sum
 
-      - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+      - name: Download gosec binary
+        uses: actions/download-artifact@v4
+        with:
+          name: gosec-binary
+          path: ${{ runner.temp }}/gosec
+
+      - name: Add gosec to PATH
+        run: |
+          chmod +x "$RUNNER_TEMP/gosec/gosec"
+          echo "$RUNNER_TEMP/gosec" >> "$GITHUB_PATH"
 
       - name: Download module dependencies
         working-directory: services/${{ matrix.service }}

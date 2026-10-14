@@ -1,0 +1,38 @@
+= ADR-0006: Cost-aware GitHub Actions without reducing assurance
+
+== Context
+
+The project reported spending 350 of its 2,000 free GitHub Actions minutes in one day. A review of the latest 24 hours of workflow runs found:
+
+* CI ran 33 times: 27 pull request runs and 6 pushes to `main`.
+* Documentation publication ran 33 times on the same events.
+* AI review ran 12 times on pull request updates.
+* The Go security scan ran 5 times. Each run started five matrix jobs, and each job spent approximately 42–66 seconds installing the same pinned `gosec` version.
+
+The CI and documentation workflows both set up Nix and devenv. The documentation workflow builds a preview on every pull request, including changes that cannot affect the documentation. The CI workflow uses `devenv test`, which currently runs the four Go test suites in `test.sh`; it does not run UI tests, docs, or the `common` module.
+
+The GitHub run-usage endpoint returned zero billed milliseconds for sampled runs, so the timings above are runner step durations and run counts, not a precise reconstruction of billed minutes. Existing checks, review feedback, SARIF uploads, documentation previews, and production publication must remain available for relevant changes.
+
+== Decision
+
+Preserve the current CI and AI-review triggers and all existing check coverage. Reduce repeat work where the affected output is clear:
+
+. Keep the documentation workflow and its pull request job/check active, but run the expensive documentation build and preview only when documentation sources or their build configuration changed. Restrict `main` push runs to those same paths. Keep manual dispatch able to build documentation.
+. Build the pinned `gosec` binary once per security workflow run and distribute it to the existing five-module matrix. Keep the per-module job names, scan scope, SARIF files, categories, and uploads. Cache each module's Go dependencies using its `go.sum`.
+. Continue running `devenv test` for all current CI triggers. Do not broaden or reduce its test coverage as part of this cost change.
+
+Documentation-affecting paths are `docs/**`, `taskfile.yml`, `devenv.nix`, `devenv.yaml`, `devenv.lock`, and `.github/workflows/publish-antora.docs.yml`.
+
+== Consequences
+
+Unrelated pull requests still produce a successful documentation workflow check, but skip Nix/devenv installation and documentation build steps. Changes to docs or build configuration continue to generate previews, and relevant pushes to `main` continue to publish the production site.
+
+The security workflow adds one setup job and artifact transfer, but avoids compiling the same security tool independently in five runners. The matrix remains parallel and keeps its existing check names; the setup job becomes a prerequisite.
+
+CI and AI review may continue to run for changes that do not affect their results. This is intentional until branch-protection requirements and broader code/test dependencies are verified; path-based CI skipping could otherwise remove a required status check or miss a dependency.
+
+Measure billed minutes and check results after adoption. If documented paths, outputs, required checks, or scan categories are missing, restore the prior behavior before pursuing further trigger narrowing.
+
+== References
+
+* xref:architecture:workflow.adoc[Processing workflow]

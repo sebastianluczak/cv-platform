@@ -5,3 +5,4 @@
 * xref:adr0003.adoc[]
 * xref:adr0004.adoc[]
 * xref:adr0005.adoc[]
+* xref:adr0006.adoc[]
