@@ -92,4 +92,4 @@ tasks:
     desc: Review current branch with OpenRouter AI
     deps: [review:install]
     cmds:
-      - .venv/bin/python reviewer.py --base "{{.BASE | default "origin/main"}}" --model "{{.MODEL | default "nvidia/nemotron-3-ultra-550b-a55b:free"}}"
+      - .venv/bin/python reviewer.py --base "{{.BASE | default "origin/main"}}" --model "{{.MODEL | default "nvidia/nemotron-3-super-120b-a12b:free"}}"
