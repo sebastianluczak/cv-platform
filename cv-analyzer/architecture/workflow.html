@@ -104,6 +104,9 @@
     <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -185,10 +188,16 @@
 <p>The extractor publishes a persistent redaction job to <code>QUEUE_NAME.pii</code>; it acknowledges the extraction job only after RabbitMQ confirms that publish.</p>
 </li>
 <li>
-<p>Piistripper reads the extraction result, writes a separate <code>results/&lt;job-id&gt;.redacted.txt</code> copy, publishes <code>completed</code>, and acknowledges the redaction job. The uploader consumes status events and updates its in-memory store.</p>
+<p>Piistripper reads the extraction result and writes a separate <code>results/&lt;job-id&gt;.redacted.txt</code> copy. It publishes a confirmed job to <code>QUEUE_NAME.skills</code> and acknowledges the redaction job after the publish is confirmed.</p>
+</li>
+<li>
+<p>The skill matcher reads the redacted text, scores it against deterministic role-profile patterns, writes <code>results/&lt;job-id&gt;.skills.json</code>, publishes <code>completed</code>, and acknowledges the matching job. The uploader consumes status events and updates its in-memory store.</p>
 </li>
 <li>
 <p>The client connects to <code>GET /events?job_id=&lt;job-id&gt;</code>. SSE sends the current snapshot first, then subsequent updates, with a 20-second keep-alive comment.</p>
+</li>
+<li>
+<p>After completion, the UI retrieves the persisted score artifact from <code>GET /results?job_id=&lt;job-id&gt;</code>.</p>
 </li>
 </ol>
 </div>
@@ -198,11 +207,11 @@
 <h2 id="_extraction_failures_and_retries"><a class="anchor" href="#_extraction_failures_and_retries"></a>Extraction failures and retries</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented <code>x-retry-count</code>, then the original delivery is acknowledged. Piistripper similarly retries redaction failures.
+<p>The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented <code>x-retry-count</code>, then the original delivery is acknowledged. Piistripper and the skill matcher similarly retry processing failures.
 The initial attempt plus up to three retries means a job may be attempted four times at each stage. During redaction retries the status remains <code>redacting</code> and includes a retry message, keeping the UI progress step accurate.</p>
 </div>
 <div class="paragraph">
-<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>.</p>
+<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.</p>
 </div>
 <div class="paragraph">
 <p>Malformed job JSON is also sent directly to the failed queue.</p>
@@ -219,7 +228,7 @@ The initial attempt plus up to three retries means a job may be attempted four t
 <p>If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job.</p>
 </div>
 <div class="paragraph">
-<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code> and <code>results/&lt;job-id&gt;.redacted.txt</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
+<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, and <code>results/&lt;job-id&gt;.skills.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
 </div>
 <div class="paragraph">
 <p>There is no separate deduplication store, operation is idempotent.</p>

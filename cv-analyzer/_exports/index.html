@@ -684,20 +684,26 @@ end note
 <p>The extractor publishes a persistent redaction job to <code>QUEUE_NAME.pii</code>; it acknowledges the extraction job only after RabbitMQ confirms that publish.</p>
 </li>
 <li>
-<p>Piistripper reads the extraction result, writes a separate <code>results/&lt;job-id&gt;.redacted.txt</code> copy, publishes <code>completed</code>, and acknowledges the redaction job. The uploader consumes status events and updates its in-memory store.</p>
+<p>Piistripper reads the extraction result and writes a separate <code>results/&lt;job-id&gt;.redacted.txt</code> copy. It publishes a confirmed job to <code>QUEUE_NAME.skills</code> and acknowledges the redaction job after the publish is confirmed.</p>
+</li>
+<li>
+<p>The skill matcher reads the redacted text, scores it against deterministic role-profile patterns, writes <code>results/&lt;job-id&gt;.skills.json</code>, publishes <code>completed</code>, and acknowledges the matching job. The uploader consumes status events and updates its in-memory store.</p>
 </li>
 <li>
 <p>The client connects to <code>GET /events?job_id=&lt;job-id&gt;</code>. SSE sends the current snapshot first, then subsequent updates, with a 20-second keep-alive comment.</p>
+</li>
+<li>
+<p>After completion, the UI retrieves the persisted score artifact from <code>GET /results?job_id=&lt;job-id&gt;</code>.</p>
 </li>
 </ol>
 </div>
 <h4 id="architecture:workflow:::_extraction_failures_and_retries" class="discrete">Extraction failures and retries</h4>
 <div class="paragraph">
-<p>The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented <code>x-retry-count</code>, then the original delivery is acknowledged. Piistripper similarly retries redaction failures.
+<p>The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented <code>x-retry-count</code>, then the original delivery is acknowledged. Piistripper and the skill matcher similarly retry processing failures.
 The initial attempt plus up to three retries means a job may be attempted four times at each stage. During redaction retries the status remains <code>redacting</code> and includes a retry message, keeping the UI progress step accurate.</p>
 </div>
 <div class="paragraph">
-<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>.</p>
+<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.</p>
 </div>
 <div class="paragraph">
 <p>Malformed job JSON is also sent directly to the failed queue.</p>
@@ -710,7 +716,7 @@ The initial attempt plus up to three retries means a job may be attempted four t
 <p>If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job.</p>
 </div>
 <div class="paragraph">
-<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code> and <code>results/&lt;job-id&gt;.redacted.txt</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
+<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, and <code>results/&lt;job-id&gt;.skills.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
 </div>
 <div class="paragraph">
 <p>There is no separate deduplication store, operation is idempotent.</p>
@@ -783,6 +789,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>piistripper</code> as a separate best-effort redacted copy; the original extracted text is retained.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Role-profile scores</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;job-id&gt;.skills.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>skillmatcher</code> from redacted text; contains category scores and matched pattern evidence.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extraction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
@@ -795,6 +807,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by the extractor after storing the extracted text; manually acknowledged after redaction, retry republish, or failed-queue republish.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by piistripper after storing the redacted result; manually acknowledged after scoring, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.failed</code></p></td>
@@ -804,6 +822,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed redaction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.pii.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed skill matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
 </tr>
 <tr>
@@ -997,9 +1021,9 @@ Storage administrators must configure lifecycle expiration and access controls a
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>skillmatcher</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Intended to match extracted skills against supplied sets</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">README-only placeholder; no executable implementation or integration</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:prototypes">Prototype components</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Scores redacted resume text against deterministic IT role-profile patterns</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implemented; part of the running upload/review flow</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:skillmatcher">Skill matcher</a></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>aiweighter</code></p></td>
@@ -1067,6 +1091,9 @@ Storage administrators must configure lifecycle expiration and access controls a
 <div class="paragraph">
 <p><code>GET /events?job_id=&lt;job-id&gt;</code> streams status event JSON in SSE <code>data:</code> frames. It returns <code>404</code> if the uploader has no retained status for that job. The latest snapshot is sent immediately; terminal <code>completed</code> and <code>failed</code> states end the stream. Clients may reconnect while the status remains in the same uploader process.</p>
 </div>
+<div class="paragraph">
+<p><code>GET /results?job_id=&lt;job-id&gt;</code> serves the stored JSON role-match result for a valid UUID job ID. It returns <code>404</code> if the result artifact does not exist and rejects invalid IDs before reading object storage.</p>
+</div>
 <h4 id="services:uploader:::_runtime_behavior" class="discrete">Runtime behavior</h4>
 <div class="paragraph">
 <p>At startup the uploader creates an S3-compatible client, checks for the configured bucket and creates it if absent, connects to RabbitMQ, declares the durable work queue, and consumes the durable <code>&lt;QUEUE_NAME&gt;.events</code> queue.</p>
@@ -1125,7 +1152,7 @@ Storage administrators must configure lifecycle expiration and access controls a
 <p>Retry and failed-queue republishing use publisher confirms. If a republish cannot be confirmed, the original delivery is negatively acknowledged and requeued. A terminal <code>failed</code> status is published on exhausted extraction attempts.</p>
 </div>
 <div class="paragraph">
-<p>Extraction status publishing is best-effort. Once extraction succeeds, the job is not marked complete: piistripper publishes the terminal <code>completed</code> status after writing the redacted copy.</p>
+<p>Extraction status publishing is best-effort. Once extraction succeeds, the job is not marked complete: piistripper queues matching after writing the redacted copy, and the skill matcher publishes terminal <code>completed</code> only after storing role scores.</p>
 </div>
 <h4 id="services:extractor:::_runtime_requirements" class="discrete">Runtime requirements</h4>
 <div class="paragraph">
@@ -1164,11 +1191,111 @@ Local environment is properly configured with NixOS packages.
 <p>The extractor publishes the redaction job only after storing the extracted result and acknowledges its original queue delivery only after RabbitMQ confirms the redaction publish. Piistripper validates that the job ID is a UUID, the bucket matches its configured bucket, and the object key is exactly <code>results/&lt;job-id&gt;.txt</code>.</p>
 </div>
 <div class="paragraph">
-<p>The worker uses manual acknowledgements, a prefetch of one, deterministic output keys, a 10 MiB source-result limit, and up to three retries after the initial attempt. It republishes exhausted or malformed jobs to <code>QUEUE_NAME.pii.failed</code>. Terminal progress is published to <code>QUEUE_NAME.events</code>; the user-facing job becomes <code>completed</code> only after the redacted output is stored. Delivery is at-least-once, so duplicate work may occur.</p>
+<p>The worker uses manual acknowledgements, a prefetch of one, deterministic output keys, a 10 MiB source-result limit, and up to three retries after the initial attempt. It republishes exhausted or malformed jobs to <code>QUEUE_NAME.pii.failed</code>. After storing redacted text, it publishes a confirmed job to <code>QUEUE_NAME.skills</code>; the skill matcher later publishes terminal <code>completed</code> after storing scores. Delivery is at-least-once, so duplicate work may occur.</p>
 </div>
 <h4 id="services:piistripper:::_configuration" class="discrete">Configuration</h4>
 <div class="paragraph">
-<p>Piistripper shares <code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and all <code>RUSTFS_*</code> settings with the uploader and extractor. It reads objects from <code>RUSTFS_BUCKET</code>; deployment credentials should be limited to reading the extracted result and writing the redacted result. See <a href="#services:configuration">configuration</a> and <a href="#services:operations">operations</a>.</p>
+<p>Piistripper shares <code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and all <code>RUSTFS_*</code> settings with the uploader, extractor, and skill matcher. It reads objects from <code>RUSTFS_BUCKET</code>; deployment credentials should be limited to reading the extracted result and writing the redacted result. See <a href="#services:configuration">configuration</a> and <a href="#services:operations">operations</a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="services:skillmatcher"><a class="anchor" href="#services:skillmatcher"></a>Skill matcher</h3>
+<div class="paragraph">
+<p>The skill matcher consumes jobs after PII stripping, reads the redacted text
+from shared S3-compatible storage, and scores the resume against deterministic
+IT role-profile patterns. It does not call an external model or API.</p>
+</div>
+<h4 id="services:skillmatcher:::_workflow_and_result" class="discrete">Workflow and result</h4>
+<div class="paragraph">
+<p>The service consumes persistent JSON jobs from <code>QUEUE_NAME.skills</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "id": "&lt;job-id&gt;",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/&lt;job-id&gt;.redacted.txt"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The worker validates the UUID, configured bucket, and exact object key. It
+reads no more than 10 MiB of text and writes a versioned result to
+<code>results/&lt;job-id&gt;.skills.json</code>. The result includes the job ID, scoring
+timestamp, categories, integer scores, and matched patterns as evidence. The
+uploader serves this JSON at <code>GET /results?job_id=&lt;job-id&gt;</code>.</p>
+</div>
+<div class="paragraph">
+<p>Piistripper publishes the matching job only after storing the redacted text.
+The matcher publishes <code>matching</code>, followed by terminal <code>completed</code> only after
+storing the score result. It uses manual acknowledgements, a prefetch of one,
+publisher confirms, and up to three retries after the initial attempt.
+Exhausted and malformed jobs are published to <code>QUEUE_NAME.skills.failed</code>.
+Delivery is at-least-once; deterministic object keys make repeated writes safe.</p>
+</div>
+<h4 id="services:skillmatcher:::_categories_and_scoring_rubric" class="discrete">Categories and scoring rubric</h4>
+<div class="paragraph">
+<p>V1 includes backend, DevOps, management, architecture, QA, frontend, data, and
+security. Each category counts distinct matching patterns:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Matched patterns</th>
+<th class="tableblock halign-left valign-top">Score</th>
+<th class="tableblock halign-left valign-top">Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0-1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Little or no matching evidence</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2-3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Some matching evidence</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4-5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Moderate matching evidence</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6-7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Strong matching evidence</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8 or more</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Broad matching evidence</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>These scores are heuristic indicators of text signals, not objective measures
+of candidate ability or suitability. Matched patterns are included so results
+can be interpreted. The scorer does not use identity or demographic
+characteristics.</p>
+</div>
+<h4 id="services:skillmatcher:::_configuration_and_operation" class="discrete">Configuration and operation</h4>
+<div class="paragraph">
+<p><code>RABBITMQ_URL</code> and <code>QUEUE_NAME</code> are required. The matcher must use the same
+<code>RUSTFS_ENDPOINT_URL</code>, <code>RUSTFS_BUCKET</code>, <code>RUSTFS_REGION</code>,
+<code>RUSTFS_ACCESS_KEY_ID</code>, and <code>RUSTFS_SECRET_ACCESS_KEY</code> values as the uploader
+and preceding workers. See <a href="#services:configuration">configuration</a>.</p>
+</div>
+<div class="paragraph">
+<p>Run locally with <code>task services:skillmatcher:start</code>; build the binary and Docker
+image with <code>task services:skillmatcher:build</code>. For retry and queue operations,
+see <a href="#services:operations">local operations</a>.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1206,6 +1333,22 @@ Local environment is properly configured with NixOS packages.
 <div class="paragraph">
 <p>Piistripper requires a UUID <code>id</code>, the configured bucket, and the exact result key derived from that ID. On success it writes the redacted copy to <code>results/&lt;id&gt;.redacted.txt</code>; the source result is retained. Exhausted and malformed redaction jobs are sent to <code>QUEUE_NAME.pii.failed</code>.</p>
 </div>
+<h4 id="services:contracts:::_skill_matching_job_and_result" class="discrete">Skill matching job and result</h4>
+<div class="paragraph">
+<p>After writing the redacted result, piistripper publishes a persistent job to <code>QUEUE_NAME.skills</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "id": "&lt;job-id&gt;",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/&lt;job-id&gt;.redacted.txt"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to <code>results/&lt;job-id&gt;.skills.json</code>. The result includes <code>version</code>, <code>job_id</code>, <code>scored_at</code>, and <code>categories</code>; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to <code>QUEUE_NAME.skills.failed</code>.</p>
+</div>
 <h4 id="services:contracts:::_status_event" class="discrete">Status event</h4>
 <div class="paragraph">
 <p>The extractor and piistripper publish status messages to the durable <code>QUEUE_NAME.events</code> queue. The uploader consumes these messages and retains the latest one per job in memory.</p>
@@ -1222,7 +1365,7 @@ Local environment is properly configured with NixOS packages.
 </div>
 </div>
 <div class="paragraph">
-<p>Stages are <code>queued</code>, <code>processing</code>, <code>retrying</code>, <code>redacting</code>, <code>completed</code>, and <code>failed</code>. The extractor reports extraction activity; piistripper reports redaction and terminal completion/failure. <code>updated_at</code> is UTC. <code>attempt</code> is the attempt number represented by the status; <code>queued</code> is first recorded by the uploader after job publish confirmation.</p>
+<p>Stages are <code>queued</code>, <code>processing</code>, <code>retrying</code>, <code>redacting</code>, <code>matching</code>, <code>completed</code>, and <code>failed</code>. The extractor reports extraction activity, piistripper reports redaction and matching start, and the skill matcher publishes terminal completion/failure. <code>updated_at</code> is UTC. <code>attempt</code> is the attempt number represented by the status; <code>queued</code> is first recorded by the uploader after job publish confirmation.</p>
 </div>
 <h4 id="services:contracts:::_upload_response" class="discrete">Upload response</h4>
 <div class="listingblock">
@@ -1274,6 +1417,16 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Piistripper</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.events</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extractor, piistripper</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Uploader</p></td>
@@ -1297,7 +1450,7 @@ Status updates are not a durable client-facing event log.
 <div class="sect2">
 <h3 id="services:configuration"><a class="anchor" href="#services:configuration"></a>Configuration</h3>
 <div class="paragraph">
-<p>The uploader, extractor, and piistripper must point to the same RabbitMQ queue and S3-compatible storage namespace.</p>
+<p>The uploader, extractor, piistripper, and skill matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -1317,43 +1470,43 @@ Status updates are not a durable client-facing event log.
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.failed</code>, and <code>.pii.failed</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, matching, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.failed</code>, <code>.pii.failed</code>, and <code>.skills.failed</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for original uploads, extracted text, and redacted results.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for original uploads, extracted text, redacted results, and score results.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3 signing region.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage access key.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage secret key.</p></td>
 </tr>
@@ -1372,7 +1525,7 @@ Status updates are not a durable client-facing event log.
 </tbody>
 </table>
 <div class="paragraph">
-<p>Use the same <code>RUSTFS_*</code> values in all three services. In particular, <code>RUSTFS_BUCKET</code> must match or a worker rejects the job reference. Piistripper consumes <code>&lt;QUEUE_NAME&gt;.pii</code> and writes a separate redacted result.</p>
+<p>Use the same <code>RUSTFS_*</code> values in all four services. In particular, <code>RUSTFS_BUCKET</code> must match or a worker rejects the job reference. Piistripper consumes <code>&lt;QUEUE_NAME&gt;.pii</code> and writes a separate redacted result; the skill matcher consumes <code>&lt;QUEUE_NAME&gt;.skills</code> and writes category scores.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1394,10 +1547,10 @@ Status updates are not a durable client-facing event log.
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, frontend, and documentation builder.</p>
+<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, frontend, and documentation builder.</p>
 </div>
 <div class="paragraph">
-<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, and <code>piistripper</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, and <code>task services:piistripper:build</code> build the binaries and Docker images.</p>
+<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, and <code>skillmatcher</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, and <code>task services:skillmatcher:build</code> build the binaries and Docker images.</p>
 </div>
 <h4 id="services:operations:::_verification" class="discrete">Verification</h4>
 <div class="paragraph">
@@ -1424,6 +1577,9 @@ Status updates are not a durable client-facing event log.
 <p><strong>No redacted result appears:</strong> confirm piistripper is running with the same <code>QUEUE_NAME</code> and <code>RUSTFS_*</code> settings; inspect its logs and the durable <code>&lt;QUEUE_NAME&gt;.pii.failed</code> queue.</p>
 </li>
 <li>
+<p><strong>No role scores appear:</strong> confirm piistripper and skillmatcher are running with matching RabbitMQ/storage settings; inspect the durable <code>&lt;QUEUE_NAME&gt;.skills.failed</code> queue and the skillmatcher logs.</p>
+</li>
+<li>
 <p><strong>Upload returns <code>503</code>:</strong> inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.</p>
 </li>
 <li>
@@ -1437,10 +1593,6 @@ Status updates are not a durable client-facing event log.
 </div>
 <div class="sect2">
 <h3 id="services:prototypes"><a class="anchor" href="#services:prototypes"></a>Prototype components</h3>
-<h4 id="services:prototypes:::_skill_matcher" class="discrete">Skill matcher</h4>
-<div class="paragraph">
-<p><code>services/skillmatcher</code> currently contains only a README describing an intended post-extraction skill-matching step. There is no Go implementation, input/output contract, executable, or connection from the extractor. Skill matching is not part of the running workflow.</p>
-</div>
 <h4 id="services:prototypes:::_ai_weighter" class="discrete">AI weighter</h4>
 <div class="paragraph">
 <p><code>services/aiweighter/aiweighter.go</code> contains a standalone helper that sends supplied text to OpenRouter&#8217;s chat-completions endpoint. It selects a model directly in source and prints the response content, reasoning field, and full response body. It requires <code>OPENROUTER_API_KEY</code> and panics on errors.</p>
@@ -1489,6 +1641,9 @@ They persist the original file, extracted text, and a separate best-effort redac
 </li>
 <li>
 <p>Piistripper performs local pattern matching and English named-entity recognition; it does not call a hosted model/API. Detection can miss direct, contextual, or indirect identifiers and can produce false positives.</p>
+</li>
+<li>
+<p>The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.</p>
 </li>
 <li>
 <p>The services do not implement deletion, expiration, or a retention policy for stored objects.</p>

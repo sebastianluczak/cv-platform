@@ -104,6 +104,9 @@
     <a class="nav-link" href="piistripper.html">PII stripper</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -212,7 +215,7 @@
 <p>Retry and failed-queue republishing use publisher confirms. If a republish cannot be confirmed, the original delivery is negatively acknowledged and requeued. A terminal <code>failed</code> status is published on exhausted extraction attempts.</p>
 </div>
 <div class="paragraph">
-<p>Extraction status publishing is best-effort. Once extraction succeeds, the job is not marked complete: piistripper publishes the terminal <code>completed</code> status after writing the redacted copy.</p>
+<p>Extraction status publishing is best-effort. Once extraction succeeds, the job is not marked complete: piistripper queues matching after writing the redacted copy, and the skill matcher publishes terminal <code>completed</code> only after storing role scores.</p>
 </div>
 </div>
 </div>

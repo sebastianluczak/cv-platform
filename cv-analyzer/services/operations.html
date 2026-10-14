@@ -104,6 +104,9 @@
     <a class="nav-link" href="piistripper.html">PII stripper</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -184,10 +187,10 @@
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, frontend, and documentation builder.</p>
+<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, frontend, and documentation builder.</p>
 </div>
 <div class="paragraph">
-<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, and <code>piistripper</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, and <code>task services:piistripper:build</code> build the binaries and Docker images.</p>
+<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, and <code>skillmatcher</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, and <code>task services:skillmatcher:build</code> build the binaries and Docker images.</p>
 </div>
 </div>
 </div>
@@ -220,6 +223,9 @@
 </li>
 <li>
 <p><strong>No redacted result appears:</strong> confirm piistripper is running with the same <code>QUEUE_NAME</code> and <code>RUSTFS_*</code> settings; inspect its logs and the durable <code>&lt;QUEUE_NAME&gt;.pii.failed</code> queue.</p>
+</li>
+<li>
+<p><strong>No role scores appear:</strong> confirm piistripper and skillmatcher are running with matching RabbitMQ/storage settings; inspect the durable <code>&lt;QUEUE_NAME&gt;.skills.failed</code> queue and the skillmatcher logs.</p>
 </li>
 <li>
 <p><strong>Upload returns <code>503</code>:</strong> inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.</p>

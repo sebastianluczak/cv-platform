@@ -103,6 +103,9 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="piistripper.html">PII stripper</a>
   </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
@@ -203,6 +206,26 @@
 </div>
 </div>
 <div class="sect1">
+<h2 id="_skill_matching_job_and_result"><a class="anchor" href="#_skill_matching_job_and_result"></a>Skill matching job and result</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After writing the redacted result, piistripper publishes a persistent job to <code>QUEUE_NAME.skills</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "id": "&lt;job-id&gt;",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/&lt;job-id&gt;.redacted.txt"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to <code>results/&lt;job-id&gt;.skills.json</code>. The result includes <code>version</code>, <code>job_id</code>, <code>scored_at</code>, and <code>categories</code>; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to <code>QUEUE_NAME.skills.failed</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_status_event"><a class="anchor" href="#_status_event"></a>Status event</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -220,7 +243,7 @@
 </div>
 </div>
 <div class="paragraph">
-<p>Stages are <code>queued</code>, <code>processing</code>, <code>retrying</code>, <code>redacting</code>, <code>completed</code>, and <code>failed</code>. The extractor reports extraction activity; piistripper reports redaction and terminal completion/failure. <code>updated_at</code> is UTC. <code>attempt</code> is the attempt number represented by the status; <code>queued</code> is first recorded by the uploader after job publish confirmation.</p>
+<p>Stages are <code>queued</code>, <code>processing</code>, <code>retrying</code>, <code>redacting</code>, <code>matching</code>, <code>completed</code>, and <code>failed</code>. The extractor reports extraction activity, piistripper reports redaction and matching start, and the skill matcher publishes terminal completion/failure. <code>updated_at</code> is UTC. <code>attempt</code> is the attempt number represented by the status; <code>queued</code> is first recorded by the uploader after job publish confirmation.</p>
 </div>
 </div>
 </div>
@@ -278,6 +301,16 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.pii</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extractor</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Piistripper</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.events</code></p></td>

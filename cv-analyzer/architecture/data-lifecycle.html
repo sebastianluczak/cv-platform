@@ -104,6 +104,9 @@
     <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -199,6 +202,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>piistripper</code> as a separate best-effort redacted copy; the original extracted text is retained.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Role-profile scores</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;job-id&gt;.skills.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>skillmatcher</code> from redacted text; contains category scores and matched pattern evidence.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extraction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
@@ -211,6 +220,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by the extractor after storing the extracted text; manually acknowledged after redaction, retry republish, or failed-queue republish.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by piistripper after storing the redacted result; manually acknowledged after scoring, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.failed</code></p></td>
@@ -220,6 +235,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed redaction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.pii.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed skill matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
 </tr>
 <tr>

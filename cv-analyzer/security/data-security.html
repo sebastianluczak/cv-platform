@@ -104,6 +104,9 @@
     <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -196,6 +199,9 @@ They persist the original file, extracted text, and a separate best-effort redac
 </li>
 <li>
 <p>Piistripper performs local pattern matching and English named-entity recognition; it does not call a hosted model/API. Detection can miss direct, contextual, or indirect identifiers and can produce false positives.</p>
+</li>
+<li>
+<p>The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.</p>
 </li>
 <li>
 <p>The services do not implement deletion, expiration, or a retention policy for stored objects.</p>
