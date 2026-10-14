@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"brodaty.dev/cv-platform/common/objectstore"
+	"brodaty.dev/cv-platform/common/rabbitmq"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/streadway/amqp"
 )
@@ -17,7 +19,6 @@ import (
 const (
 	maxRetries     = 3
 	storageTimeout = 2 * time.Minute
-	confirmTimeout = 10 * time.Second
 )
 
 var jobIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -26,14 +27,6 @@ type redactionJob struct {
 	ID        string `json:"id"`
 	Bucket    string `json:"bucket"`
 	ObjectKey string `json:"object_key"`
-}
-
-type statusEvent struct {
-	JobID     string    `json:"job_id"`
-	Stage     string    `json:"stage"`
-	Message   string    `json:"message"`
-	Attempt   int       `json:"attempt"`
-	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func run() error {
@@ -83,13 +76,13 @@ func run() error {
 		return fmt.Errorf("enable publisher confirms: %w", err)
 	}
 	confirmations := publisherChannel.NotifyPublish(make(chan amqp.Confirmation, 1))
-	storageClient, config := newStorageClient()
-	log.Printf("PII stripper consuming queue %q; bucket: %q", workQueue, config.bucket)
+	storageClient, config := objectstore.NewClient()
+	log.Printf("PII stripper consuming queue %q; bucket: %q", workQueue, config.Bucket)
 
 	for delivery := range deliveries {
 		if err := handleDelivery(
 			consumerChannel, publisherChannel, confirmations, delivery,
-			workQueue, failedQueue, skillQueue, statusQueue, storageClient, config.bucket,
+			workQueue, failedQueue, skillQueue, statusQueue, storageClient, config.Bucket,
 		); err != nil {
 			log.Printf("Handle redaction delivery: %v", err)
 		}
@@ -112,12 +105,12 @@ func handleDelivery(
 	if !validJob(job, bucket) {
 		return moveToFailedQueue(
 			consumerChannel, publisherChannel, confirmations, delivery, failedQueue, statusQueue,
-			job.ID, retryCount(delivery.Headers)+1, fmt.Errorf("invalid redaction job reference"),
+			job.ID, rabbitmq.RetryCount(delivery.Headers, maxRetries)+1, fmt.Errorf("invalid redaction job reference"),
 		)
 	}
 
-	attempt := retryCount(delivery.Headers) + 1
-	publishStatusBestEffort(publisherChannel, confirmations, statusQueue, statusEvent{
+	attempt := rabbitmq.RetryCount(delivery.Headers, maxRetries) + 1
+	rabbitmq.PublishStatusBestEffort(publisherChannel, confirmations, statusQueue, rabbitmq.StatusEvent{
 		JobID: job.ID, Stage: "redacting", Message: "Removing common personal identifiers.", Attempt: attempt,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), storageTimeout)
@@ -131,11 +124,11 @@ func handleDelivery(
 			_ = delivery.Nack(false, true)
 			return fmt.Errorf("encode skill matching job %s: %w", job.ID, err)
 		}
-		if err := publishAndConfirm(publisherChannel, confirmations, skillQueue, skillJob, nil); err != nil {
+		if err := rabbitmq.PublishAndConfirm(publisherChannel, confirmations, skillQueue, skillJob, nil, rabbitmq.ConfirmTimeout); err != nil {
 			_ = delivery.Nack(false, true)
 			return fmt.Errorf("queue skill matching job %s: %w", job.ID, err)
 		}
-		publishStatusBestEffort(publisherChannel, confirmations, statusQueue, statusEvent{
+		rabbitmq.PublishStatusBestEffort(publisherChannel, confirmations, statusQueue, rabbitmq.StatusEvent{
 			JobID: job.ID, Stage: "matching", Message: "Redacted resume is ready; comparing role profiles.", Attempt: attempt,
 		})
 		if err := delivery.Ack(false); err != nil {
@@ -145,15 +138,15 @@ func handleDelivery(
 		return nil
 	}
 
-	retry := retryCount(delivery.Headers)
+	retry := rabbitmq.RetryCount(delivery.Headers, maxRetries)
 	if retry < maxRetries {
-		publishStatusBestEffort(publisherChannel, confirmations, statusQueue, statusEvent{
+		rabbitmq.PublishStatusBestEffort(publisherChannel, confirmations, statusQueue, rabbitmq.StatusEvent{
 			JobID: job.ID, Stage: "redacting", Message: "Redaction could not be completed; retrying.", Attempt: retry + 2,
 		})
-		headers := copyHeaders(delivery.Headers)
+		headers := rabbitmq.CopyHeaders(delivery.Headers)
 		headers["x-retry-count"] = int64(retry + 1)
 		headers["x-last-error"] = errorText(err)
-		if publishErr := publishAndConfirm(publisherChannel, confirmations, workQueue, delivery.Body, headers); publishErr != nil {
+		if publishErr := rabbitmq.PublishAndConfirm(publisherChannel, confirmations, workQueue, delivery.Body, headers, rabbitmq.ConfirmTimeout); publishErr != nil {
 			_ = delivery.Nack(false, true)
 			return fmt.Errorf("retry redaction job %s: %w", job.ID, publishErr)
 		}
@@ -202,14 +195,14 @@ func moveToFailedQueue(
 	failedQueue, statusQueue, jobID string, attempt int,
 	cause error,
 ) error {
-	headers := copyHeaders(delivery.Headers)
+	headers := rabbitmq.CopyHeaders(delivery.Headers)
 	headers["x-last-error"] = errorText(cause)
-	if err := publishAndConfirm(publisherChannel, confirmations, failedQueue, delivery.Body, headers); err != nil {
+	if err := rabbitmq.PublishAndConfirm(publisherChannel, confirmations, failedQueue, delivery.Body, headers, rabbitmq.ConfirmTimeout); err != nil {
 		_ = delivery.Nack(false, true)
 		return fmt.Errorf("move job to %q: %w", failedQueue, err)
 	}
 	if jobIDPattern.MatchString(jobID) {
-		if err := publishStatus(publisherChannel, confirmations, statusQueue, statusEvent{
+		if err := rabbitmq.PublishStatus(publisherChannel, confirmations, statusQueue, rabbitmq.StatusEvent{
 			JobID: jobID, Stage: "failed", Message: "We couldn't redact this resume.", Attempt: attempt,
 		}); err != nil {
 			_ = delivery.Nack(false, true)
@@ -221,107 +214,6 @@ func moveToFailedQueue(
 	}
 	log.Printf("Redaction job moved to %s: %v", failedQueue, cause)
 	return nil
-}
-
-func publishStatusBestEffort(
-	channel *amqp.Channel,
-	confirmations <-chan amqp.Confirmation,
-	statusQueue string,
-	event statusEvent,
-) {
-	if event.JobID == "" {
-		return
-	}
-	event.UpdatedAt = time.Now().UTC()
-	body, err := json.Marshal(event)
-	if err == nil {
-		err = publishAndConfirm(channel, confirmations, statusQueue, body, nil)
-	}
-	if err != nil {
-		log.Printf("Publish %s status for job %s: %v", event.Stage, event.JobID, err)
-	}
-}
-
-func publishStatus(
-	channel *amqp.Channel,
-	confirmations <-chan amqp.Confirmation,
-	statusQueue string,
-	event statusEvent,
-) error {
-	event.UpdatedAt = time.Now().UTC()
-	body, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("encode %s status: %w", event.Stage, err)
-	}
-	return publishAndConfirm(channel, confirmations, statusQueue, body, nil)
-}
-
-func publishAndConfirm(
-	channel *amqp.Channel,
-	confirmations <-chan amqp.Confirmation,
-	routingKey string,
-	body []byte,
-	headers amqp.Table,
-) error {
-	if err := channel.Publish(
-		"",
-		routingKey,
-		true,
-		false,
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent,
-			Headers:      headers,
-			Body:         body,
-		},
-	); err != nil {
-		return fmt.Errorf("publish to %q: %w", routingKey, err)
-	}
-	timer := time.NewTimer(confirmTimeout)
-	defer timer.Stop()
-	select {
-	case confirmation, ok := <-confirmations:
-		if !ok {
-			return fmt.Errorf("RabbitMQ closed the publisher confirmation channel")
-		}
-		if !confirmation.Ack {
-			return fmt.Errorf("RabbitMQ rejected publish to %q", routingKey)
-		}
-		return nil
-	case <-timer.C:
-		return fmt.Errorf("timed out waiting for RabbitMQ confirmation")
-	}
-}
-
-func retryCount(headers amqp.Table) int {
-	switch count := headers["x-retry-count"].(type) {
-	case int:
-		return boundedRetryCount(int64(count))
-	case int32:
-		return boundedRetryCount(int64(count))
-	case int64:
-		return boundedRetryCount(count)
-	default:
-		return 0
-	}
-}
-
-func boundedRetryCount(count int64) int {
-	if count <= 0 {
-		return 0
-	}
-	if count > maxRetries {
-		return maxRetries + 1
-	}
-	return int(count)
-}
-
-func copyHeaders(headers amqp.Table) amqp.Table {
-	copy := make(amqp.Table, len(headers)+2)
-	for key, value := range headers {
-		copy[key] = value
-	}
-	return copy
 }
 
 func errorText(err error) string {
