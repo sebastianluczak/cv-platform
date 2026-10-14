@@ -1,0 +1,7 @@
+= Automatic review process
+
+AI is reviewing the code and returning actionable items based on diff between different points in time of repository.
+
+== Implementation
+
+See `./reviewer` in root of the repository.
