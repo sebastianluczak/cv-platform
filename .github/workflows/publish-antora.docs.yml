@@ -38,32 +38,18 @@ jobs:
           source-dir: docs/build/site
           preview-branch: gh-pages
           comment: false
-      - name: Upload static files as artifact
-        id: deployment
+      - name: Prepare GitHub Pages files
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/build/site
-      - name: Deploy artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        id: deployment-pages
-        env:
-          name: github-pages
-          url: ${{ steps.deployment.outputs.page_url }}
-        uses: actions/deploy-pages@v4
+        run: touch docs/build/site/.nojekyll
 
-      # - name: Create an artifact for the built documentation
-      #   id: upload-docs
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: antora-docs
-      #     path: docs/build/site
-      # - name: Create Single HTML preview for docs
-      #   id: upload-single-doc
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: antora-single-page.html
-      #     path: docs/build/site/cv-analyzer/_exports/index.html
+      - name: Deploy production documentation
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: docs/build/site
+          branch: gh-pages
+          clean-exclude: pr-preview
+          force: false
       - name: Comment on PR with documentation preview
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
