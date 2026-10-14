@@ -53,14 +53,32 @@ func TestValidMatchResultRequiresVersionJobIDAndAllCategoryScores(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	categories := result["categories"].([]map[string]any)
+	for left, right := 0, len(categories)-1; left < right; left, right = left+1, right-1 {
+		categories[left], categories[right] = categories[right], categories[left]
+	}
+	firstCategory := categories[0]
+	content, err = json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !validMatchResult(content, jobID) {
-		t.Fatal("expected valid result to pass validation")
+		t.Fatal("expected valid result to pass validation regardless of category order")
 	}
 	if validMatchResult(content, "123e4567-e89b-12d3-a456-426614174001") {
 		t.Fatal("result for another job should be rejected")
 	}
+	categories[0] = categories[1]
+	content, err = json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validMatchResult(content, jobID) {
+		t.Fatal("duplicate categories should be rejected")
+	}
+	categories[0] = firstCategory
 
-	result["categories"] = append(result["categories"].([]map[string]any),
+	result["categories"] = append(categories,
 		map[string]any{"category": "product", "score": 1, "evidence": []string{}},
 		map[string]any{"category": "mobile", "score": 1, "evidence": []string{}},
 		map[string]any{"category": "embedded", "score": 1, "evidence": []string{}},

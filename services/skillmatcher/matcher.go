@@ -2,6 +2,7 @@ package main
 
 import (
 	"regexp"
+	"sort"
 	"time"
 )
 
@@ -810,6 +811,9 @@ func scoreText(jobID, text string, scoredAt time.Time) MatchResult {
 			Evidence: evidence,
 		})
 	}
+	sort.SliceStable(result.Categories, func(i, j int) bool {
+		return result.Categories[i].Score > result.Categories[j].Score
+	})
 	return result
 }
 

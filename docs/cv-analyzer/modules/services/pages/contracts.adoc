@@ -44,7 +44,7 @@ After writing the redacted result, piistripper publishes a persistent job to `QU
 }
 ----
 
-The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to `results/<job-id>.skills.json`. The result includes `version`, `job_id`, `scored_at`, and `categories`; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Exhausted and malformed jobs are sent to `QUEUE_NAME.skills.failed`.
+The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to `results/<job-id>.skills.json`. The result includes `version`, `job_id`, `scored_at`, and `categories`; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to `QUEUE_NAME.skills.failed`.
 
 == Status event
 

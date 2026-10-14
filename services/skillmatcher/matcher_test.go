@@ -6,21 +6,23 @@ import (
 	"time"
 )
 
-func TestScoreTextFindsRoleSignalsAndKeepsCategoryOrder(t *testing.T) {
+func TestScoreTextFindsRoleSignalsAndSortsByDescendingScore(t *testing.T) {
 	result := scoreText("job-1", "Backend engineer using Go, PostgreSQL, Docker, Kubernetes and Terraform.", time.Unix(1, 0))
-	if len(result.Categories) != 8 {
-		t.Fatalf("expected 8 categories; got %d", len(result.Categories))
+	if len(result.Categories) != len(profiles) {
+		t.Fatalf("expected %d categories; got %d", len(profiles), len(result.Categories))
 	}
-	if result.Categories[0].Category != "backend" || result.Categories[0].Score != 2 {
+	if result.Categories[0].Category != "backend" || result.Categories[0].Score != 3 {
 		t.Fatalf("unexpected backend score: %+v", result.Categories[0])
 	}
 	if result.Categories[1].Category != "devops" || result.Categories[1].Score != 2 {
 		t.Fatalf("unexpected DevOps score: %+v", result.Categories[1])
 	}
-	if result.Categories[2].Category != "management" || result.Categories[2].Score != 1 {
-		t.Fatalf("unexpected management score: %+v", result.Categories[2])
+	for i := 1; i < len(result.Categories); i++ {
+		if result.Categories[i-1].Score < result.Categories[i].Score {
+			t.Fatalf("scores are not descending at positions %d and %d: %+v", i-1, i, result.Categories)
+		}
 	}
-	if !reflect.DeepEqual(result.Categories[0].Evidence, []string{"backend", "go", "postgresql"}) {
+	if !reflect.DeepEqual(result.Categories[0].Evidence, []string{"backend", "go", "postgresql", "backend engineer"}) {
 		t.Fatalf("unexpected backend evidence: %v", result.Categories[0].Evidence)
 	}
 }

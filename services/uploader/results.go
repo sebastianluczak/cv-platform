@@ -102,23 +102,33 @@ func validMatchResult(content []byte, jobID string) bool {
 	if err := json.Unmarshal(content, &result); err != nil {
 		return false
 	}
-	categories := matchResultCategories
-	if len(result.Categories) == len(legacyMatchResultCategories) {
+	var categories []string
+	switch len(result.Categories) {
+	case len(legacyMatchResultCategories):
 		categories = legacyMatchResultCategories
-	}
-	if result.Version != 1 || result.JobID != jobID || result.ScoredAt.IsZero() || len(result.Categories) != len(categories) {
+	case len(matchResultCategories):
+		categories = matchResultCategories
+	default:
 		return false
 	}
-	for index, category := range result.Categories {
-		if category.Category != categories[index] ||
+	if result.Version != 1 || result.JobID != jobID || result.ScoredAt.IsZero() {
+		return false
+	}
+	expected := make(map[string]struct{}, len(categories))
+	for _, category := range categories {
+		expected[category] = struct{}{}
+	}
+	for _, category := range result.Categories {
+		if _, ok := expected[category.Category]; !ok ||
 			category.Score < 1 || category.Score > 5 || category.Evidence == nil {
 			return false
 		}
+		delete(expected, category.Category)
 		for _, evidence := range category.Evidence {
 			if evidence == "" {
 				return false
 			}
 		}
 	}
-	return true
+	return len(expected) == 0
 }

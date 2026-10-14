@@ -97,7 +97,7 @@ function App() {
             if (update.stage === 'completed') {
               void (async () => {
                 try {
-                  const endpoint = new URL('/api/results', window.location.href)
+                  const endpoint = new URL(import.meta.env.VITE_RESULTS_ENDPOINT || '/api/results', window.location.href)
                   endpoint.searchParams.set('job_id', result.job_id)
                   const resultResponse = await fetch(endpoint)
                   if (!resultResponse.ok) throw new Error('Could not load match results')

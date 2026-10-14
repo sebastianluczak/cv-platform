@@ -12,7 +12,7 @@ import requests
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
-MAX_DIFF_CHARS = 100_000
+MAX_DIFF_CHARS = 200_000
 
 REVIEW_SCHEMA = {
     "type": "object",
@@ -97,7 +97,7 @@ def collect_diff(base: str) -> tuple[str, str]:
         "--no-ext-diff",
         "--no-color",
         "--find-renames",
-        "--unified=80",
+        "--unified=120",
         f"{merge_base}...{head}",
         "--",
     )
@@ -194,7 +194,7 @@ def main() -> int:
         if truncated:
             diff = diff[:MAX_DIFF_CHARS]
 
-        print(f"Reviewing HEAD {head[:12]} against {args.base}")
+        print(f"Reviewing HEAD {head[:12]} against {args.base} with {len(diff)} amount of characters in diff")
         if truncated:
             print("WARNING: diff truncated; findings may be incomplete.")
 
