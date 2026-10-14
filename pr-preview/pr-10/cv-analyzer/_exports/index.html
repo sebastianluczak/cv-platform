@@ -1347,7 +1347,7 @@ see <a href="#services:operations">local operations</a>.</p>
 </div>
 </div>
 <div class="paragraph">
-<p>The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to <code>results/&lt;job-id&gt;.skills.json</code>. The result includes <code>version</code>, <code>job_id</code>, <code>scored_at</code>, and <code>categories</code>; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Exhausted and malformed jobs are sent to <code>QUEUE_NAME.skills.failed</code>.</p>
+<p>The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to <code>results/&lt;job-id&gt;.skills.json</code>. The result includes <code>version</code>, <code>job_id</code>, <code>scored_at</code>, and <code>categories</code>; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to <code>QUEUE_NAME.skills.failed</code>.</p>
 </div>
 <h4 id="services:contracts:::_status_event" class="discrete">Status event</h4>
 <div class="paragraph">
