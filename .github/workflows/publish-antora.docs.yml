@@ -30,11 +30,12 @@ jobs:
           task docs:build-docs
       - name: Publish PR documentation preview
         if: github.event_name == 'pull_request'
+        id: preview-publish
         uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: docs/build/site
           preview-branch: gh-pages
-          qr-code: true
+          comment: false
       - name: Create an artifact for the built documentation
         id: upload-docs
         uses: actions/upload-artifact@v4
@@ -66,7 +67,8 @@ jobs:
                 `**[Download the built documentation](${artifactUrl})**`,
                 `**[See HTML preview on one page](${singlePageUrl})**`,
                 ``,
-                `**[Live GHPages snapshot for PR#${prNumber}](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)
+                `**[Preview generated](${{ steps.preview-publish.outputs.preview-url }})**`,
+                `**[Live GHPages snapshot for PR#${prNumber}](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)**`,
                 '',
                 'Download and extract the ZIP, then open `cv-analyzer/index.html` or see live preview.'
               ].join('\n')
