@@ -11,5 +11,5 @@ echo "  - Unit tests"
 echo "  - E2E tests"
 echo ""
 
-# todo
-echo true
+go -C services/uploader test -v
+go -C services/extractor test -v

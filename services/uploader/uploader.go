@@ -14,8 +14,10 @@ import (
 	"time"
 
 	"brodaty.dev/cv-platform/uploader/buckets"
+	"brodaty.dev/cv-platform/uploader/progress"
 	"brodaty.dev/cv-platform/uploader/queue"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/streadway/amqp"
 )
 
 const (
@@ -23,7 +25,7 @@ const (
 	maxRequestSize = maxUploadSize + (64 << 10)
 )
 
-func uploadHandler(storageClient *s3.Client, bucket string, publisher *queue.Publisher) http.HandlerFunc {
+func uploadHandler(storageClient *s3.Client, bucket string, publisher *queue.Publisher, statusStore *progress.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -89,6 +91,11 @@ func uploadHandler(storageClient *s3.Client, bucket string, publisher *queue.Pub
 			http.Error(w, "Could not queue file for extraction", http.StatusServiceUnavailable)
 			return
 		}
+		statusStore.Update(queue.StatusEvent{
+			JobID:   jobID,
+			Stage:   "queued",
+			Message: "Your resume is in the processing queue.",
+		})
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
@@ -99,6 +106,83 @@ func uploadHandler(storageClient *s3.Client, bucket string, publisher *queue.Pub
 			log.Printf("Write upload response for %s: %v", jobID, err)
 		}
 	}
+}
+
+func consumeStatusEvents(deliveries <-chan amqp.Delivery, store *progress.Store) {
+	for delivery := range deliveries {
+		var event queue.StatusEvent
+		if err := json.Unmarshal(delivery.Body, &event); err != nil {
+			log.Printf("Decode processing status event: %v", err)
+		} else if !store.Update(event) {
+			log.Printf("Ignore invalid or stale processing status for job %q at stage %q", event.JobID, event.Stage)
+		}
+		if err := delivery.Ack(false); err != nil {
+			log.Printf("Acknowledge processing status event: %v", err)
+		}
+	}
+	log.Printf("RabbitMQ status event stream closed")
+}
+
+func progressHandler(store *progress.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		jobID := r.URL.Query().Get("job_id")
+		snapshot, updates, unsubscribe, ok := store.Subscribe(jobID)
+		if !ok {
+			http.Error(w, "Processing job not found", http.StatusNotFound)
+			return
+		}
+		defer unsubscribe()
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming is not supported", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("X-Accel-Buffering", "no")
+		fmt.Fprint(w, "retry: 3000\n\n")
+		writeProgressEvent(w, snapshot)
+		flusher.Flush()
+		if snapshot.Stage == "completed" || snapshot.Stage == "failed" {
+			return
+		}
+
+		heartbeat := time.NewTicker(20 * time.Second)
+		defer heartbeat.Stop()
+		for {
+			select {
+			case event, open := <-updates:
+				if !open {
+					return
+				}
+				writeProgressEvent(w, event)
+				flusher.Flush()
+				if event.Stage == "completed" || event.Stage == "failed" {
+					return
+				}
+			case <-heartbeat.C:
+				fmt.Fprint(w, ": keep-alive\n\n")
+				flusher.Flush()
+			case <-r.Context().Done():
+				return
+			}
+		}
+	}
+}
+
+func writeProgressEvent(w io.Writer, event queue.StatusEvent) {
+	payload, err := json.Marshal(event)
+	if err != nil {
+		log.Printf("Encode processing status event for %s: %v", event.JobID, err)
+		return
+	}
+	fmt.Fprintf(w, "data: %s\n\n", payload)
 }
 
 func supportedContentType(contentType string) bool {
@@ -135,7 +219,16 @@ func main() {
 	defer publisher.Close()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/upload", uploadHandler(storageClient, bucketConfig.Bucket, publisher))
+	statusStore := progress.NewStore()
+	mux.HandleFunc("/upload", uploadHandler(storageClient, bucketConfig.Bucket, publisher, statusStore))
+	statusQueue := os.Getenv("QUEUE_NAME") + ".events"
+	statusChannel, statusEvents, err := queue.ConsumeStatusEvents(conn, statusQueue)
+	if err != nil {
+		log.Fatalf("Connect to RabbitMQ status queue: %v", err)
+	}
+	defer statusChannel.Close()
+	go consumeStatusEvents(statusEvents, statusStore)
+	mux.HandleFunc("/events", progressHandler(statusStore))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		payload := r.URL.Path[1:]

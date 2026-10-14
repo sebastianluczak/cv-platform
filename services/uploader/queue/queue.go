@@ -30,6 +30,14 @@ type ExtractionJob struct {
 	ContentType string `json:"content_type"`
 }
 
+type StatusEvent struct {
+	JobID     string    `json:"job_id"`
+	Stage     string    `json:"stage"`
+	Message   string    `json:"message"`
+	Attempt   int       `json:"attempt"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 func ConnectToQueue() (*amqp.Connection, *Publisher, error) {
 	rabbitMQURL := os.Getenv("RABBITMQ_URL")
 	if rabbitMQURL == "" {
@@ -70,6 +78,23 @@ func ConnectToQueue() (*amqp.Connection, *Publisher, error) {
 	}
 	log.Printf("Connected to RabbitMQ and declared queue: %s", queueName)
 	return conn, publisher, nil
+}
+
+func ConsumeStatusEvents(conn *amqp.Connection, queueName string) (*amqp.Channel, <-chan amqp.Delivery, error) {
+	channel, err := conn.Channel()
+	if err != nil {
+		return nil, nil, fmt.Errorf("open RabbitMQ status channel: %w", err)
+	}
+	if _, err := channel.QueueDeclare(queueName, true, false, false, false, nil); err != nil {
+		channel.Close()
+		return nil, nil, fmt.Errorf("declare status queue %q: %w", queueName, err)
+	}
+	deliveries, err := channel.Consume(queueName, "", false, false, false, false, nil)
+	if err != nil {
+		channel.Close()
+		return nil, nil, fmt.Errorf("consume status queue %q: %w", queueName, err)
+	}
+	return channel, deliveries, nil
 }
 
 func (p *Publisher) PublishMessage(message ExtractionJob) error {
