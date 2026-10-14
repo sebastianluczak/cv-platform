@@ -12,6 +12,7 @@
     pkgs.nodejs
     pkgs.antora
     pkgs.asciidoc
+    pkgs.asciidoctor
     pkgs.go-task
     pkgs.gdb
     pkgs.pkg-config
@@ -45,6 +46,9 @@
     };
     extractor = {
       exec = "sleep 2 && task services:extractor:start";
+    };
+    piistripper = {
+      exec = "sleep 4 && task services:piistripper:start";
     };
     frontend = {
       exec = "task ui:install && task ui:start";

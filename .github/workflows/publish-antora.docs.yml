@@ -10,8 +10,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
+  pages: write 
+  id-token: write
 
 jobs:
   build:
@@ -28,28 +30,63 @@ jobs:
         shell: devenv shell -- bash -e {0}
         run: |
           task docs:build-docs
-      - name: Create an artifact for the built documentation
-        id: upload-docs
-        uses: actions/upload-artifact@v4
+      - name: Publish PR documentation preview
+        if: github.event_name == 'pull_request'
+        id: preview-publish
+        uses: rossjrw/pr-preview-action@v1
         with:
-          name: antora-docs
-          path: docs/build/site
+          source-dir: docs/build/site
+          preview-branch: gh-pages
+          comment: false
+      - name: Prepare GitHub Pages files
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: touch docs/build/site/.nojekyll
+
+      - name: Deploy production documentation
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: docs/build/site
+          branch: gh-pages
+          clean-exclude: pr-preview
+          force: false
       - name: Comment on PR with documentation preview
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const artifactUrl = '${{ steps.upload-docs.outputs.artifact-url }}';
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const prNumber = context.issue.number;
+            const marker = '<!-- antora-docs-preview -->';
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: [
-                '## 📚 Antora documentation preview',
-                '',
-                `**[Download the built documentation](${artifactUrl})**`,
-                '',
-                'Download and extract the ZIP, then open `cv-analyzer/index.html`.'
-              ].join('\n')
-            });
+            const body = [
+              marker,
+              `📚 **[Antora documentation preview](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)**`
+            ].join('\n');
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number, per_page: 100 }
+            );
+
+            const existing = comments.find(comment =>
+              comment.user?.type === 'Bot' &&
+              comment.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+              });
+            }

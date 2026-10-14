@@ -27,6 +27,13 @@ func TestStorePublishesUpdatesAndRejectsStaleQueuedEvent(t *testing.T) {
 	if got := <-updates; got.Stage != "processing" {
 		t.Fatalf("got stage %q, want processing", got.Stage)
 	}
+	redacting := queue.StatusEvent{JobID: "job-1", Stage: "redacting", UpdatedAt: time.Now()}
+	if !store.Update(redacting) {
+		t.Fatal("expected redacting update to be accepted")
+	}
+	if got := <-updates; got.Stage != "redacting" {
+		t.Fatalf("got stage %q, want redacting", got.Stage)
+	}
 	if store.Update(queued) {
 		t.Fatal("stale queued update should not replace current progress")
 	}

@@ -1,6 +1,6 @@
 = Extractor Service
 
-The extractor consumes JSON jobs from RabbitMQ, downloads the referenced upload, extracts text, stores the result, and publishes status events.
+The extractor consumes JSON jobs from RabbitMQ, downloads the referenced upload, extracts text, stores the result, and queues redaction.
 
 == Extraction behavior
 
@@ -14,14 +14,14 @@ The extractor validates that the job ID is non-empty, the bucket equals its conf
 
 The consumer uses manual acknowledgements and a prefetch of one. 
 
-. On success it publishes a `completed` status and acknowledges the delivery. 
+. On success it publishes a persistent redaction job to `QUEUE_NAME.pii` and acknowledges the extraction delivery only after publisher confirmation.
 . On processing failure it publishes a `retrying` status and republishes the job with an incremented `x-retry-count` and after publisher confirmation it acknowledges the original. 
 
 It makes up to three retries after the initial attempt. After the last failed attempt, or for malformed JSON, it republishes the message to `QUEUE_NAME.failed` and acknowledges the original.
 
 Retry and failed-queue republishing use publisher confirms. If a republish cannot be confirmed, the original delivery is negatively acknowledged and requeued. A terminal `failed` status is published on exhausted extraction attempts.
 
-Status publishing is best-effort. The extractor logs a status publish failure and continues with the job's normal acknowledgement or retry handling.
+Extraction status publishing is best-effort. Once extraction succeeds, the job is not marked complete: piistripper publishes the terminal `completed` status after writing the redacted copy.
 
 == Runtime requirements
 

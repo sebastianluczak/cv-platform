@@ -6,6 +6,14 @@ tasks:
     cmds:
       - cp product.png /tmp/image.png
       - cp sample_resume.pdf /tmp/resume.pdf
+  prep:lint:
+    desc: Lints all projects
+    cmds:
+      - cd services/aiweighter && gofmt -l -e -w .
+      - cd services/extractor && gofmt -l -e -w .
+      - cd services/piistripper && gofmt -l -e -w .
+      - cd services/skillmatcher && gofmt -l -e -w .
+      - cd services/uploader && gofmt -l -e -w .
   ui:install:
     dir: ui
     desc: Install the UI application dependencies
@@ -31,6 +39,10 @@ tasks:
     desc: Start the extractor service
     cmds:
       - go -C services/extractor run .
+  services:piistripper:start:
+    desc: Start the PII stripping service
+    cmds:
+      - go -C services/piistripper run .
   services:aiweighter:start:
     desc: Start the AI weighter service
     cmds:
@@ -39,7 +51,10 @@ tasks:
     dir: docs
     desc: Build the documentation
     cmds:
+      - npm ci
       - antora --fetch antora-playbook.yml
+      - echo '<meta http-equiv="refresh" content="0;url=cv-analyzer/index.html">' > build/site/index.html
+  
   # BUILD SECTION #
   services:uploader:build:
     dir: services/uploader
@@ -53,3 +68,9 @@ tasks:
     cmds:
       - CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o extractor .
       - docker build -t extractor .
+  services:piistripper:build:
+    dir: services/piistripper
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o piistripper .
+      - docker build -t piistripper .

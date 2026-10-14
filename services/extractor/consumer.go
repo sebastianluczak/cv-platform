@@ -36,6 +36,12 @@ type extractionJob struct {
 	ContentType string `json:"content_type"`
 }
 
+type redactionJob struct {
+	ID        string `json:"id"`
+	Bucket    string `json:"bucket"`
+	ObjectKey string `json:"object_key"`
+}
+
 func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
@@ -77,6 +83,10 @@ func run() error {
 	if _, err := channel.QueueDeclare(failedQueue, true, false, false, false, nil); err != nil {
 		return fmt.Errorf("declare failed-job queue %q: %w", failedQueue, err)
 	}
+	redactionQueue := queueName + ".pii"
+	if _, err := channel.QueueDeclare(redactionQueue, true, false, false, false, nil); err != nil {
+		return fmt.Errorf("declare redaction queue %q: %w", redactionQueue, err)
+	}
 	statusChannel, err := conn.Channel()
 	if err != nil {
 		return fmt.Errorf("open RabbitMQ status channel: %w", err)
@@ -106,7 +116,7 @@ func run() error {
 	storageClient, config := storage.NewClient()
 	log.Printf("Extractor consuming queue %q; input/output bucket: %q", queueName, config.Bucket)
 	for delivery := range deliveries {
-		if err := handleDelivery(channel, confirmations, statusChannel, statusConfirmations, delivery, queueName, failedQueue, statusQueue, storageClient, config.Bucket); err != nil {
+		if err := handleDelivery(channel, confirmations, statusChannel, statusConfirmations, delivery, queueName, failedQueue, redactionQueue, statusQueue, storageClient, config.Bucket); err != nil {
 			log.Printf("Handle RabbitMQ delivery: %v", err)
 		}
 	}
@@ -119,7 +129,7 @@ func handleDelivery(
 	statusChannel *amqp.Channel,
 	statusConfirmations <-chan amqp.Confirmation,
 	delivery amqp.Delivery,
-	queueName, failedQueue, statusQueue string,
+	queueName, failedQueue, redactionQueue, statusQueue string,
 	storageClient *s3.Client,
 	bucket string,
 ) error {
@@ -136,8 +146,19 @@ func handleDelivery(
 	err := processJob(ctx, storageClient, bucket, job)
 	cancel()
 	if err == nil {
+		redaction, err := json.Marshal(redactionJob{
+			ID: job.ID, Bucket: bucket, ObjectKey: "results/" + job.ID + ".txt",
+		})
+		if err != nil {
+			_ = delivery.Nack(false, true)
+			return fmt.Errorf("encode redaction job %s: %w", job.ID, err)
+		}
+		if err := publishAndConfirm(channel, confirmations, redactionQueue, redaction, nil); err != nil {
+			_ = delivery.Nack(false, true)
+			return fmt.Errorf("queue redaction job %s: %w", job.ID, err)
+		}
 		publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
-			JobID: job.ID, Stage: "completed", Message: "Resume text extraction is complete.", Attempt: attempt,
+			JobID: job.ID, Stage: "redacting", Message: "Removing common personal identifiers.", Attempt: attempt,
 		})
 		if err := delivery.Ack(false); err != nil {
 			return fmt.Errorf("acknowledge job %s: %w", job.ID, err)

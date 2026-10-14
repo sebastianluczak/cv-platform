@@ -16,9 +16,24 @@ The uploader publishes a persistent JSON message to `QUEUE_NAME` after storing t
 
 `id` is a generated UUID. The extractor requires the bucket to match its configured `RUSTFS_BUCKET` and requires `object_key` to equal `uploads/<id>`.
 
+== Redaction job
+
+After storing `results/<id>.txt`, the extractor publishes a persistent job to `QUEUE_NAME.pii`:
+
+[source,json]
+----
+{
+  "id": "<job-id>",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/<job-id>.txt"
+}
+----
+
+Piistripper requires a UUID `id`, the configured bucket, and the exact result key derived from that ID. On success it writes the redacted copy to `results/<id>.redacted.txt`; the source result is retained. Exhausted and malformed redaction jobs are sent to `QUEUE_NAME.pii.failed`.
+
 == Status event
 
-The extractor publishes status messages to the durable `QUEUE_NAME.events` queue. The uploader consumes these messages and retains the latest one per job in memory.
+The extractor and piistripper publish status messages to the durable `QUEUE_NAME.events` queue. The uploader consumes these messages and retains the latest one per job in memory.
 
 [source,json]
 ----
@@ -31,7 +46,7 @@ The extractor publishes status messages to the durable `QUEUE_NAME.events` queue
 }
 ----
 
-Stages are `queued`, `processing`, `retrying`, `completed`, and `failed`. `updated_at` is UTC. `attempt` is the attempt number represented by the status; `queued` is first recorded by the uploader after job publish confirmation.
+Stages are `queued`, `processing`, `retrying`, `redacting`, `completed`, and `failed`. The extractor reports extraction activity; piistripper reports redaction and terminal completion/failure. `updated_at` is UTC. `attempt` is the attempt number represented by the status; `queued` is first recorded by the uploader after job publish confirmation.
 
 == Upload response
 
@@ -57,12 +72,20 @@ IMPORTANT: Status updates are not a durable client-facing event log.
 |Uploader
 |Extractor
 
-|`QUEUE_NAME.events`
+|`QUEUE_NAME.pii`
 |Extractor
+|Piistripper
+
+|`QUEUE_NAME.events`
+|Extractor, piistripper
 |Uploader
 
 |`QUEUE_NAME.failed`
 |Extractor
+|None
+
+|`QUEUE_NAME.pii.failed`
+|Piistripper
 |None
 |===
 

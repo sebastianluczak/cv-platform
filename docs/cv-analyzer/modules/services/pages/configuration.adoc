@@ -1,43 +1,43 @@
 = Configuration
 
-The uploader and extractor must point to the same RabbitMQ queue and S3-compatible storage namespace.
+The uploader, extractor, and piistripper must point to the same RabbitMQ queue and S3-compatible storage namespace.
 
 [cols="1,1,2,2"]
 |===
 |Variable |Required by |Default |Purpose
 
 |`RABBITMQ_URL`
-|Uploader, extractor
+|Uploader, extractor, piistripper
 |None
 |AMQP connection URL. Required at startup.
 
 |`QUEUE_NAME`
-|Uploader, extractor
+|Uploader, extractor, piistripper
 |None
-|Durable extraction queue name. Status and failed queue names are derived by appending `.events` and `.failed`.
+|Durable extraction queue name. Redaction, status, and failed queue names append `.pii`, `.events`, `.failed`, and `.pii.failed`.
 
 |`RUSTFS_ENDPOINT_URL`
-|Uploader, extractor
+|Uploader, extractor, piistripper
 |`http://localhost:9000`
 |S3-compatible endpoint.
 
 |`RUSTFS_BUCKET`
-|Uploader, extractor
+|Uploader, extractor, piistripper
 |`cv-platform-uploads`
-|Shared bucket for original uploads and extracted text.
+|Shared bucket for original uploads, extracted text, and redacted results.
 
 |`RUSTFS_REGION`
-|Uploader, extractor
+|Uploader, extractor, piistripper
 |`us-east-1`
 |S3 signing region.
 
 |`RUSTFS_ACCESS_KEY_ID`
-|Uploader, extractor
+|Uploader, extractor, piistripper
 |`rustfsadmin`
 |Object-storage access key.
 
 |`RUSTFS_SECRET_ACCESS_KEY`
-|Uploader, extractor
+|Uploader, extractor, piistripper
 |`rustfsadmin`
 |Object-storage secret key.
 
@@ -52,4 +52,4 @@ The uploader and extractor must point to the same RabbitMQ queue and S3-compatib
 |API key required if the standalone `SendToWeighter` helper is called.
 |===
 
-Use the same `RUSTFS_*` values in both services. In particular, `RUSTFS_BUCKET` must match or the extractor rejects the job reference.
+Use the same `RUSTFS_*` values in all three services. In particular, `RUSTFS_BUCKET` must match or a worker rejects the job reference. Piistripper consumes `<QUEUE_NAME>.pii` and writes a separate redacted result.
