@@ -6,6 +6,14 @@ tasks:
     cmds:
       - cp product.png /tmp/image.png
       - cp sample_resume.pdf /tmp/resume.pdf
+  prep:lint:
+    desc: Lints all projects
+    cmds:
+      - cd services/aiweighter && gofmt -l -e -w .
+      - cd services/extractor && gofmt -l -e -w .
+      - cd services/piistripper && gofmt -l -e -w .
+      - cd services/skillmatcher && gofmt -l -e -w .
+      - cd services/uploader && gofmt -l -e -w .
   ui:install:
     dir: ui
     desc: Install the UI application dependencies
@@ -63,7 +71,3 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o piistripper .
       - docker build -t piistripper .
-  services:piistripper:test:
-    desc: Run the PII stripper tests
-    cmds:
-      - go -C services/piistripper test ./...

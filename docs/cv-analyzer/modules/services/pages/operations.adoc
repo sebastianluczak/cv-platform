@@ -28,8 +28,6 @@ Run the service unit tests from the repository root:
 sh test.sh
 ----
 
-Run `task services:piistripper:test` to run the redaction worker tests.
-
 Build the Antora site with `task docs:build-docs`.
 
 == Troubleshooting
