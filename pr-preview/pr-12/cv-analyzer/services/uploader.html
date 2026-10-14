@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Uploader Service :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Service catalog</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="operations.html">Operations</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="prototypes.html">Prototype components</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Services</li>
+    <li><a href="uploader.html">Uploader</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/services/pages/uploader.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Uploader Service</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The uploader is the HTTP entry point for file submissions. It stores originals in object storage, publishes extraction jobs to RabbitMQ, and serves processing updates as SSE.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_http_endpoints"><a class="anchor" href="#_http_endpoints"></a>HTTP endpoints</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>POST /upload</code> accepts multipart form data with a <code>file</code> field. Supported detected media types are <code>application/pdf</code>, <code>image/png</code>, <code>image/jpeg</code>, <code>image/tiff</code>, and <code>image/bmp</code>; the file limit is 10 MiB.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Response</th>
+<th class="tableblock halign-left valign-top">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>202 Accepted</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The object was stored and RabbitMQ confirmed the extraction job. JSON contains <code>job_id</code> and <code>status: "queued"</code>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>400 Bad Request</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The multipart upload is invalid or its file cannot be read.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>405 Method Not Allowed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The request method is not <code>POST</code>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>413 Content Too Large</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The file exceeds the upload limit.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>415 Unsupported Media Type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The detected content type is not supported.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>500 Internal Server Error</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The uploader could not store or process the upload.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>503 Service Unavailable</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ did not confirm the extraction job.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>The upload body is limited to 10 MiB plus 64 KiB for multipart framing. The uploader writes the original object before publishing the job. If publishing fails, the stored object is not automatically removed.</p>
+</div>
+<div class="paragraph">
+<p><code>GET /events?job_id=&lt;job-id&gt;</code> streams status event JSON in SSE <code>data:</code> frames. It returns <code>404</code> if the uploader has no retained status for that job. The latest snapshot is sent immediately; terminal <code>completed</code> and <code>failed</code> states end the stream. Clients may reconnect while the status remains in the same uploader process.</p>
+</div>
+<div class="paragraph">
+<p><code>GET /results?job_id=&lt;job-id&gt;</code> serves the stored JSON role-match result for a valid UUID job ID. It returns <code>404</code> if the result artifact does not exist and rejects invalid IDs before reading object storage.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_runtime_behavior"><a class="anchor" href="#_runtime_behavior"></a>Runtime behavior</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>At startup the uploader creates an S3-compatible client, checks for the configured bucket and creates it if absent, connects to RabbitMQ, declares the durable work queue, and consumes the durable <code>&lt;QUEUE_NAME&gt;.events</code> queue.</p>
+</div>
+<div class="paragraph">
+<p>Status is held in memory for at most 24 hours, with a capacity of 10,000 jobs. The oldest status may be evicted when the capacity is reached. The store rejects invalid stages, stale updates after a terminal state, and a later <code>queued</code> event for an existing job.</p>
+</div>
+<div class="paragraph">
+<p>Run one uploader instance for the current queue-based SSE design. Status queue consumers compete for messages, and each instance has a separate in-memory store; multiple replicas are not a broadcast arrangement.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_operational_notes"><a class="anchor" href="#_operational_notes"></a>Operational notes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The listener uses <code>PORT</code>, defaulting to <code>8080</code>. The service does not define a health-check endpoint or persistent status store. See <a href="configuration.html" class="xref page">configuration</a> and <a href="operations.html" class="xref page">operations</a>.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
