@@ -7,6 +7,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "docs/**"
+      - "taskfile.yml"
+      - "devenv.nix"
+      - "devenv.yaml"
+      - "devenv.lock"
+      - ".github/workflows/publish-antora.docs.yml"
   workflow_dispatch:
 
 concurrency:
@@ -24,18 +31,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Check whether documentation sources changed
+        if: github.event_name == 'pull_request'
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - 'docs/**'
+              - 'taskfile.yml'
+              - 'devenv.nix'
+              - 'devenv.yaml'
+              - 'devenv.lock'
+              - '.github/workflows/publish-antora.docs.yml'
       - uses: cachix/install-nix-action@v31
+        if: github.event_name != 'pull_request' || steps.changes.outputs.docs == 'true'
       - uses: cachix/cachix-action@v16
+        if: github.event_name != 'pull_request' || steps.changes.outputs.docs == 'true'
         with:
           name: devenv
       - name: Install devenv.sh
+        if: github.event_name != 'pull_request' || steps.changes.outputs.docs == 'true'
         run: nix profile add nixpkgs#devenv
       - name: Build antora documentation
+        if: github.event_name != 'pull_request' || steps.changes.outputs.docs == 'true'
         shell: devenv shell -- bash -e {0}
         run: |
           task docs:build-docs
       - name: Publish PR documentation preview
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.changes.outputs.docs == 'true'
         id: preview-publish
         uses: rossjrw/pr-preview-action@v1
         with:
@@ -55,7 +79,7 @@ jobs:
           clean-exclude: pr-preview
           force: false
       - name: Comment on PR with documentation preview
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.changes.outputs.docs == 'true'
         uses: actions/github-script@v7
         with:
           script: |
