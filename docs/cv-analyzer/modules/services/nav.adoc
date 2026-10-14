@@ -1,4 +1,4 @@
-Services
+.Services
 * xref:index.adoc[Service catalog]
 * xref:uploader.adoc[Uploader]
 * xref:extractor.adoc[Extractor]

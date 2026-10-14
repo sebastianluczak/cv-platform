@@ -1,4 +1,5 @@
-Architecture
+.Architecture
+* xref:drivers.adoc[Architecture Drivers]
 * xref:context.adoc[System context]
 * xref:workflow.adoc[Processing workflow]
 * xref:data-lifecycle.adoc[Data and persistence]
