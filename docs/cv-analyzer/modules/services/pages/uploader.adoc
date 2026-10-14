@@ -1,0 +1,49 @@
+= Uploader Service
+
+The uploader is the HTTP entry point for file submissions. It stores originals in object storage, publishes extraction jobs to RabbitMQ, and serves processing updates as SSE.
+
+== HTTP endpoints
+
+`POST /upload` accepts multipart form data with a `file` field. Supported detected media types are `application/pdf`, `image/png`, `image/jpeg`, `image/tiff`, and `image/bmp`; the file limit is 10 MiB.
+
+[cols="1,2"]
+|===
+|Response |Meaning
+
+|`202 Accepted`
+|The object was stored and RabbitMQ confirmed the extraction job. JSON contains `job_id` and `status: "queued"`.
+
+|`400 Bad Request`
+|The multipart upload is invalid or its file cannot be read.
+
+|`405 Method Not Allowed`
+|The request method is not `POST`.
+
+|`413 Content Too Large`
+|The file exceeds the upload limit.
+
+|`415 Unsupported Media Type`
+|The detected content type is not supported.
+
+|`500 Internal Server Error`
+|The uploader could not store or process the upload.
+
+|`503 Service Unavailable`
+|RabbitMQ did not confirm the extraction job.
+|===
+
+The upload body is limited to 10 MiB plus 64 KiB for multipart framing. The uploader writes the original object before publishing the job. If publishing fails, the stored object is not automatically removed.
+
+`GET /events?job_id=<job-id>` streams status event JSON in SSE `data:` frames. It returns `404` if the uploader has no retained status for that job. The latest snapshot is sent immediately; terminal `completed` and `failed` states end the stream. Clients may reconnect while the status remains in the same uploader process.
+
+== Runtime behavior
+
+At startup the uploader creates an S3-compatible client, checks for the configured bucket and creates it if absent, connects to RabbitMQ, declares the durable work queue, and consumes the durable `<QUEUE_NAME>.events` queue.
+
+Status is held in memory for at most 24 hours, with a capacity of 10,000 jobs. The oldest status may be evicted when the capacity is reached. The store rejects invalid stages, stale updates after a terminal state, and a later `queued` event for an existing job.
+
+Run one uploader instance for the current queue-based SSE design. Status queue consumers compete for messages, and each instance has a separate in-memory store; multiple replicas are not a broadcast arrangement.
+
+== Operational notes
+
+The listener uses `PORT`, defaulting to `8080`. The service does not define a health-check endpoint or persistent status store. See xref:configuration.adoc[configuration] and xref:operations.adoc[operations].

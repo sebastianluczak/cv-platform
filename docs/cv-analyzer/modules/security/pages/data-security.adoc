@@ -1,8 +1,26 @@
 = Data Security (PII)
 
-As the system is handling sensitive data, it is important to ensure that the data is protected and secure. 
+The current upload and extraction services process resume data, which may contain personal information. 
 
-The following measures are in place to ensure data security:
+IMPORTANT: They persist both the original file and extracted text in the configured S3-compatible bucket.
 
-. We never store any sensitive data, including PII, in our system.
+== Current implementation
 
+* The uploader and extractor use static S3 credentials from environment variables; local-development defaults are `rustfsadmin` / `rustfsadmin`.
+* Uploaded objects are stored under `uploads/<job-id>` and extracted text under `results/<job-id>.txt`.
+* The services do not implement deletion, expiration, or a retention policy for either object.
+* Temporary extractor files are created on the service host during processing and removed when processing finishes.
+* The uploader's HTTP endpoints do not implement authentication or authorization.
+
+== Deployment responsibilities
+
+Before handling real resumes, operators must configure:
+
+. private storage access, 
+. dedicated least-privilege credentials, 
+. transport and network protections, 
+. an explicit retention/deletion policy. 
+
+NOTE: Protect the uploader behind an authenticated and appropriately restricted network boundary. 
+
+IMPORTANT: Do not use development credentials in a deployed environment.

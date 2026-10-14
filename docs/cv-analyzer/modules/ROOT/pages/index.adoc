@@ -1,5 +1,18 @@
 = Overview
 
-Project CV Analyzer is a SaaS platform for managing and processing CVs (resumes).
+CV Platform (also presented as Draftline in the UI) is an early-stage resume-processing application. 
 
-Technically, it is a microservice-based platform written in Golang and React.
+. A user submits a resume; 
+. the backend stores the original, 
+. backend queues an extraction job, 
+. system makes processing updates available to the browser.
+
+== Documentation map
+
+* xref:architecture:context.adoc[Architecture context] describes the running components and their boundaries.
+* xref:architecture:workflow.adoc[Processing workflow] follows a job from upload through extraction and status delivery.
+* xref:architecture:data-lifecycle.adoc[Data and persistence] describes what is stored, where, and for how long.
+* xref:services:index.adoc[Service catalog] distinguishes implemented services from prototypes.
+* xref:services:uploader.adoc[Uploader] and xref:services:extractor.adoc[Extractor] document each service's behavior.
+* xref:services:configuration.adoc[Configuration] and xref:services:operations.adoc[Operations] cover environment variables and local operation.
+* xref:services:contracts.adoc[Service contracts] records the HTTP, queue, and status-event shapes.

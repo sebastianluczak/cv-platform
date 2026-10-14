@@ -1,0 +1,8 @@
+.Services
+* xref:index.adoc[Service catalog]
+* xref:uploader.adoc[Uploader]
+* xref:extractor.adoc[Extractor]
+* xref:contracts.adoc[Service contracts]
+* xref:configuration.adoc[Configuration]
+* xref:operations.adoc[Operations]
+* xref:prototypes.adoc[Prototype components]

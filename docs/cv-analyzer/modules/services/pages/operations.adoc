@@ -1,0 +1,39 @@
+= Local Operations
+
+== Prerequisites
+
+The development environment is defined by `devenv.nix` and provides Go, Node.js, Antora, RabbitMQ, and RustFS. The extractor also needs Tesseract and Poppler tools (`pdftotext`, `pdfinfo`, and `pdftoppm`). RabbitMQ and RustFS are started by `devenv up` in the configured development environment.
+
+Copy `.env.dist` to `.env` and provide appropriate local values before starting the environment. The repository template includes the RabbitMQ URL and queue name; storage settings default in the services. Never put production secrets in the template.
+
+== Start and build
+
+From the repository root:
+
+[source,shell]
+----
+devenv up
+----
+
+The `devenv` processes start the uploader, extractor, frontend, and documentation builder.
+
+The service Dockerfiles expect prebuilt binaries named `uploader` and `extractor` in their respective service directories. `task services:uploader:build` and `task services:extractor:build` build the binaries and Docker images.
+
+== Verification
+
+Run the existing service unit tests from the repository root:
+
+[source,shell]
+----
+sh test.sh
+----
+
+Build the Antora site with `task docs:build-docs`.
+
+== Troubleshooting
+
+* **Uploader does not start:** check `RABBITMQ_URL`, `QUEUE_NAME`, storage endpoint/credentials, and whether the configured bucket can be listed or created.
+* **Extractor does not start:** verify RabbitMQ settings and that `pdftotext`, `pdfinfo`, and `pdftoppm` are available. Confirm the S3 settings point to the same bucket as the uploader.
+* **Upload returns `503`:** inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.
+* **No SSE update appears:** confirm that the extractor can publish to `QUEUE_NAME.events` and that the uploader is consuming that queue. Status state is local to the uploader instance and does not survive its restart.
+* **A job repeatedly fails:** inspect the extractor logs and the durable `QUEUE_NAME.failed` queue.

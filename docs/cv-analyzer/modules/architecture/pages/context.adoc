@@ -1,0 +1,73 @@
+= System Context and Runtime Architecture
+
+The current system is an asynchronous file-processing pipeline. 
+
+. browser interacts with the `uploader` microservice over HTTP protocol
+. the `uploader` and `extractor` coordinate through RabbitMQ and share an S3-compatible bucket.
+
+.Documentation extraction architecture (DEA)
+[plantuml]
+----
+
+@startuml
+title DEA
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor Browser
+
+component Uploader
+queue RabbitMQ
+
+component Extractor
+
+database "S3-compatible Storage" as Storage
+
+Browser --> Uploader : POST /upload
+Browser --> Uploader : GET /events?job_id=...
+
+Uploader --> Storage : Upload file\nuploads/<job-id>
+Uploader --> RabbitMQ : Publish extraction job
+
+RabbitMQ --> Extractor : Consume extraction job
+Extractor --> Storage : Download upload
+Extractor --> Storage : Write results/<job-id>.txt
+
+note right of RabbitMQ
+  Queues:
+  - extraction jobs
+  - <queue>.events
+end note
+
+@enduml
+----
+
+The UI is a separate React application. 
+
+. uses `/api/upload` and `/api/events`, so a deployment must route those browser paths to the uploader's `/upload` and `/events` handlers. 
+
+This repository does not define that reverse-proxy or gateway configuration yet, it is hardcoded and proxied.
+
+== Component responsibilities
+
+[cols="1,3"]
+|===
+|Component |Responsibility
+
+|Browser UI
+|Selects an allowed file, posts it as multipart form data, then listens to status updates using `EventSource`.
+
+|Uploader
+|Validates and stores the uploaded file, publishes a persistent extraction job, and streams the latest in-memory status to clients using Server-Sent Events (SSE).
+
+|Extractor
+|Consumes jobs, downloads the referenced upload, extracts PDF or image text, stores the result, and acknowledges or routes the job according to its outcome.
+
+|RabbitMQ
+|Carries extraction jobs, status events, and terminal failed jobs in durable queues.
+
+|S3-compatible storage
+|Stores the original upload and extracted plain text. Both services must use the same bucket and endpoint configuration.
+|===
