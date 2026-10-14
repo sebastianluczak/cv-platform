@@ -24,6 +24,7 @@ tasks:
       - cd piistripper && gosec ./... || true
       - cd skillmatcher && gosec ./... || true
       - cd uploader && gosec ./... || true
+      - cd common && gosec ./... || true
   ui:install:
     dir: ui
     desc: Install the UI application dependencies
