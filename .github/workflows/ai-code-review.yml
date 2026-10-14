@@ -25,14 +25,18 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install trusted reviewer
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      # - name: Install trusted reviewer
+      #   env:
+      #     BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      #   run: |
+      #     mkdir -p /tmp/trusted-reviewer
+      #     git show "${BASE_SHA}:reviewer/reviewer.py" > /tmp/trusted-reviewer/reviewer.py
+      #     git show "${BASE_SHA}:reviewer/requirements.txt" > /tmp/trusted-reviewer/requirements.txt
+      #     python -m pip install -r /tmp/trusted-reviewer/requirements.txt
+
+      - name: Install reviewer
         run: |
-          mkdir -p /tmp/trusted-reviewer
-          git show "${BASE_SHA}:reviewer/reviewer.py" > /tmp/trusted-reviewer/reviewer.py
-          git show "${BASE_SHA}:reviewer/requirements.txt" > /tmp/trusted-reviewer/requirements.txt
-          python -m pip install -r /tmp/trusted-reviewer/requirements.txt
+          python -m pip install -r reviewer/requirements.txt
 
       - name: Review pull request
         env:
