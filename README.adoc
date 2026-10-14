@@ -5,9 +5,18 @@ Microservice-based platform for managing and processing CVs (resumes).
 .Alpha version of UI
 image::product.png[]
 
+== Tech Stack
+
 Written in Golang and React.
 
+From the infrastructure point of view, it requires:
+
+. RabbitMQ
+. S3-compatible storage
+
 Optionally processes sent data through an AI model to assign a weight to the CV, but the core functionality works without any AI model.
+
+Opens SSE connection to the client for real-time signals.
 
 == Running
 
@@ -16,6 +25,8 @@ Optionally processes sent data through an AI model to assign a weight to the CV,
 `vi .env` <- set your keys, quit vim
 
 `devenv up` <- run the beast
+
+Visit http://localhost:5173/
 
 == Architecture
 

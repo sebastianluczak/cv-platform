@@ -21,6 +21,14 @@ const (
 	confirmTimeout = 10 * time.Second
 )
 
+type statusEvent struct {
+	JobID     string    `json:"job_id"`
+	Stage     string    `json:"stage"`
+	Message   string    `json:"message"`
+	Attempt   int       `json:"attempt"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type extractionJob struct {
 	ID          string `json:"id"`
 	Bucket      string `json:"bucket"`
@@ -69,6 +77,19 @@ func run() error {
 	if _, err := channel.QueueDeclare(failedQueue, true, false, false, false, nil); err != nil {
 		return fmt.Errorf("declare failed-job queue %q: %w", failedQueue, err)
 	}
+	statusChannel, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("open RabbitMQ status channel: %w", err)
+	}
+	defer statusChannel.Close()
+	statusQueue := queueName + ".events"
+	if _, err := statusChannel.QueueDeclare(statusQueue, true, false, false, false, nil); err != nil {
+		return fmt.Errorf("declare status queue %q: %w", statusQueue, err)
+	}
+	if err := statusChannel.Confirm(false); err != nil {
+		return fmt.Errorf("enable RabbitMQ status publisher confirms: %w", err)
+	}
+	statusConfirmations := statusChannel.NotifyPublish(make(chan amqp.Confirmation, 1))
 	if err := channel.Qos(1, 0, false); err != nil {
 		return fmt.Errorf("configure RabbitMQ prefetch: %w", err)
 	}
@@ -85,7 +106,7 @@ func run() error {
 	storageClient, config := storage.NewClient()
 	log.Printf("Extractor consuming queue %q; input/output bucket: %q", queueName, config.Bucket)
 	for delivery := range deliveries {
-		if err := handleDelivery(channel, confirmations, delivery, queueName, failedQueue, storageClient, config.Bucket); err != nil {
+		if err := handleDelivery(channel, confirmations, statusChannel, statusConfirmations, delivery, queueName, failedQueue, statusQueue, storageClient, config.Bucket); err != nil {
 			log.Printf("Handle RabbitMQ delivery: %v", err)
 		}
 	}
@@ -95,8 +116,10 @@ func run() error {
 func handleDelivery(
 	channel *amqp.Channel,
 	confirmations <-chan amqp.Confirmation,
+	statusChannel *amqp.Channel,
+	statusConfirmations <-chan amqp.Confirmation,
 	delivery amqp.Delivery,
-	queueName, failedQueue string,
+	queueName, failedQueue, statusQueue string,
 	storageClient *s3.Client,
 	bucket string,
 ) error {
@@ -105,10 +128,17 @@ func handleDelivery(
 		return moveToFailedQueue(channel, confirmations, delivery, failedQueue, fmt.Errorf("decode job: %w", err))
 	}
 
+	attempt := retryCount(delivery.Headers) + 1
+	publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+		JobID: job.ID, Stage: "processing", Message: "We're reading your resume.", Attempt: attempt,
+	})
 	ctx, cancel := context.WithTimeout(context.Background(), jobTimeout)
 	err := processJob(ctx, storageClient, bucket, job)
 	cancel()
 	if err == nil {
+		publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+			JobID: job.ID, Stage: "completed", Message: "Resume text extraction is complete.", Attempt: attempt,
+		})
 		if err := delivery.Ack(false); err != nil {
 			return fmt.Errorf("acknowledge job %s: %w", job.ID, err)
 		}
@@ -116,10 +146,13 @@ func handleDelivery(
 		return nil
 	}
 
-	attempt := retryCount(delivery.Headers)
-	if attempt < maxRetries {
+	retry := retryCount(delivery.Headers)
+	if retry < maxRetries {
+		publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+			JobID: job.ID, Stage: "retrying", Message: "We hit a snag and are trying again.", Attempt: retry + 2,
+		})
 		headers := copyHeaders(delivery.Headers)
-		headers["x-retry-count"] = int32(attempt + 1)
+		headers["x-retry-count"] = int32(retry + 1)
 		headers["x-last-error"] = errorText(err)
 		if publishErr := publishAndConfirm(channel, confirmations, queueName, delivery.Body, headers); publishErr != nil {
 			_ = delivery.Nack(false, true)
@@ -128,10 +161,13 @@ func handleDelivery(
 		if ackErr := delivery.Ack(false); ackErr != nil {
 			return fmt.Errorf("acknowledge retried job %s: %w", job.ID, ackErr)
 		}
-		log.Printf("Job %s failed (attempt %d/%d); queued for retry: %v", job.ID, attempt+1, maxRetries+1, err)
+		log.Printf("Job %s failed (attempt %d/%d); queued for retry: %v", job.ID, retry+1, maxRetries+1, err)
 		return nil
 	}
 
+	publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+		JobID: job.ID, Stage: "failed", Message: "We couldn't process this resume.", Attempt: retry + 1,
+	})
 	return moveToFailedQueue(channel, confirmations, delivery, failedQueue, err)
 }
 
@@ -214,6 +250,25 @@ func publishAndConfirm(
 		return nil
 	case <-timer.C:
 		return fmt.Errorf("timed out waiting for RabbitMQ confirmation")
+	}
+}
+
+func publishStatusBestEffort(
+	channel *amqp.Channel,
+	confirmations <-chan amqp.Confirmation,
+	statusQueue string,
+	event statusEvent,
+) {
+	if event.JobID == "" {
+		return
+	}
+	event.UpdatedAt = time.Now().UTC()
+	body, err := json.Marshal(event)
+	if err == nil {
+		err = publishAndConfirm(channel, confirmations, statusQueue, body, nil)
+	}
+	if err != nil {
+		log.Printf("Publish %s status for job %s: %v", event.Stage, event.JobID, err)
 	}
 }
 

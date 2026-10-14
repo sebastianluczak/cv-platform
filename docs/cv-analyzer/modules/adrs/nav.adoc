@@ -3,3 +3,4 @@
 * xref:adr0001.adoc[]
 * xref:adr0002.adoc[]
 * xref:adr0003.adoc[]
+* xref:adr0004.adoc[]

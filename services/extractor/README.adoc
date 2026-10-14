@@ -8,6 +8,7 @@ The extractor consumes upload jobs from RabbitMQ and writes extracted text back 
 . downloads the referenced object from the shared RustFS/S3 bucket
 . extracts text from a PDF or runs OCR on an image/scanned PDF
 . stores the result at `results/<job-id>.txt`
+. publishes extraction, retry, and terminal status events to `<QUEUE_NAME>.events`
 . acknowledges the message only after the result has been stored
 
 Failed jobs are retried up to three times, then moved to `<QUEUE_NAME>.failed` for inspection or manual requeue.

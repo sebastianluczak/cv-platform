@@ -1,17 +1,34 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
+
+type ProgressEvent = {
+  job_id: string
+  stage: 'queued' | 'processing' | 'retrying' | 'completed' | 'failed'
+  message: string
+  attempt: number
+  updated_at: string
+}
 
 function App() {
   const fileInput = useRef<HTMLInputElement>(null)
+  const eventSource = useRef<EventSource | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
   const [uploaded, setUploaded] = useState(false)
+  const [progress, setProgress] = useState<ProgressEvent | null>(null)
+  const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | null>(null)
+
+  useEffect(() => () => eventSource.current?.close(), [])
 
   function chooseFile(nextFile?: File) {
+    eventSource.current?.close()
+    eventSource.current = null
     setMessage('')
     setUploaded(false)
+    setProgress(null)
+    setConnection(null)
     if (!nextFile) return
     if (nextFile.size > 10 * 1024 * 1024) {
       setFile(null)
@@ -34,8 +51,31 @@ function App() {
         body: formData,
       })
       if (!response.ok) throw new Error(await response.text())
+      const result = await response.json() as { job_id: string }
+      if (!result.job_id) throw new Error('Upload response did not include a job ID')
+
       setUploaded(true)
-      setMessage('Resume received. The feedback analysis service is not connected yet.')
+      setMessage('Resume received. Follow its progress below.')
+      setConnection('connecting')
+      const endpoint = new URL(import.meta.env.VITE_EVENTS_ENDPOINT || '/api/events', window.location.href)
+      endpoint.searchParams.set('job_id', result.job_id)
+      const source = new EventSource(endpoint)
+      eventSource.current = source
+      source.onopen = () => setConnection('connected')
+      source.onmessage = (event) => {
+        try {
+          const update = JSON.parse(event.data) as ProgressEvent
+          if (update.job_id !== result.job_id) return
+          setProgress(update)
+          if (update.stage === 'completed' || update.stage === 'failed') {
+            source.close()
+            setConnection(null)
+          }
+        } catch {
+          setMessage('Received an invalid processing update. Reconnecting…')
+        }
+      }
+      source.onerror = () => setConnection('reconnecting')
     } catch {
       setMessage('Upload failed. Check that the resume service is running, then try again.')
     } finally {
@@ -79,7 +119,7 @@ function App() {
               <input
                 ref={fileInput}
                 type="file"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp"
                 onChange={(event) => chooseFile(event.target.files?.[0])}
               />
               <span className="upload-symbol" aria-hidden="true">↑</span>
@@ -87,7 +127,7 @@ function App() {
                 {file ? file.name : 'Drop your resume here'}
               </span>
               <span className="dropzone-caption">
-                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Click to change` : 'or click to browse · PDF or Word · up to 10 MB'}
+                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Click to change` : 'or click to browse · PDF or image · up to 10 MB'}
               </span>
             </label>
             <button
@@ -99,6 +139,25 @@ function App() {
               {uploading ? 'Uploading…' : uploaded ? 'Resume received' : 'Get resume feedback'}
               {!uploading && !uploaded && <span aria-hidden="true">↗</span>}
             </button>
+            {progress && (
+              <section className="progress-panel" aria-live="polite" aria-label="Resume processing progress">
+                <div className="progress-heading">
+                  <strong>Processing your resume</strong>
+                  {connection && <span>{connection === 'reconnecting' ? 'Reconnecting…' : connection === 'connecting' ? 'Connecting…' : 'Live'}</span>}
+                </div>
+                <ol className="progress-steps">
+                  <li className="is-complete"><span>01</span><div><strong>Queued</strong><small>{progress.stage === 'queued' ? progress.message : 'Your resume is safely in line.'}</small></div></li>
+                  <li className={progress.stage === 'processing' || progress.stage === 'retrying' ? 'is-active' : progress.stage === 'completed' ? 'is-complete' : progress.stage === 'failed' ? 'is-failed' : ''}>
+                    <span>02</span>
+                    <div>
+                      <strong>{progress.stage === 'retrying' ? 'Retrying extraction' : 'Reading your resume'}</strong>
+                      <small>{progress.stage === 'queued' ? 'Waiting for extraction to start.' : progress.message}{progress.stage === 'retrying' && progress.attempt > 0 ? ` (attempt ${progress.attempt})` : ''}</small>
+                    </div>
+                  </li>
+                  <li className={progress.stage === 'completed' ? 'is-complete' : ''}><span>03</span><div><strong>{progress.stage === 'failed' ? 'Needs attention' : 'Extraction complete'}</strong><small>{progress.stage === 'failed' ? 'We could not process this file.' : 'Resume text is ready for the next step.'}</small></div></li>
+                </ol>
+              </section>
+            )}
             <p className={`upload-message${message && !uploaded ? ' is-error' : ''}`} aria-live="polite">
               {message || 'Your resume stays yours. We only use it to prepare your review.'}
             </p>
@@ -147,7 +206,7 @@ function App() {
 
       <footer className="page-footer">
         <span>draftline <span className="footer-divider">/</span> Resume feedback, with a point of view.</span>
-        <span>PDF & DOCX · MAX 10 MB</span>
+        <span>PDF & IMAGES · MAX 10 MB</span>
       </footer>
     </main>
   )
