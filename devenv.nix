@@ -13,6 +13,14 @@
     pkgs.antora
     pkgs.asciidoc
     pkgs.go-task
+    pkgs.gdb
+    pkgs.pkg-config
+    pkgs.cmake
+    pkgs.meson
+    pkgs.ninja
+    pkgs.leptonica
+    pkgs.tesseract4
+    pkgs.vips
   ];
   dotenv.enable = true;
   languages.go.enable = true;
@@ -34,6 +42,9 @@
   processes = { } // lib.optionalAttrs (!config.devenv.isTesting) {
     uploader = {
       exec = "sleep 3 && task services:uploader:start";
+    };
+    extractor = {
+      exec = "sleep 2 && task services:extractor:start";
     };
     frontend = {
       exec = "task ui:install && task ui:start";

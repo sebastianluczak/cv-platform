@@ -1,5 +1,31 @@
 = extractor
 
-Whatever was uploaded, we need to extract the information from it.
+The extractor consumes upload jobs from RabbitMQ and writes extracted text back to object storage.
 
-This is the most crucial step.
+== Flow
+
+. consumes a persistent JSON job from the `QUEUE_NAME` queue
+. downloads the referenced object from the shared RustFS/S3 bucket
+. extracts text from a PDF or runs OCR on an image/scanned PDF
+. stores the result at `results/<job-id>.txt`
+. acknowledges the message only after the result has been stored
+
+Failed jobs are retried up to three times, then moved to `<QUEUE_NAME>.failed` for inspection or manual requeue.
+
+The uploader publishes jobs in this shape:
+
+[source,json]
+----
+{
+  "id": "<job-id>",
+  "bucket": "cv-platform-uploads",
+  "object_key": "uploads/<job-id>",
+  "content_type": "application/pdf"
+}
+----
+
+== Configuration
+
+Both uploader and extractor must receive the same `RABBITMQ_URL`, `QUEUE_NAME`, `RUSTFS_ENDPOINT_URL`, `RUSTFS_BUCKET`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, and `RUSTFS_SECRET_ACCESS_KEY` environment variables. `RUSTFS_BUCKET` defaults to `cv-platform-uploads`.
+
+The runtime requires Tesseract and Poppler utilities (`pdftotext`, `pdfinfo`, and `pdftoppm`). The extractor Docker image installs Poppler utilities.

@@ -1,19 +1,45 @@
 package queue
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/streadway/amqp"
 )
 
-var (
-	rabbitMQURL = os.Getenv("RABBITMQ_URL")
-	queueName   = os.Getenv("QUEUE_NAME")
-)
+type Publisher struct {
+	channel       *amqp.Channel
+	queueName     string
+	confirmations <-chan amqp.Confirmation
+	mu            sync.Mutex
+	failed        error
+}
 
-func ConnectToQueue() (*amqp.Connection, *amqp.Channel, error) {
+func (p *Publisher) Close() error {
+	return p.channel.Close()
+}
+
+type ExtractionJob struct {
+	ID          string `json:"id"`
+	Bucket      string `json:"bucket"`
+	ObjectKey   string `json:"object_key"`
+	ContentType string `json:"content_type"`
+}
+
+func ConnectToQueue() (*amqp.Connection, *Publisher, error) {
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		return nil, nil, fmt.Errorf("RABBITMQ_URL is not set")
+	}
+	queueName := os.Getenv("QUEUE_NAME")
+	if queueName == "" {
+		return nil, nil, fmt.Errorf("QUEUE_NAME is not set")
+	}
+
 	conn, err := amqp.Dial(rabbitMQURL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
@@ -25,39 +51,72 @@ func ConnectToQueue() (*amqp.Connection, *amqp.Channel, error) {
 		return nil, nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
 
-	_, err = ch.QueueDeclare(
-		queueName,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
+	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
 		ch.Close()
 		conn.Close()
-		return nil, nil, fmt.Errorf("failed to declare a queue: %w", err)
+		return nil, nil, fmt.Errorf("failed to declare queue %q: %w", queueName, err)
+	}
+	if err := ch.Confirm(false); err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, nil, fmt.Errorf("failed to enable publisher confirms: %w", err)
 	}
 
+	publisher := &Publisher{
+		channel:       ch,
+		queueName:     queueName,
+		confirmations: ch.NotifyPublish(make(chan amqp.Confirmation, 1)),
+	}
 	log.Printf("Connected to RabbitMQ and declared queue: %s", queueName)
-	return conn, ch, nil
+	return conn, publisher, nil
 }
 
-func PublishMessage(ch *amqp.Channel, message string) error {
-	err := ch.Publish(
+func (p *Publisher) PublishMessage(message ExtractionJob) error {
+	body, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("encode extraction job: %w", err)
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.failed != nil {
+		return fmt.Errorf("RabbitMQ publisher is unavailable: %w", p.failed)
+	}
+
+	err = p.channel.Publish(
 		"",
-		queueName,
+		p.queueName,
 		false,
 		false,
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(message),
+			ContentType:  "application/json",
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to publish a message: %w", err)
+		p.failed = err
+		return fmt.Errorf("failed to publish message: %w", err)
 	}
 
-	log.Printf("Published message to queue %s: %s", queueName, message)
+	timer := time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+	select {
+	case confirmation, ok := <-p.confirmations:
+		if !ok {
+			p.failed = fmt.Errorf("RabbitMQ closed the publisher confirmation channel")
+			return p.failed
+		}
+		if !confirmation.Ack {
+			p.failed = fmt.Errorf("RabbitMQ rejected the extraction job")
+			return p.failed
+		}
+	case <-timer.C:
+		p.failed = fmt.Errorf("timed out waiting for RabbitMQ to confirm the extraction job")
+		return p.failed
+	}
+
+	log.Printf("Published extraction job %s for %s/%s", message.ID, message.Bucket, message.ObjectKey)
 	return nil
 }
