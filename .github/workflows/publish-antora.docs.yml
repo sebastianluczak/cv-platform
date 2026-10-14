@@ -54,17 +54,20 @@ jobs:
           script: |
             const artifactUrl = '${{ steps.upload-docs.outputs.artifact-url }}';
             const singlePageUrl = '${{ steps.upload-single-doc.outputs.artifact-url }}';
+            const prNumber = '${{ github.event.number }}';
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: [
-                '## 📚 Antora documentation preview',
+                '## 📚 Antora documentation preview for PR ${prNumber}',
                 '',
                 `**[Download the built documentation](${artifactUrl})**`,
                 `**[See HTML preview on one page](${singlePageUrl})**`,
+                ``,
+                `**[Live GHPages snapshot for PR#${prNumber}](https://sebastianluczak.github.io/cv-platform/pr-preview/pr-${prNumber}/cv-analyzer/index.html)
                 '',
-                'Download and extract the ZIP, then open `cv-analyzer/index.html`.'
+                'Download and extract the ZIP, then open `cv-analyzer/index.html` or see live preview.'
               ].join('\n')
             });
