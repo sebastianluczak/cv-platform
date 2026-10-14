@@ -1,0 +1,62 @@
+name: Go security scan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/security-scan.yml"
+      - "services/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/security-scan.yml"
+      - "services/**"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+concurrency:
+  group: security-scan-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gosec:
+    name: Scan ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [uploader, extractor, piistripper, skillmatcher]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: services/${{ matrix.service }}/go.mod
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+
+      - name: Download module dependencies
+        working-directory: services/${{ matrix.service }}
+        run: go mod download
+
+      - name: Scan module
+        working-directory: services/${{ matrix.service }}
+        run: gosec -fmt sarif -out gosec.sarif ./...
+
+      - name: Upload SARIF results
+        if: >-
+          always() &&
+          hashFiles(format('services/{0}/gosec.sarif', matrix.service)) != '' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: services/${{ matrix.service }}/gosec.sarif
+          category: gosec/${{ matrix.service }}
