@@ -15,9 +15,9 @@ From the repository root:
 devenv up
 ----
 
-The `devenv` processes start the uploader, extractor, piistripper, frontend, and documentation builder.
+The `devenv` processes start the uploader, extractor, piistripper, skill matcher, frontend, and documentation builder.
 
-The service Dockerfiles expect prebuilt binaries named `uploader`, `extractor`, and `piistripper` in their respective service directories. `task services:uploader:build`, `task services:extractor:build`, and `task services:piistripper:build` build the binaries and Docker images.
+The service Dockerfiles expect prebuilt binaries named `uploader`, `extractor`, `piistripper`, and `skillmatcher` in their respective service directories. `task services:uploader:build`, `task services:extractor:build`, `task services:piistripper:build`, and `task services:skillmatcher:build` build the binaries and Docker images.
 
 == Verification
 
@@ -35,6 +35,7 @@ Build the Antora site with `task docs:build-docs`.
 * **Uploader does not start:** check `RABBITMQ_URL`, `QUEUE_NAME`, storage endpoint/credentials, and whether the configured bucket can be listed or created.
 * **Extractor does not start:** verify RabbitMQ settings and that `pdftotext`, `pdfinfo`, and `pdftoppm` are available. Confirm the S3 settings point to the same bucket as the uploader.
 * **No redacted result appears:** confirm piistripper is running with the same `QUEUE_NAME` and `RUSTFS_*` settings; inspect its logs and the durable `<QUEUE_NAME>.pii.failed` queue.
+* **No role scores appear:** confirm piistripper and skillmatcher are running with matching RabbitMQ/storage settings; inspect the durable `<QUEUE_NAME>.skills.failed` queue and the skillmatcher logs.
 * **Upload returns `503`:** inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.
 * **No SSE update appears:** confirm that the extractor can publish to `QUEUE_NAME.events` and that the uploader is consuming that queue. Status state is local to the uploader instance and does not survive its restart.
 * **A job repeatedly fails:** inspect the extractor logs and the durable `QUEUE_NAME.failed` queue.

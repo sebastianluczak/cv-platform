@@ -1,5 +1,79 @@
-= skillmatcher
+= Skill Matcher
 
-After extraction, skill matcher tries to match found skills to the given sets.
+The skill matcher consumes jobs after PII stripping, reads the redacted text
+from shared S3-compatible storage, and scores the resume against deterministic
+IT role-profile patterns. It does not call an external model or API.
 
-TODO: buckets and labels
+== Workflow contract
+
+The worker consumes persistent JSON jobs from `<QUEUE_NAME>.skills`:
+
+[source,json]
+----
+{
+  "id": "<job-id>",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/<job-id>.redacted.txt"
+}
+----
+
+The job ID must be a UUID, the bucket must match `RUSTFS_BUCKET`, and the
+object key must exactly match the ID. The worker reads at most 10 MiB of source
+text and writes the versioned result to `results/<job-id>.skills.json`.
+Results include the job ID, scoring timestamp, category scores, and matched
+patterns (evidence). The uploader serves a result at
+`GET /results?job_id=<job-id>` after processing completes.
+
+Matching status is published to `<QUEUE_NAME>.events`. The service uses manual
+acknowledgements, a prefetch of one, publisher confirms, and up to three retries
+after the initial attempt. Exhausted or malformed jobs are published to
+`<QUEUE_NAME>.skills.failed`. Processing is at-least-once; deterministic object
+keys make repeat writes safe.
+
+== Categories and scoring
+
+V1 scores backend, DevOps, management, architecture, QA, frontend, data, and
+security. Each score is based on the number of distinct curated patterns found
+in the redacted text:
+
+[cols="1,1,2"]
+|===
+|Matched patterns |Score |Interpretation
+
+|0–1
+|1
+|Little or no matching evidence
+
+|2–3
+|2
+|Some matching evidence
+
+|4–5
+|3
+|Moderate matching evidence
+
+|6–7
+|4
+|Strong matching evidence
+
+|8 or more
+|5
+|Broad matching evidence
+|===
+
+Scores are heuristic indicators of resume text signals, not an objective
+assessment of a candidate's ability or suitability. The pattern set and rubric
+are versioned implementation details and should be reviewed as product needs
+evolve. Identity and demographic characteristics are not used.
+
+== Configuration
+
+`RABBITMQ_URL` and `QUEUE_NAME` are required. Configure the same
+`RUSTFS_ENDPOINT_URL`, `RUSTFS_BUCKET`, `RUSTFS_REGION`,
+`RUSTFS_ACCESS_KEY_ID`, and `RUSTFS_SECRET_ACCESS_KEY` as the uploader and
+piistripper. The storage settings default to the local RustFS development
+configuration documented in xref:configuration.adoc[configuration].
+
+The service requires only Go at build time and runs as an unprivileged user in
+the provided Docker image. See xref:operations.adoc[operations] for run/build
+tasks.

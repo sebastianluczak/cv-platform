@@ -21,7 +21,7 @@ It makes up to three retries after the initial attempt. After the last failed at
 
 Retry and failed-queue republishing use publisher confirms. If a republish cannot be confirmed, the original delivery is negatively acknowledged and requeued. A terminal `failed` status is published on exhausted extraction attempts.
 
-Extraction status publishing is best-effort. Once extraction succeeds, the job is not marked complete: piistripper publishes the terminal `completed` status after writing the redacted copy.
+Extraction status publishing is best-effort. Once extraction succeeds, the job is not marked complete: piistripper queues matching after writing the redacted copy, and the skill matcher publishes terminal `completed` only after storing role scores.
 
 == Runtime requirements
 

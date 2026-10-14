@@ -4,7 +4,8 @@ The `piistripper` consumes redaction jobs from RabbitMQ after extraction and rea
 `results/<job-id>.txt` from the shared S3-compatible bucket. It writes a separate
 redacted copy to `results/<job-id>.redacted.txt`.
 
-IMPORTANT: The extracted source is retained and never touched.
+IMPORTANT: The extracted source is retained and never touched. Skill matching
+consumes only the redacted result.
 
 It replaces common email, URL, phone-number, and street-address patterns and uses the local English named-entity recognizer in `github.com/jdkato/prose/v2` for person and organization names. 
 
@@ -36,11 +37,13 @@ The service consumes durable messages from `<QUEUE_NAME>.pii`:
 
 The job ID must be a UUID, the bucket must match `RUSTFS_BUCKET`, and the object
 key must be exactly `results/<job-id>.txt`. Jobs are retried up to three times
-after the initial attempt, then sent to `<QUEUE_NAME>.pii.failed`. The service
-publishes progress to `<QUEUE_NAME>.events`.
+after the initial attempt, then sent to `<QUEUE_NAME>.pii.failed`. After storing
+the redacted result, the service publishes a confirmed matching job to
+`<QUEUE_NAME>.skills`; the overall job remains in progress until the matcher
+publishes `completed` or `failed` to `<QUEUE_NAME>.events`.
 
 == Configuration
 
 `RABBITMQ_URL`, `QUEUE_NAME`, `RUSTFS_ENDPOINT_URL`, `RUSTFS_REGION`,
 `RUSTFS_BUCKET`, `RUSTFS_ACCESS_KEY_ID`, and `RUSTFS_SECRET_ACCESS_KEY` must
-match the extractor's settings.
+match the uploader, extractor, and skill matcher settings.

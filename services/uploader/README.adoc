@@ -9,12 +9,15 @@ An HTTP entry point for resume uploads. It:
 . streams processing status to `GET /events?job_id=<job-id>` using Server-Sent Events
 
 The extractor stores extracted text at `results/<job-id>.txt`; piistripper stores a redacted copy at
-`results/<job-id>.redacted.txt` in the same bucket. The original extracted text is retained.
-The extractor and piistripper publish status messages to the durable `<QUEUE_NAME>.events` queue;
+`results/<job-id>.redacted.txt` in the same bucket, then queues the skill matcher. The matcher stores
+scores at `results/<job-id>.skills.json`. The original extracted text is retained.
+The extractor, piistripper, and skill matcher publish status messages to the durable `<QUEUE_NAME>.events` queue;
 the uploader keeps the latest status in memory so an SSE client can reconnect and receive the current stage.
-Statuses include `queued`, `processing`, `retrying`, `redacting`, `completed`, and `failed`. The in-memory status
+Statuses include `queued`, `processing`, `retrying`, `redacting`, `matching`, `completed`, and `failed`. `completed`
+is published only after matching succeeds. The uploader serves match JSON at
+`GET /results?job_id=<job-id>`. The in-memory status
 is retained for up to 24 hours (with a 10,000-job capacity), and is lost when the uploader restarts.
 Run one uploader instance with this queue-based status setup; multiple uploader replicas need a
 broadcast or shared status store so each instance can serve every connected client.
 
-Uploader, extractor, and piistripper must use the same `RUSTFS_BUCKET` (defaults to `cv-platform-uploads`), `RUSTFS_ENDPOINT_URL`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, `RUSTFS_SECRET_ACCESS_KEY`, `RABBITMQ_URL`, and `QUEUE_NAME`.
+Uploader, extractor, piistripper, and skillmatcher must use the same `RUSTFS_BUCKET` (defaults to `cv-platform-uploads`), `RUSTFS_ENDPOINT_URL`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, `RUSTFS_SECRET_ACCESS_KEY`, `RABBITMQ_URL`, and `QUEUE_NAME`.

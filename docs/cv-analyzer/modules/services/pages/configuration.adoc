@@ -1,43 +1,43 @@
 = Configuration
 
-The uploader, extractor, and piistripper must point to the same RabbitMQ queue and S3-compatible storage namespace.
+The uploader, extractor, piistripper, and skill matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.
 
 [cols="1,1,2,2"]
 |===
 |Variable |Required by |Default |Purpose
 
 |`RABBITMQ_URL`
-|Uploader, extractor, piistripper
+|Uploader, extractor, piistripper, skill matcher
 |None
 |AMQP connection URL. Required at startup.
 
 |`QUEUE_NAME`
-|Uploader, extractor, piistripper
+|Uploader, extractor, piistripper, skill matcher
 |None
-|Durable extraction queue name. Redaction, status, and failed queue names append `.pii`, `.events`, `.failed`, and `.pii.failed`.
+|Durable extraction queue name. Redaction, status, matching, and failed queue names append `.pii`, `.events`, `.skills`, `.failed`, `.pii.failed`, and `.skills.failed`.
 
 |`RUSTFS_ENDPOINT_URL`
-|Uploader, extractor, piistripper
+|Uploader, extractor, piistripper, skill matcher
 |`http://localhost:9000`
 |S3-compatible endpoint.
 
 |`RUSTFS_BUCKET`
-|Uploader, extractor, piistripper
+|Uploader, extractor, piistripper, skill matcher
 |`cv-platform-uploads`
-|Shared bucket for original uploads, extracted text, and redacted results.
+|Shared bucket for original uploads, extracted text, redacted results, and score results.
 
 |`RUSTFS_REGION`
-|Uploader, extractor, piistripper
+|Uploader, extractor, piistripper, skill matcher
 |`us-east-1`
 |S3 signing region.
 
 |`RUSTFS_ACCESS_KEY_ID`
-|Uploader, extractor, piistripper
+|Uploader, extractor, piistripper, skill matcher
 |`rustfsadmin`
 |Object-storage access key.
 
 |`RUSTFS_SECRET_ACCESS_KEY`
-|Uploader, extractor, piistripper
+|Uploader, extractor, piistripper, skill matcher
 |`rustfsadmin`
 |Object-storage secret key.
 
@@ -52,4 +52,4 @@ The uploader, extractor, and piistripper must point to the same RabbitMQ queue a
 |API key required if the standalone `SendToWeighter` helper is called.
 |===
 
-Use the same `RUSTFS_*` values in all three services. In particular, `RUSTFS_BUCKET` must match or a worker rejects the job reference. Piistripper consumes `<QUEUE_NAME>.pii` and writes a separate redacted result.
+Use the same `RUSTFS_*` values in all four services. In particular, `RUSTFS_BUCKET` must match or a worker rejects the job reference. Piistripper consumes `<QUEUE_NAME>.pii` and writes a separate redacted result; the skill matcher consumes `<QUEUE_NAME>.skills` and writes category scores.

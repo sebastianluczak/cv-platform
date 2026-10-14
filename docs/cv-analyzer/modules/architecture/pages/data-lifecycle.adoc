@@ -21,6 +21,11 @@
 |`results/<job-id>.redacted.txt`
 |Written by `piistripper` as a separate best-effort redacted copy; the original extracted text is retained.
 
+|Role-profile scores
+|Configured S3-compatible bucket
+|`results/<job-id>.skills.json`
+|Written by `skillmatcher` from redacted text; contains category scores and matched pattern evidence.
+
 |Extraction job
 |RabbitMQ work queue
 |`QUEUE_NAME`
@@ -31,6 +36,11 @@
 |`QUEUE_NAME.pii`
 |Persistent message published by the extractor after storing the extracted text; manually acknowledged after redaction, retry republish, or failed-queue republish.
 
+|Skill matching job
+|RabbitMQ work queue
+|`QUEUE_NAME.skills`
+|Persistent message published by piistripper after storing the redacted result; manually acknowledged after scoring, retry republish, or failed-queue republish.
+
 |Failed job
 |RabbitMQ failed queue
 |`QUEUE_NAME.failed`
@@ -39,6 +49,11 @@
 |Failed redaction job
 |RabbitMQ failed queue
 |`QUEUE_NAME.pii.failed`
+|Persistent message retained for inspection or operator-managed requeue.
+
+|Failed skill matching job
+|RabbitMQ failed queue
+|`QUEUE_NAME.skills.failed`
 |Persistent message retained for inspection or operator-managed requeue.
 
 |Processing status

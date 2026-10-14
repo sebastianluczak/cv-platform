@@ -50,6 +50,9 @@
     piistripper = {
       exec = "sleep 4 && task services:piistripper:start";
     };
+    skillmatcher = {
+      exec = "sleep 5 && task services:skillmatcher:start";
+    };
     frontend = {
       exec = "task ui:install && task ui:start";
     };

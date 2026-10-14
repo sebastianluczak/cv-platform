@@ -31,6 +31,21 @@ After storing `results/<id>.txt`, the extractor publishes a persistent job to `Q
 
 Piistripper requires a UUID `id`, the configured bucket, and the exact result key derived from that ID. On success it writes the redacted copy to `results/<id>.redacted.txt`; the source result is retained. Exhausted and malformed redaction jobs are sent to `QUEUE_NAME.pii.failed`.
 
+== Skill matching job and result
+
+After writing the redacted result, piistripper publishes a persistent job to `QUEUE_NAME.skills`:
+
+[source,json]
+----
+{
+  "id": "<job-id>",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/<job-id>.redacted.txt"
+}
+----
+
+The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to `results/<job-id>.skills.json`. The result includes `version`, `job_id`, `scored_at`, and `categories`; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to `QUEUE_NAME.skills.failed`.
+
 == Status event
 
 The extractor and piistripper publish status messages to the durable `QUEUE_NAME.events` queue. The uploader consumes these messages and retains the latest one per job in memory.
@@ -46,7 +61,7 @@ The extractor and piistripper publish status messages to the durable `QUEUE_NAME
 }
 ----
 
-Stages are `queued`, `processing`, `retrying`, `redacting`, `completed`, and `failed`. The extractor reports extraction activity; piistripper reports redaction and terminal completion/failure. `updated_at` is UTC. `attempt` is the attempt number represented by the status; `queued` is first recorded by the uploader after job publish confirmation.
+Stages are `queued`, `processing`, `retrying`, `redacting`, `matching`, `completed`, and `failed`. The extractor reports extraction activity, piistripper reports redaction and matching start, and the skill matcher publishes terminal completion/failure. `updated_at` is UTC. `attempt` is the attempt number represented by the status; `queued` is first recorded by the uploader after job publish confirmation.
 
 == Upload response
 
@@ -75,6 +90,14 @@ IMPORTANT: Status updates are not a durable client-facing event log.
 |`QUEUE_NAME.pii`
 |Extractor
 |Piistripper
+
+|`QUEUE_NAME.skills`
+|Piistripper
+|Skill matcher
+
+|`QUEUE_NAME.skills.failed`
+|Skill matcher
+|None
 
 |`QUEUE_NAME.events`
 |Extractor, piistripper

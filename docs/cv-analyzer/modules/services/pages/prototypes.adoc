@@ -1,9 +1,5 @@
 = Prototype Components
 
-== Skill matcher
-
-`services/skillmatcher` currently contains only a README describing an intended post-extraction skill-matching step. There is no Go implementation, input/output contract, executable, or connection from the extractor. Skill matching is not part of the running workflow.
-
 == AI weighter
 
 `services/aiweighter/aiweighter.go` contains a standalone helper that sends supplied text to OpenRouter's chat-completions endpoint. It selects a model directly in source and prints the response content, reasoning field, and full response body. It requires `OPENROUTER_API_KEY` and panics on errors.

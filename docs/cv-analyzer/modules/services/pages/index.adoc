@@ -20,9 +20,9 @@
 |xref:piistripper.adoc[PII stripper]
 
 |`skillmatcher`
-|Intended to match extracted skills against supplied sets
-|README-only placeholder; no executable implementation or integration
-|xref:prototypes.adoc[Prototype components]
+|Scores redacted resume text against deterministic IT role-profile patterns
+|Implemented; part of the running upload/review flow
+|xref:skillmatcher.adoc[Skill matcher]
 
 |`aiweighter`
 |Standalone OpenRouter chat-completion helper

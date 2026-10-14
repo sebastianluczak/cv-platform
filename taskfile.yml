@@ -43,6 +43,10 @@ tasks:
     desc: Start the PII stripping service
     cmds:
       - go -C services/piistripper run .
+  services:skillmatcher:start:
+    desc: Start the skill matcher service
+    cmds:
+      - go -C services/skillmatcher run .
   services:aiweighter:start:
     desc: Start the AI weighter service
     cmds:
@@ -74,6 +78,12 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o piistripper .
       - docker build -t piistripper .
+  services:skillmatcher:build:
+    dir: services/skillmatcher
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o skillmatcher .
+      - docker build -t skillmatcher .
 
   
   # AI CODE REVIEW #

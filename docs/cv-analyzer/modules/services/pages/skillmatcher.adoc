@@ -1,0 +1,77 @@
+= Skill Matcher Service
+
+The skill matcher consumes jobs after PII stripping, reads the redacted text
+from shared S3-compatible storage, and scores the resume against deterministic
+IT role-profile patterns. It does not call an external model or API.
+
+== Workflow and result
+
+The service consumes persistent JSON jobs from `QUEUE_NAME.skills`:
+
+[source,json]
+----
+{
+  "id": "<job-id>",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/<job-id>.redacted.txt"
+}
+----
+
+The worker validates the UUID, configured bucket, and exact object key. It
+reads no more than 10 MiB of text and writes a versioned result to
+`results/<job-id>.skills.json`. The result includes the job ID, scoring
+timestamp, categories, integer scores, and matched patterns as evidence. The
+uploader serves this JSON at `GET /results?job_id=<job-id>`.
+
+Piistripper publishes the matching job only after storing the redacted text.
+The matcher publishes `matching`, followed by terminal `completed` only after
+storing the score result. It uses manual acknowledgements, a prefetch of one,
+publisher confirms, and up to three retries after the initial attempt.
+Exhausted and malformed jobs are published to `QUEUE_NAME.skills.failed`.
+Delivery is at-least-once; deterministic object keys make repeated writes safe.
+
+== Categories and scoring rubric
+
+V1 includes backend, DevOps, management, architecture, QA, frontend, data, and
+security. Each category counts distinct matching patterns:
+
+[cols="1,1,2"]
+|===
+|Matched patterns |Score |Interpretation
+
+|0-1
+|1
+|Little or no matching evidence
+
+|2-3
+|2
+|Some matching evidence
+
+|4-5
+|3
+|Moderate matching evidence
+
+|6-7
+|4
+|Strong matching evidence
+
+|8 or more
+|5
+|Broad matching evidence
+|===
+
+These scores are heuristic indicators of text signals, not objective measures
+of candidate ability or suitability. Matched patterns are included so results
+can be interpreted. The scorer does not use identity or demographic
+characteristics.
+
+== Configuration and operation
+
+`RABBITMQ_URL` and `QUEUE_NAME` are required. The matcher must use the same
+`RUSTFS_ENDPOINT_URL`, `RUSTFS_BUCKET`, `RUSTFS_REGION`,
+`RUSTFS_ACCESS_KEY_ID`, and `RUSTFS_SECRET_ACCESS_KEY` values as the uploader
+and preceding workers. See xref:configuration.adoc[configuration].
+
+Run locally with `task services:skillmatcher:start`; build the binary and Docker
+image with `task services:skillmatcher:build`. For retry and queue operations,
+see xref:operations.adoc[local operations].
