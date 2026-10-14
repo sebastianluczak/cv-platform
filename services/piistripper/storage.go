@@ -4,41 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 const maxResultSize = 10 << 20
-
-type storageConfig struct {
-	endpoint string
-	region   string
-	bucket   string
-}
-
-func newStorageClient() (*s3.Client, storageConfig) {
-	config := storageConfig{
-		endpoint: envOrDefault("RUSTFS_ENDPOINT_URL", "http://localhost:9000"),
-		region:   envOrDefault("RUSTFS_REGION", "us-east-1"),
-		bucket:   envOrDefault("RUSTFS_BUCKET", "cv-platform-uploads"),
-	}
-	client := s3.NewFromConfig(aws.Config{
-		Region: config.region,
-		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
-			envOrDefault("RUSTFS_ACCESS_KEY_ID", "rustfsadmin"),
-			envOrDefault("RUSTFS_SECRET_ACCESS_KEY", "rustfsadmin"),
-			"",
-		)),
-	}, func(options *s3.Options) {
-		options.BaseEndpoint = aws.String(config.endpoint)
-		options.UsePathStyle = true
-	})
-	return client, config
-}
 
 func readResult(ctx context.Context, client *s3.Client, bucket, key string) (string, error) {
 	object, err := client.GetObject(ctx, &s3.GetObjectInput{
@@ -72,11 +44,4 @@ func writeRedactedResult(ctx context.Context, client *s3.Client, bucket, key, co
 		return fmt.Errorf("store redacted result %q: %w", key, err)
 	}
 	return nil
-}
-
-func envOrDefault(name, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
-		return value
-	}
-	return fallback
 }

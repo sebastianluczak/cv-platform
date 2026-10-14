@@ -10,24 +10,17 @@ import (
 	"strings"
 	"time"
 
+	"brodaty.dev/cv-platform/common/objectstore"
+	"brodaty.dev/cv-platform/common/rabbitmq"
 	"brodaty.dev/cv-platform/extractor/storage"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/streadway/amqp"
 )
 
 const (
-	maxRetries     = 3
-	jobTimeout     = 5 * time.Minute
-	confirmTimeout = 10 * time.Second
+	maxRetries = 3
+	jobTimeout = 5 * time.Minute
 )
-
-type statusEvent struct {
-	JobID     string    `json:"job_id"`
-	Stage     string    `json:"stage"`
-	Message   string    `json:"message"`
-	Attempt   int       `json:"attempt"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
 
 type extractionJob struct {
 	ID          string `json:"id"`
@@ -113,7 +106,7 @@ func run() error {
 		return fmt.Errorf("consume queue %q: %w", queueName, err)
 	}
 
-	storageClient, config := storage.NewClient()
+	storageClient, config := objectstore.NewClient()
 	// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
 	log.Printf("Extractor consuming queue %q; input/output bucket: %q", safeLogField(queueName), safeLogField(config.Bucket))
 	for delivery := range deliveries {
@@ -139,8 +132,8 @@ func handleDelivery(
 		return moveToFailedQueue(channel, confirmations, delivery, failedQueue, fmt.Errorf("decode job: %w", err))
 	}
 
-	attempt := retryCount(delivery.Headers) + 1
-	publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+	attempt := rabbitmq.RetryCount(delivery.Headers, maxRetries) + 1
+	rabbitmq.PublishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, rabbitmq.StatusEvent{
 		JobID: job.ID, Stage: "processing", Message: "We're reading your resume.", Attempt: attempt,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), jobTimeout)
@@ -154,11 +147,11 @@ func handleDelivery(
 			_ = delivery.Nack(false, true)
 			return fmt.Errorf("encode redaction job %s: %w", job.ID, err)
 		}
-		if err := publishAndConfirm(channel, confirmations, redactionQueue, redaction, nil); err != nil {
+		if err := rabbitmq.PublishAndConfirm(channel, confirmations, redactionQueue, redaction, nil, rabbitmq.ConfirmTimeout); err != nil {
 			_ = delivery.Nack(false, true)
 			return fmt.Errorf("queue redaction job %s: %w", job.ID, err)
 		}
-		publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+		rabbitmq.PublishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, rabbitmq.StatusEvent{
 			JobID: job.ID, Stage: "redacting", Message: "Removing common personal identifiers.", Attempt: attempt,
 		})
 		if err := delivery.Ack(false); err != nil {
@@ -168,15 +161,15 @@ func handleDelivery(
 		return nil
 	}
 
-	retry := retryCount(delivery.Headers)
+	retry := rabbitmq.RetryCount(delivery.Headers, maxRetries)
 	if retry < maxRetries {
-		publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+		rabbitmq.PublishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, rabbitmq.StatusEvent{
 			JobID: job.ID, Stage: "retrying", Message: "We hit a snag and are trying again.", Attempt: retry + 2,
 		})
-		headers := copyHeaders(delivery.Headers)
+		headers := rabbitmq.CopyHeaders(delivery.Headers)
 		headers["x-retry-count"] = int64(retry + 1)
 		headers["x-last-error"] = errorText(err)
-		if publishErr := publishAndConfirm(channel, confirmations, queueName, delivery.Body, headers); publishErr != nil {
+		if publishErr := rabbitmq.PublishAndConfirm(channel, confirmations, queueName, delivery.Body, headers, rabbitmq.ConfirmTimeout); publishErr != nil {
 			_ = delivery.Nack(false, true)
 			return fmt.Errorf("retry job %s: %w", job.ID, publishErr)
 		}
@@ -187,7 +180,7 @@ func handleDelivery(
 		return nil
 	}
 
-	publishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, statusEvent{
+	rabbitmq.PublishStatusBestEffort(statusChannel, statusConfirmations, statusQueue, rabbitmq.StatusEvent{
 		JobID: job.ID, Stage: "failed", Message: "We couldn't process this resume.", Attempt: retry + 1,
 	})
 	return moveToFailedQueue(channel, confirmations, delivery, failedQueue, err)
@@ -224,9 +217,9 @@ func moveToFailedQueue(
 	failedQueue string,
 	cause error,
 ) error {
-	headers := copyHeaders(delivery.Headers)
+	headers := rabbitmq.CopyHeaders(delivery.Headers)
 	headers["x-last-error"] = errorText(cause)
-	if err := publishAndConfirm(channel, confirmations, failedQueue, delivery.Body, headers); err != nil {
+	if err := rabbitmq.PublishAndConfirm(channel, confirmations, failedQueue, delivery.Body, headers, rabbitmq.ConfirmTimeout); err != nil {
 		_ = delivery.Nack(false, true)
 		return fmt.Errorf("move failed job to %q: %w", failedQueue, err)
 	}
@@ -236,94 +229,6 @@ func moveToFailedQueue(
 	// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
 	log.Printf("Job moved to %s: %s", safeLogField(failedQueue), safeLogField(fmt.Sprint(cause)))
 	return nil
-}
-
-func publishAndConfirm(
-	channel *amqp.Channel,
-	confirmations <-chan amqp.Confirmation,
-	routingKey string,
-	body []byte,
-	headers amqp.Table,
-) error {
-	if err := channel.Publish(
-		"",
-		routingKey,
-		true,
-		false,
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent,
-			Headers:      headers,
-			Body:         body,
-		},
-	); err != nil {
-		return fmt.Errorf("publish to %q: %w", routingKey, err)
-	}
-
-	timer := time.NewTimer(confirmTimeout)
-	defer timer.Stop()
-	select {
-	case confirmation, ok := <-confirmations:
-		if !ok {
-			return fmt.Errorf("RabbitMQ closed the publisher confirmation channel")
-		}
-		if !confirmation.Ack {
-			return fmt.Errorf("RabbitMQ rejected publish to %q", routingKey)
-		}
-		return nil
-	case <-timer.C:
-		return fmt.Errorf("timed out waiting for RabbitMQ confirmation")
-	}
-}
-
-func publishStatusBestEffort(
-	channel *amqp.Channel,
-	confirmations <-chan amqp.Confirmation,
-	statusQueue string,
-	event statusEvent,
-) {
-	if event.JobID == "" {
-		return
-	}
-	event.UpdatedAt = time.Now().UTC()
-	body, err := json.Marshal(event)
-	if err == nil {
-		err = publishAndConfirm(channel, confirmations, statusQueue, body, nil)
-	}
-	if err != nil {
-		log.Printf("Publish %s status for job %s: %v", event.Stage, event.JobID, err)
-	}
-}
-
-func retryCount(headers amqp.Table) int {
-	switch count := headers["x-retry-count"].(type) {
-	case int:
-		return boundedRetryCount(int64(count))
-	case int32:
-		return boundedRetryCount(int64(count))
-	case int64:
-		return boundedRetryCount(count)
-	default:
-		return 0
-	}
-}
-
-func boundedRetryCount(count int64) int {
-	if count <= 0 {
-		return 0
-	}
-	if count > maxRetries {
-		return maxRetries + 1
-	}
-	return int(count)
-}
-
-func copyHeaders(headers amqp.Table) amqp.Table {
-	copy := make(amqp.Table, len(headers)+2)
-	for key, value := range headers {
-		copy[key] = value
-	}
-	return copy
 }
 
 func safeLogField(value string) string {

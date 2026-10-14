@@ -10,16 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
+	"brodaty.dev/cv-platform/common/objectstore"
+	"brodaty.dev/cv-platform/common/rabbitmq"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/streadway/amqp"
 )
 
 const (
-	maxRetries     = 3
-	jobTimeout     = 2 * time.Minute
-	confirmTimeout = 10 * time.Second
+	maxRetries = 3
+	jobTimeout = 2 * time.Minute
 )
 
 var jobIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -28,20 +27,6 @@ type matchingJob struct {
 	ID        string `json:"id"`
 	Bucket    string `json:"bucket"`
 	ObjectKey string `json:"object_key"`
-}
-
-type statusEvent struct {
-	JobID     string    `json:"job_id"`
-	Stage     string    `json:"stage"`
-	Message   string    `json:"message"`
-	Attempt   int       `json:"attempt"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type storageConfig struct {
-	endpoint string
-	region   string
-	bucket   string
 }
 
 func run() error {
@@ -91,13 +76,13 @@ func run() error {
 	}
 	confirmations := publisherChannel.NotifyPublish(make(chan amqp.Confirmation, 1))
 
-	storageClient, config := newStorageClient()
+	storageClient, config := objectstore.NewClient()
 	// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
-	log.Printf("Skill matcher consuming queue %q; bucket: %q", safeLogField(workQueue), safeLogField(config.bucket))
+	log.Printf("Skill matcher consuming queue %q; bucket: %q", safeLogField(workQueue), safeLogField(config.Bucket))
 	for delivery := range deliveries {
 		if err := handleDelivery(
 			consumerChannel, publisherChannel, confirmations, delivery,
-			workQueue, failedQueue, statusQueue, storageClient, config.bucket,
+			workQueue, failedQueue, statusQueue, storageClient, config.Bucket,
 		); err != nil {
 			log.Printf("Handle skill matching delivery: %v", err)
 		}
@@ -123,20 +108,20 @@ func handleDelivery(
 	if !validJob(job, bucket) {
 		return moveToFailedQueue(
 			consumerChannel, publisherChannel, confirmations, delivery,
-			failedQueue, statusQueue, job.ID, retryCount(delivery.Headers)+1,
+			failedQueue, statusQueue, job.ID, rabbitmq.RetryCount(delivery.Headers, maxRetries)+1,
 			fmt.Errorf("invalid matching job reference"),
 		)
 	}
 
-	attempt := retryCount(delivery.Headers) + 1
-	publishStatusBestEffort(publisherChannel, confirmations, statusQueue, statusEvent{
+	attempt := rabbitmq.RetryCount(delivery.Headers, maxRetries) + 1
+	rabbitmq.PublishStatusBestEffort(publisherChannel, confirmations, statusQueue, rabbitmq.StatusEvent{
 		JobID: job.ID, Stage: "matching", Message: "Comparing resume experience with IT role profiles.", Attempt: attempt,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), jobTimeout)
 	err := matchJob(ctx, storageClient, bucket, job)
 	cancel()
 	if err == nil {
-		if err := publishStatus(publisherChannel, confirmations, statusQueue, statusEvent{
+		if err := rabbitmq.PublishStatus(publisherChannel, confirmations, statusQueue, rabbitmq.StatusEvent{
 			JobID: job.ID, Stage: "completed", Message: "Role profile scores are ready.", Attempt: attempt,
 		}); err != nil {
 			_ = delivery.Nack(false, true)
@@ -149,15 +134,15 @@ func handleDelivery(
 		return nil
 	}
 
-	retry := retryCount(delivery.Headers)
+	retry := rabbitmq.RetryCount(delivery.Headers, maxRetries)
 	if retry < maxRetries {
-		publishStatusBestEffort(publisherChannel, confirmations, statusQueue, statusEvent{
+		rabbitmq.PublishStatusBestEffort(publisherChannel, confirmations, statusQueue, rabbitmq.StatusEvent{
 			JobID: job.ID, Stage: "matching", Message: "Matching could not be completed; retrying.", Attempt: retry + 2,
 		})
-		headers := copyHeaders(delivery.Headers)
+		headers := rabbitmq.CopyHeaders(delivery.Headers)
 		headers["x-retry-count"] = int64(retry + 1)
 		headers["x-last-error"] = errorText(err)
-		if publishErr := publishAndConfirm(publisherChannel, confirmations, workQueue, delivery.Body, headers); publishErr != nil {
+		if publishErr := rabbitmq.PublishAndConfirm(publisherChannel, confirmations, workQueue, delivery.Body, headers, rabbitmq.ConfirmTimeout); publishErr != nil {
 			_ = delivery.Nack(false, true)
 			return fmt.Errorf("retry matching job %s: %w", job.ID, publishErr)
 		}
@@ -193,31 +178,4 @@ func validJob(job matchingJob, bucket string) bool {
 	return jobIDPattern.MatchString(job.ID) &&
 		job.Bucket == bucket &&
 		job.ObjectKey == "results/"+job.ID+".redacted.txt"
-}
-
-func newStorageClient() (*s3.Client, storageConfig) {
-	config := storageConfig{
-		endpoint: envOrDefault("RUSTFS_ENDPOINT_URL", "http://localhost:9000"),
-		region:   envOrDefault("RUSTFS_REGION", "us-east-1"),
-		bucket:   envOrDefault("RUSTFS_BUCKET", "cv-platform-uploads"),
-	}
-	client := s3.NewFromConfig(aws.Config{
-		Region: config.region,
-		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
-			envOrDefault("RUSTFS_ACCESS_KEY_ID", "rustfsadmin"),
-			envOrDefault("RUSTFS_SECRET_ACCESS_KEY", "rustfsadmin"),
-			"",
-		)),
-	}, func(options *s3.Options) {
-		options.BaseEndpoint = aws.String(config.endpoint)
-		options.UsePathStyle = true
-	})
-	return client, config
-}
-
-func envOrDefault(name, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
-		return value
-	}
-	return fallback
 }
