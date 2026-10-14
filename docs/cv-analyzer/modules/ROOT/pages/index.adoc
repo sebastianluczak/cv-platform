@@ -7,6 +7,13 @@ CV Platform (also presented as Draftline in the UI) is an early-stage resume-pro
 . backend queues an extraction job, 
 . system makes processing updates available to the browser.
 
+== North Star
+
+It is a personal project solely driven by this pure soul:
+
+.Coder, Processor, Architect, Contractor, Reason
+image::freya.png[]
+
 == Documentation map
 
 * xref:architecture:context.adoc[Architecture context] describes the running components and their boundaries.
