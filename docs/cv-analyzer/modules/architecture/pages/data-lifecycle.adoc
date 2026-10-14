@@ -9,22 +9,22 @@
 |Original resume
 |Configured S3-compatible bucket
 |`uploads/<job-id>`
-|Written by the uploader before the job is queued. No deletion or object lifecycle policy is implemented in these services.
+|Written by the `uploader` before the job is queued.
 
 |Extracted text
-|Same bucket
+|Configured S3-compatible bucket
 |`results/<job-id>.txt`
-|Written by the extractor after extraction. No retrieval or deletion endpoint is implemented here.
+|Written by the `extractor` after extraction.
 
 |Extraction job
 |RabbitMQ work queue
 |`QUEUE_NAME`
-|Persistent message in a durable queue; manually acknowledged after success, retry republish, or failed-queue republish.
+|Persistent message in a durable queue, manually acknowledged after success, retry republish, or failed-queue republish.
 
 |Failed job
 |RabbitMQ failed queue
 |`QUEUE_NAME.failed`
-|Persistent message retained for inspection or operator-managed requeue. No requeue tooling is included.
+|Persistent message retained for inspection or operator-managed requeue.
 
 |Processing status
 |RabbitMQ status queue, then uploader memory
@@ -38,6 +38,6 @@ The extractor downloads each input to a temporary file. For scanned PDFs it rend
 
 == Retention and privacy
 
-The services do not implement a retention schedule for uploaded resumes or extracted text. Storage administrators must configure lifecycle expiration and access controls appropriate to their data policy. The current implementation therefore must not be described as never storing personal data: resumes and their extracted text are persisted in object storage.
+The services do not implement a retention schedule for uploaded resumes or extracted text. 
 
-The `aiweighter` prototype also sends its input text to the OpenRouter API if invoked. It is not connected to this pipeline, but its use would disclose that content to an external provider; see xref:services:prototypes.adoc[prototype components].
+IMPORTANT: Storage administrators must configure lifecycle expiration and access controls appropriate to their data policy.

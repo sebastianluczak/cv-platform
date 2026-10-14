@@ -24,5 +24,3 @@
 |Prototype package; not integrated into the upload/extraction pipeline
 |xref:prototypes.adoc[Prototype components]
 |===
-
-The currently implemented end-to-end backend flow ends when extracted text is stored. It does not yet match skills, calculate a CV weight, or return extracted text to the browser.

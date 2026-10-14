@@ -19,11 +19,12 @@ This project began as a learning and portfolio application. Its architecture ref
 
 == Trade-offs and constraints
 
-* Asynchronous processing keeps HTTP uploads separate from extraction latency, but requires durable job handling and status delivery.
-* The current status store is in-memory and single-instance oriented; it is not a resilient multi-replica status service.
-* Resume files and extracted text are persisted without service-managed expiration. Retention, authentication, and production hardening remain deployment concerns.
-* Skill matching and AI weighting are not yet integrated into the implemented workflow.
+TODO
 
 == Architecture practices
 
-ADRs capture selected decisions, while the architecture and service pages describe the current implementation. These should be revised together as component boundaries or runtime behavior change.
+ADRs capture selected decisions, while the architecture and service pages describe the current implementation.
+
+These should be revised together as component boundaries or runtime behavior change.
+
+IMPORTANT: Automation over documentation is needed.

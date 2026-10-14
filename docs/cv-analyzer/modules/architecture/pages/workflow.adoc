@@ -12,12 +12,30 @@
 
 == Extraction failures and retries
 
-The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented `x-retry-count`, then the original delivery is acknowledged. The initial attempt plus up to three retries means a job may be attempted four times. A job still failing after those attempts is published to `QUEUE_NAME.failed` and acknowledged from the work queue.
+The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented `x-retry-count`, then the original delivery is acknowledged. 
+The initial attempt plus up to three retries means a job may be attempted four times. 
 
-Malformed job JSON is also sent directly to the failed queue. Queue republishes use publisher confirms and persistent messages. Status publishing is best-effort: a status publish failure is logged but does not prevent processing or acknowledgement.
+A job still failing after those attempts is published to `QUEUE_NAME.failed` and acknowledged from the work queue.
+
+Malformed job JSON is also sent directly to the failed queue. 
 
 == Delivery semantics
 
-The workflow is at-least-once, not exactly-once. If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job. Result writes use a deterministic key (`results/<job-id>.txt`), so a repeated successful extraction overwrites that object's key. There is no separate deduplication store.
+The workflow is **at-least-once**, not exactly-once. 
 
-SSE status events are not a durable history for clients: they are consumed by the uploader and retained only in that uploader process. A reconnect to the same live instance receives the latest snapshot, but an uploader restart or another replica may not have the job's status.
+If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job. 
+
+Result writes use a deterministic key (`results/<job-id>.txt`), so a repeated successful extraction overwrites that object's key.
+
+There is no separate deduplication store, operation is idempotent.
+
+=== SSE status durability
+
+SSE status events are **not a durable history for clients**: 
+
+. they are consumed by the `uploader`,
+. retained only in **that** `uploader` process. 
+
+A reconnect to the same live instance receives the latest snapshot, but an `uploader` **after restart** or **another replica** will not have the job's status.
+
+IMPORTANT: This is serious and needs proper addressing.

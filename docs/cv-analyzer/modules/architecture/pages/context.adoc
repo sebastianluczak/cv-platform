@@ -1,24 +1,54 @@
 = System Context and Runtime Architecture
 
-The current system is an asynchronous file-processing pipeline. The browser interacts with the uploader over HTTP; the uploader and extractor coordinate through RabbitMQ and share an S3-compatible bucket.
+The current system is an asynchronous file-processing pipeline. 
 
-[source]
-----
-Browser
-  |
-  | POST /upload; GET /events?job_id=...
-  v
-Uploader ----------------------> RabbitMQ
-  |                              |  extraction jobs
-  | uploads/<job-id>             |  <queue>.events
-  v                              v
-S3-compatible storage <------ Extractor
-  |                         downloads upload,
-  |                         extracts text
-  +-- results/<job-id>.txt <------+
+. browser interacts with the `uploader` microservice over HTTP protocol
+. the `uploader` and `extractor` coordinate through RabbitMQ and share an S3-compatible bucket.
+
+.Documentation extraction architecture (DEA)
+[plantuml]
 ----
 
-The UI is a separate React application. It defaults to `/api/upload` and `/api/events`, so a deployment must route those browser paths to the uploader's `/upload` and `/events` handlers. This repository does not define that reverse-proxy or gateway configuration.
+@startuml
+title DEA
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor Browser
+
+component Uploader
+queue RabbitMQ
+
+component Extractor
+
+database "S3-compatible Storage" as Storage
+
+Browser --> Uploader : POST /upload
+Browser --> Uploader : GET /events?job_id=...
+
+Uploader --> Storage : Upload file\nuploads/<job-id>
+Uploader --> RabbitMQ : Publish extraction job
+
+RabbitMQ --> Extractor : Consume extraction job
+Extractor --> Storage : Download upload
+Extractor --> Storage : Write results/<job-id>.txt
+
+note right of RabbitMQ
+  Queues:
+  - extraction jobs
+  - <queue>.events
+end note
+
+@enduml
+----
+
+The UI is a separate React application. 
+
+. uses `/api/upload` and `/api/events`, so a deployment must route those browser paths to the uploader's `/upload` and `/events` handlers. 
+
+This repository does not define that reverse-proxy or gateway configuration yet, it is hardcoded and proxied.
 
 == Component responsibilities
 
@@ -32,19 +62,12 @@ The UI is a separate React application. It defaults to `/api/upload` and `/api/e
 |Uploader
 |Validates and stores the uploaded file, publishes a persistent extraction job, and streams the latest in-memory status to clients using Server-Sent Events (SSE).
 
+|Extractor
+|Consumes jobs, downloads the referenced upload, extracts PDF or image text, stores the result, and acknowledges or routes the job according to its outcome.
+
 |RabbitMQ
 |Carries extraction jobs, status events, and terminal failed jobs in durable queues.
 
 |S3-compatible storage
 |Stores the original upload and extracted plain text. Both services must use the same bucket and endpoint configuration.
-
-|Extractor
-|Consumes jobs, downloads the referenced upload, extracts PDF or image text, stores the result, and acknowledges or routes the job according to its outcome.
 |===
-
-== Boundaries and current gaps
-
-* The uploader exposes no authentication or authorization in its HTTP handlers. Protect it at the network edge before exposing it beyond a trusted development environment.
-* Job and status queues are durable, but the uploader's SSE status store is process-local and volatile. Restarting it loses the status history.
-* The result is written to object storage; this backend does not expose an endpoint for retrieving it.
-* The `skillmatcher` README describes an intended next step, but there is no implementation in the service directory. The `aiweighter` package is a standalone prototype and is not called by the upload/extraction pipeline.

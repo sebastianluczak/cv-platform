@@ -52,6 +52,4 @@ The uploader and extractor must point to the same RabbitMQ queue and S3-compatib
 |API key required if the standalone `SendToWeighter` helper is called.
 |===
 
-Defaults for S3 credentials are suitable only for local development. Use dedicated least-privilege credentials and a secret-management mechanism appropriate to the deployment; do not commit real credentials. The uploader attempts to list buckets and create the configured bucket if it is missing, so its credentials need the corresponding permissions.
-
 Use the same `RUSTFS_*` values in both services. In particular, `RUSTFS_BUCKET` must match or the extractor rejects the job reference.

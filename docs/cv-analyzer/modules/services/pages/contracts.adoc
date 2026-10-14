@@ -14,7 +14,7 @@ The uploader publishes a persistent JSON message to `QUEUE_NAME` after storing t
 }
 ----
 
-`id` is a generated UUID. The extractor requires the bucket to match its configured `RUSTFS_BUCKET` and requires `object_key` to equal `uploads/<id>`. The current consumer dispatches by `content_type`, not by filename.
+`id` is a generated UUID. The extractor requires the bucket to match its configured `RUSTFS_BUCKET` and requires `object_key` to equal `uploads/<id>`.
 
 == Status event
 
@@ -43,7 +43,9 @@ Stages are `queued`, `processing`, `retrying`, `completed`, and `failed`. `updat
 }
 ----
 
-The browser subscribes to `/events?job_id=<job-id>` and receives status event objects as SSE data frames. Status updates are not a durable client-facing event log.
+The browser subscribes to `/events?job_id=<job-id>` and receives status event objects as SSE data frames. 
+
+IMPORTANT: Status updates are not a durable client-facing event log.
 
 == Queue names and delivery
 
@@ -61,7 +63,7 @@ The browser subscribes to `/events?job_id=<job-id>` and receives status event ob
 
 |`QUEUE_NAME.failed`
 |Extractor
-|None included in this repository; operator inspection or requeue is external to the services.
+|None
 |===
 
-Queues are durable and jobs/status/failure messages are published as persistent messages. Job, retry, and failed-queue publication uses publisher confirms. Extraction deliveries are manually acknowledged.
+Queues are durable and jobs/status/failure messages are published as persistent messages.
