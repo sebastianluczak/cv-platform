@@ -92,7 +92,8 @@ func run() error {
 	confirmations := publisherChannel.NotifyPublish(make(chan amqp.Confirmation, 1))
 
 	storageClient, config := newStorageClient()
-	log.Printf("Skill matcher consuming queue %q; bucket: %q", workQueue, config.bucket)
+	// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
+	log.Printf("Skill matcher consuming queue %q; bucket: %q", safeLogField(workQueue), safeLogField(config.bucket))
 	for delivery := range deliveries {
 		if err := handleDelivery(
 			consumerChannel, publisherChannel, confirmations, delivery,
@@ -154,7 +155,7 @@ func handleDelivery(
 			JobID: job.ID, Stage: "matching", Message: "Matching could not be completed; retrying.", Attempt: retry + 2,
 		})
 		headers := copyHeaders(delivery.Headers)
-		headers["x-retry-count"] = int32(retry + 1)
+		headers["x-retry-count"] = int64(retry + 1)
 		headers["x-last-error"] = errorText(err)
 		if publishErr := publishAndConfirm(publisherChannel, confirmations, workQueue, delivery.Body, headers); publishErr != nil {
 			_ = delivery.Nack(false, true)

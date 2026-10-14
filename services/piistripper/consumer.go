@@ -151,7 +151,7 @@ func handleDelivery(
 			JobID: job.ID, Stage: "redacting", Message: "Redaction could not be completed; retrying.", Attempt: retry + 2,
 		})
 		headers := copyHeaders(delivery.Headers)
-		headers["x-retry-count"] = int32(retry + 1)
+		headers["x-retry-count"] = int64(retry + 1)
 		headers["x-last-error"] = errorText(err)
 		if publishErr := publishAndConfirm(publisherChannel, confirmations, workQueue, delivery.Body, headers); publishErr != nil {
 			_ = delivery.Nack(false, true)
@@ -296,14 +296,24 @@ func publishAndConfirm(
 func retryCount(headers amqp.Table) int {
 	switch count := headers["x-retry-count"].(type) {
 	case int:
-		return count
+		return boundedRetryCount(int64(count))
 	case int32:
-		return int(count)
+		return boundedRetryCount(int64(count))
 	case int64:
-		return int(count)
+		return boundedRetryCount(count)
 	default:
 		return 0
 	}
+}
+
+func boundedRetryCount(count int64) int {
+	if count <= 0 {
+		return 0
+	}
+	if count > maxRetries {
+		return maxRetries + 1
+	}
+	return int(count)
 }
 
 func copyHeaders(headers amqp.Table) amqp.Table {

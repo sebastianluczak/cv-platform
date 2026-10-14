@@ -2,9 +2,11 @@ package queue
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -55,20 +57,26 @@ func ConnectToQueue() (*amqp.Connection, *Publisher, error) {
 
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
-		return nil, nil, fmt.Errorf("failed to open a channel: %w", err)
+		return nil, nil, errors.Join(
+			fmt.Errorf("failed to open a channel: %w", err),
+			closeWithError("connection", conn),
+		)
 	}
 
 	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
-		ch.Close()
-		conn.Close()
-		return nil, nil, fmt.Errorf("failed to declare queue %q: %w", queueName, err)
+		return nil, nil, errors.Join(
+			fmt.Errorf("failed to declare queue %q: %w", queueName, err),
+			closeWithError("channel", ch),
+			closeWithError("connection", conn),
+		)
 	}
 	if err := ch.Confirm(false); err != nil {
-		ch.Close()
-		conn.Close()
-		return nil, nil, fmt.Errorf("failed to enable publisher confirms: %w", err)
+		return nil, nil, errors.Join(
+			fmt.Errorf("failed to enable publisher confirms: %w", err),
+			closeWithError("channel", ch),
+			closeWithError("connection", conn),
+		)
 	}
 
 	publisher := &Publisher{
@@ -76,7 +84,8 @@ func ConnectToQueue() (*amqp.Connection, *Publisher, error) {
 		queueName:     queueName,
 		confirmations: ch.NotifyPublish(make(chan amqp.Confirmation, 1)),
 	}
-	log.Printf("Connected to RabbitMQ and declared queue: %s", queueName)
+	// #nosec G706 -- The configured queue name has CR/LF removed by safeLogField.
+	log.Printf("Connected to RabbitMQ and declared queue: %s", safeLogField(queueName))
 	return conn, publisher, nil
 }
 
@@ -86,15 +95,26 @@ func ConsumeStatusEvents(conn *amqp.Connection, queueName string) (*amqp.Channel
 		return nil, nil, fmt.Errorf("open RabbitMQ status channel: %w", err)
 	}
 	if _, err := channel.QueueDeclare(queueName, true, false, false, false, nil); err != nil {
-		channel.Close()
-		return nil, nil, fmt.Errorf("declare status queue %q: %w", queueName, err)
+		return nil, nil, errors.Join(
+			fmt.Errorf("declare status queue %q: %w", queueName, err),
+			closeWithError("status channel", channel),
+		)
 	}
 	deliveries, err := channel.Consume(queueName, "", false, false, false, false, nil)
 	if err != nil {
-		channel.Close()
-		return nil, nil, fmt.Errorf("consume status queue %q: %w", queueName, err)
+		return nil, nil, errors.Join(
+			fmt.Errorf("consume status queue %q: %w", queueName, err),
+			closeWithError("status channel", channel),
+		)
 	}
 	return channel, deliveries, nil
+}
+
+func closeWithError(name string, resource interface{ Close() error }) error {
+	if err := resource.Close(); err != nil {
+		return fmt.Errorf("close %s: %w", name, err)
+	}
+	return nil
 }
 
 func (p *Publisher) PublishMessage(message ExtractionJob) error {
@@ -142,6 +162,12 @@ func (p *Publisher) PublishMessage(message ExtractionJob) error {
 		return p.failed
 	}
 
-	log.Printf("Published extraction job %s for %s/%s", message.ID, message.Bucket, message.ObjectKey)
+	log.Printf("Published extraction job %s for %s/%s",
+		safeLogField(message.ID), safeLogField(message.Bucket), safeLogField(message.ObjectKey))
 	return nil
+}
+
+func safeLogField(value string) string {
+	value = strings.ReplaceAll(value, "\r", " ")
+	return strings.ReplaceAll(value, "\n", " ")
 }

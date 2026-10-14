@@ -71,7 +71,8 @@ func resultHandler(storageClient *s3.Client, bucket string) http.HandlerFunc {
 				http.Error(w, "Match result not found", http.StatusNotFound)
 				return
 			}
-			log.Printf("Read match result for job %s: %v", jobID, err)
+			// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
+			log.Printf("Read match result for job %s: %s", safeLogField(jobID), safeLogField(err.Error()))
 			http.Error(w, "Could not retrieve match result", http.StatusBadGateway)
 			return
 		}
@@ -79,7 +80,8 @@ func resultHandler(storageClient *s3.Client, bucket string) http.HandlerFunc {
 
 		content, err := io.ReadAll(io.LimitReader(object.Body, maxMatchResultSize+1))
 		if err != nil {
-			log.Printf("Read match result body for job %s: %v", jobID, err)
+			// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
+			log.Printf("Read match result body for job %s: %s", safeLogField(jobID), safeLogField(err.Error()))
 			http.Error(w, "Could not retrieve match result", http.StatusBadGateway)
 			return
 		}
@@ -92,7 +94,8 @@ func resultHandler(storageClient *s3.Client, bucket string) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "private, no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		if _, err := w.Write(content); err != nil {
-			log.Printf("Write match result for job %s: %v", jobID, err)
+			// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
+			log.Printf("Write match result for job %s: %s", safeLogField(jobID), safeLogField(err.Error()))
 		}
 	}
 }

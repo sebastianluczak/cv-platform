@@ -114,7 +114,8 @@ func run() error {
 	}
 
 	storageClient, config := storage.NewClient()
-	log.Printf("Extractor consuming queue %q; input/output bucket: %q", queueName, config.Bucket)
+	// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
+	log.Printf("Extractor consuming queue %q; input/output bucket: %q", safeLogField(queueName), safeLogField(config.Bucket))
 	for delivery := range deliveries {
 		if err := handleDelivery(channel, confirmations, statusChannel, statusConfirmations, delivery, queueName, failedQueue, redactionQueue, statusQueue, storageClient, config.Bucket); err != nil {
 			log.Printf("Handle RabbitMQ delivery: %v", err)
@@ -173,7 +174,7 @@ func handleDelivery(
 			JobID: job.ID, Stage: "retrying", Message: "We hit a snag and are trying again.", Attempt: retry + 2,
 		})
 		headers := copyHeaders(delivery.Headers)
-		headers["x-retry-count"] = int32(retry + 1)
+		headers["x-retry-count"] = int64(retry + 1)
 		headers["x-last-error"] = errorText(err)
 		if publishErr := publishAndConfirm(channel, confirmations, queueName, delivery.Body, headers); publishErr != nil {
 			_ = delivery.Nack(false, true)
@@ -232,7 +233,8 @@ func moveToFailedQueue(
 	if err := delivery.Ack(false); err != nil {
 		return fmt.Errorf("acknowledge failed job: %w", err)
 	}
-	log.Printf("Job moved to %s: %v", failedQueue, cause)
+	// #nosec G706 -- Dynamic fields have CR/LF removed by safeLogField.
+	log.Printf("Job moved to %s: %s", safeLogField(failedQueue), safeLogField(fmt.Sprint(cause)))
 	return nil
 }
 
@@ -296,14 +298,24 @@ func publishStatusBestEffort(
 func retryCount(headers amqp.Table) int {
 	switch count := headers["x-retry-count"].(type) {
 	case int:
-		return count
+		return boundedRetryCount(int64(count))
 	case int32:
-		return int(count)
+		return boundedRetryCount(int64(count))
 	case int64:
-		return int(count)
+		return boundedRetryCount(count)
 	default:
 		return 0
 	}
+}
+
+func boundedRetryCount(count int64) int {
+	if count <= 0 {
+		return 0
+	}
+	if count > maxRetries {
+		return maxRetries + 1
+	}
+	return int(count)
 }
 
 func copyHeaders(headers amqp.Table) amqp.Table {
@@ -312,6 +324,11 @@ func copyHeaders(headers amqp.Table) amqp.Table {
 		copy[key] = value
 	}
 	return copy
+}
+
+func safeLogField(value string) string {
+	value = strings.ReplaceAll(value, "\r", " ")
+	return strings.ReplaceAll(value, "\n", " ")
 }
 
 func errorText(err error) string {

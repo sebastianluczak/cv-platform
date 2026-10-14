@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -56,8 +57,14 @@ func Download(ctx context.Context, client *s3.Client, bucket, key string) (strin
 		_ = os.Remove(file.Name())
 	}
 	if _, err := io.Copy(file, object.Body); err != nil {
-		file.Close()
+		closeErr := file.Close()
 		cleanup()
+		if closeErr != nil {
+			return "", nil, errors.Join(
+				fmt.Errorf("download object %q: %w", key, err),
+				fmt.Errorf("close temporary input file: %w", closeErr),
+			)
+		}
 		return "", nil, fmt.Errorf("download object %q: %w", key, err)
 	}
 	if err := file.Close(); err != nil {

@@ -24,6 +24,7 @@ func extractText(ctx context.Context, inputPath, contentType string) (string, er
 }
 
 func extractPDF(ctx context.Context, inputPath string) (string, error) {
+	// #nosec G204 -- executable is fixed and inputPath is a temporary file created by storage.Download.
 	output, err := exec.CommandContext(ctx, "pdftotext", "-layout", "-enc", "UTF-8", inputPath, "-").Output()
 	if err != nil {
 		return "", fmt.Errorf("extract PDF text: %w", err)
@@ -48,6 +49,7 @@ func extractPDF(ctx context.Context, inputPath string) (string, error) {
 	for page := 1; page <= pageCount; page++ {
 		prefix := filepath.Join(tempDir, fmt.Sprintf("page-%04d", page))
 		pageArg := strconv.Itoa(page)
+		// #nosec G204 -- executable is fixed; inputPath and prefix are temporary files under generated temp directories.
 		cmd := exec.CommandContext(ctx, "pdftoppm", "-f", pageArg, "-l", pageArg, "-singlefile", "-png", "-r", "200", inputPath, prefix)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			return "", fmt.Errorf("render PDF page %d: %w: %s", page, err, strings.TrimSpace(string(output)))
@@ -69,6 +71,7 @@ func extractPDF(ctx context.Context, inputPath string) (string, error) {
 }
 
 func pdfPageCount(ctx context.Context, inputPath string) (int, error) {
+	// #nosec G204 -- executable is fixed and inputPath is a temporary file created by storage.Download.
 	output, err := exec.CommandContext(ctx, "pdfinfo", inputPath).Output()
 	if err != nil {
 		return 0, fmt.Errorf("read PDF metadata: %w", err)
