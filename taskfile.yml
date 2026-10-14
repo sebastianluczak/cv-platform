@@ -5,6 +5,7 @@ tasks:
     desc: Prepares some test data for app in /tmp
     cmds:
       - cp product.png /tmp/image.png
+      - cp sample_resume.pdf /tmp/resume.pdf
   ui:install:
     dir: ui
     desc: Install the UI application dependencies
@@ -50,5 +51,5 @@ tasks:
     dir: services/extractor
     desc: Build production docker image
     cmds:
-      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o extractor .
+      - CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o extractor .
       - docker build -t extractor .

@@ -1,12 +1,12 @@
 = uploader
 
-An entry point for our application. Consist of:
+An HTTP entry point for resume uploads. It:
 
-. HTTP Form handler used for HTTP uploads
-. AWS S3 compatible client for storing payload
-. Queue Handler for publishing messages to the queue asynchronously
+. accepts PDF, PNG, JPEG, TIFF, or BMP files up to 10 MiB
+. stores each file in the shared RustFS/S3 bucket under `uploads/<job-id>`
+. publishes a persistent JSON extraction job to RabbitMQ
+. responds with HTTP 202 and the job ID after RabbitMQ confirms the message
 
-This service always responds to the client with stable UUID for given transaction.
+The extractor stores the resulting text at `results/<job-id>.txt` in the same bucket.
 
-TODO: Consider creating a websocket between us and a client with this UUID as a channel.
-TODO: How to not repeat myself with queue module and handlers for it?
+Uploader and extractor must use the same `RUSTFS_BUCKET` (defaults to `cv-platform-uploads`), `RUSTFS_ENDPOINT_URL`, `RUSTFS_REGION`, `RUSTFS_ACCESS_KEY_ID`, `RUSTFS_SECRET_ACCESS_KEY`, `RABBITMQ_URL`, and `QUEUE_NAME`.

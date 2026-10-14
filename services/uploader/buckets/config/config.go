@@ -10,6 +10,7 @@ type BucketConfig struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Endpoint        string
+	Bucket          string
 }
 
 func GetBucketConfig() BucketConfig {
@@ -33,11 +34,16 @@ func GetBucketConfig() BucketConfig {
 		log.Default().Println("RUSTFS_ENDPOINT_URL not set, defaulting to http://localhost:9000")
 		endpoint = "http://localhost:9000"
 	}
+	bucket := os.Getenv("RUSTFS_BUCKET")
+	if bucket == "" {
+		bucket = "cv-platform-uploads"
+	}
 
 	return BucketConfig{
 		Region:          region,
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
 		Endpoint:        endpoint,
+		Bucket:          bucket,
 	}
 }
