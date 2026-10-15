@@ -5,6 +5,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
+    allowedHosts: [
+      '.shares.zrok.io',
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

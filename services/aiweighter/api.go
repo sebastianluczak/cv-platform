@@ -173,7 +173,8 @@ func getWeightHandler(w http.ResponseWriter, r *http.Request, storageClient *s3.
 			writeAPIError(w, http.StatusNotFound, "AI resume not found")
 			return
 		}
-		log.Printf("Read AI resume %s: %v", weighID, err)
+		// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
+		log.Printf("Read AI resume %s: %s", safeLogField(weighID), safeLogField(err.Error()))
 		writeAPIError(w, http.StatusBadGateway, "could not retrieve AI resume")
 		return
 	}

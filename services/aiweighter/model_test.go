@@ -20,8 +20,7 @@ func TestOpenRouterGenerateReturnsMarkdownWithoutLoggingPayload(t *testing.T) {
 	defer server.Close()
 
 	client := newOpenRouterClient("test-key", "test/model")
-	client.endpoint = server.URL
-	client.httpClient = server.Client()
+	client.httpClient.Transport = redirectTestRequests(server)
 	markdown, err := client.generate(context.Background(), "test prompt")
 	if err != nil {
 		t.Fatal(err)
@@ -51,8 +50,7 @@ func TestOpenRouterGenerateRejectsInvalidResponses(t *testing.T) {
 			}))
 			defer server.Close()
 			client := newOpenRouterClient("test-key", "test/model")
-			client.endpoint = server.URL
-			client.httpClient = server.Client()
+			client.httpClient.Transport = redirectTestRequests(server)
 			if _, err := client.generate(context.Background(), "test prompt"); err == nil {
 				t.Fatal("expected response to be rejected")
 			} else if strings.Contains(err.Error(), "private provider detail") {
@@ -60,6 +58,48 @@ func TestOpenRouterGenerateRejectsInvalidResponses(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOpenRouterGenerateDoesNotFollowRedirects(t *testing.T) {
+	redirected := false
+	target := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		redirected = true
+	}))
+	defer target.Close()
+	server := httptest.NewServer(http.RedirectHandler(target.URL, http.StatusTemporaryRedirect))
+	defer server.Close()
+
+	client := newOpenRouterClient("test-key", "test/model")
+	client.httpClient.Transport = redirectTestRequests(server)
+	if _, err := client.generate(context.Background(), "test prompt"); err == nil {
+		t.Fatal("expected redirect response to be rejected")
+	}
+	if redirected {
+		t.Fatal("unexpectedly followed redirect to another host")
+	}
+}
+
+type redirectTestTransport struct {
+	server    *httptest.Server
+	transport http.RoundTripper
+}
+
+func redirectTestRequests(server *httptest.Server) http.RoundTripper {
+	return redirectTestTransport{server: server, transport: server.Client().Transport}
+}
+
+func (transport redirectTestTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	if request.URL.String() != openRouterEndpoint {
+		return nil, fmt.Errorf("unexpected OpenRouter endpoint %q", request.URL)
+	}
+	redirected := request.Clone(request.Context())
+	target, err := http.NewRequestWithContext(request.Context(), request.Method, transport.server.URL, request.Body)
+	if err != nil {
+		return nil, err
+	}
+	redirected.URL = target.URL
+	redirected.Host = target.Host
+	return transport.transport.RoundTrip(redirected)
 }
 
 func TestBuildPromptIncludesInputsInExplicitDataSections(t *testing.T) {

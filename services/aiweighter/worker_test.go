@@ -21,6 +21,12 @@ func TestValidWeighJobRequiresUUIDs(t *testing.T) {
 	}
 }
 
+func TestSafeLogFieldRemovesLineBreaks(t *testing.T) {
+	if got := safeLogField("first\r\nsecond"); got != "first  second" {
+		t.Fatalf("safeLogField() = %q, want CR/LF removed", got)
+	}
+}
+
 func TestValidateWeighArtifactRequiresMarkdownForCompletedOnly(t *testing.T) {
 	now := time.Now().UTC()
 	artifact := weighArtifact{

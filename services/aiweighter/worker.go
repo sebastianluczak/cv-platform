@@ -92,8 +92,9 @@ func handleWeightDelivery(
 		if err := delivery.Ack(false); err != nil {
 			return fmt.Errorf("acknowledge retried AI resume %s: %w", job.WeighID, err)
 		}
+		// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
 		log.Printf("AI resume %s failed (attempt %d/%d); queued for retry: %s",
-			job.WeighID, retry+1, maxRetries+1, safeLogField(err.Error()))
+			safeLogField(job.WeighID), retry+1, maxRetries+1, safeLogField(err.Error()))
 		return nil
 	}
 	return moveWeightToFailed(
@@ -196,6 +197,7 @@ func moveWeightToFailed(
 	if err := delivery.Ack(false); err != nil {
 		return fmt.Errorf("acknowledge failed AI resume job: %w", err)
 	}
+	// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
 	log.Printf("AI resume job moved to %s: %s", safeLogField(failedQueue), safeLogField(cause.Error()))
 	return nil
 }

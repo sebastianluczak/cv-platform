@@ -219,6 +219,7 @@ func moveOfferToFailed(
 	if err := delivery.Ack(false); err != nil {
 		return fmt.Errorf("acknowledge failed offer job: %w", err)
 	}
+	// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
 	log.Printf("Offer job moved to %s: %s", safeLogField(failedQueue), safeLogField(cause.Error()))
 	return nil
 }

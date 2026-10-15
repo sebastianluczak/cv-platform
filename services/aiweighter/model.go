@@ -32,17 +32,18 @@ type message struct {
 type openRouterClient struct {
 	apiKey     string
 	model      string
-	endpoint   string
 	httpClient *http.Client
 }
 
 func newOpenRouterClient(apiKey, model string) *openRouterClient {
 	return &openRouterClient{
-		apiKey:   apiKey,
-		model:    model,
-		endpoint: openRouterEndpoint,
+		apiKey: apiKey,
+		model:  model,
 		httpClient: &http.Client{
 			Timeout: 90 * time.Second,
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
 		},
 	}
 }
@@ -66,7 +67,7 @@ func (client *openRouterClient) generate(ctx context.Context, prompt string) (st
 	if len(body) > modelRequestLimit {
 		return "", fmt.Errorf("OpenRouter request exceeds %d bytes", modelRequestLimit)
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, client.endpoint, bytes.NewReader(body))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, openRouterEndpoint, bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("create OpenRouter request: %w", err)
 	}

@@ -199,7 +199,8 @@ func getMatchHandler(w http.ResponseWriter, r *http.Request, storageClient *s3.C
 			writeAPIError(w, http.StatusNotFound, "offer match not found")
 			return
 		}
-		log.Printf("Read offer match %s: %v", matchID, err)
+		// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
+		log.Printf("Read offer match %s: %s", safeLogField(matchID), safeLogField(err.Error()))
 		writeAPIError(w, http.StatusBadGateway, "could not retrieve offer match")
 		return
 	}

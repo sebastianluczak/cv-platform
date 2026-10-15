@@ -107,6 +107,12 @@ func TestNewUUIDReturnsRFC4122V4(t *testing.T) {
 	}
 }
 
+func TestSafeLogFieldRemovesLineBreaks(t *testing.T) {
+	if got := safeLogField("first\r\nsecond"); got != "first  second" {
+		t.Fatalf("safeLogField() = %q, want CR/LF removed", got)
+	}
+}
+
 func TestPublicMatchArtifactDoesNotExposeRetainedOfferText(t *testing.T) {
 	artifact := matchArtifact{
 		Version: 1, MatchID: testMatchID, ResumeJobID: testResumeID,

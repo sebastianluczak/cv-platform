@@ -108,6 +108,7 @@ func run() error {
 	go func() {
 		serverErr <- server.ListenAndServe()
 	}()
+	// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
 	log.Printf("AIweighter listening on port %q; queue %q; bucket %q; model %q",
 		safeLogField(port), safeLogField(workQueue), safeLogField(storageConfig.Bucket), safeLogField(model))
 

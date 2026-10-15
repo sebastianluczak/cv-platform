@@ -25,7 +25,7 @@ tasks:
     desc: Perform gosec scan on all projects
     cmds:
       - go install github.com/securego/gosec/v2/cmd/gosec@latest
-      - cd aiweigher && gosec ./... || true
+      - cd aiweighter && gosec ./... || true
       - cd extractor && gosec ./... || true
       - cd piistripper && gosec ./... || true
       - cd skillmatcher && gosec ./... || true
