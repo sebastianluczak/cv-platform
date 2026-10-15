@@ -459,8 +459,8 @@ function App() {
                   {offerPanelOpen && (
                     <div className="offer-form" id="offer-comparison-form">
                       <div className="offer-input-tabs" role="group" aria-label="Job description input type">
-                        <button type="button" aria-pressed={offerInputMode === 'url'} disabled={offerMatching} onClick={() => { setOfferInputMode('url'); setOfferMatch(null); setOfferError('') }}>Job URL</button>
-                        <button type="button" aria-pressed={offerInputMode === 'text'} disabled={offerMatching} onClick={() => { setOfferInputMode('text'); setOfferMatch(null); setOfferError('') }}>Paste text</button>
+                        <button type="button" aria-pressed={offerInputMode === 'url'} disabled={offerMatching || aiGenerating} onClick={() => { setOfferInputMode('url'); setOfferMatch(null); setOfferError(''); clearAIWeight() }}>Job URL</button>
+                        <button type="button" aria-pressed={offerInputMode === 'text'} disabled={offerMatching || aiGenerating} onClick={() => { setOfferInputMode('text'); setOfferMatch(null); setOfferError(''); clearAIWeight() }}>Paste text</button>
                       </div>
                       {offerInputMode === 'url' ? (
                         <label className="offer-input-label">
@@ -468,8 +468,8 @@ function App() {
                           <input
                             type="url"
                             value={offerURL}
-                            disabled={offerMatching}
-                            onChange={(event) => { setOfferURL(event.target.value); setOfferMatch(null); setOfferError('') }}
+                            disabled={offerMatching || aiGenerating}
+                            onChange={(event) => { setOfferURL(event.target.value); setOfferMatch(null); setOfferError(''); clearAIWeight() }}
                             placeholder="https://company.example/jobs/role"
                           />
                         </label>
@@ -478,15 +478,16 @@ function App() {
                           Job description
                           <textarea
                             value={offerText}
-                            disabled={offerMatching}
-                            onChange={(event) => { setOfferText(event.target.value); setOfferMatch(null); setOfferError('') }}
+                            disabled={offerMatching || aiGenerating}
+                            onChange={(event) => { setOfferText(event.target.value); setOfferMatch(null); setOfferError(''); clearAIWeight() }}
                             rows={4}
                             maxLength={100 * 1024}
                             placeholder="Paste the job description"
                           />
                         </label>
                       )}
-                      <button className="compare-button" type="button" disabled={offerMatching} onClick={() => void compareOffer()}>
+                      <small className="offer-retention-note">The job description is retained with this private match result. It is sent to OpenRouter only if you separately request resume generation and consent.</small>
+                      <button className="compare-button" type="button" disabled={offerMatching || aiGenerating} onClick={() => void compareOffer()}>
                         {offerMatching ? 'Comparing…' : 'Compare skill coverage'}
                       </button>
                       {offerError && <p className="result-error" role="alert">{offerError}</p>}
@@ -506,6 +507,54 @@ function App() {
                                 <dd>{offerMatch.missing_skills?.length ? offerMatch.missing_skills.join(', ') : 'None'}</dd>
                               </dl>
                               <small>Keyword coverage from curated patterns; not an assessment of capability or fit.</small>
+                              <section className="ai-resume-panel" aria-label="Prepare a tailored resume">
+                                <span className="panel-kicker">OPTIONAL / AI-ASSISTED</span>
+                                <h3>Prepare a tailored resume</h3>
+                                <p id="ai-resume-disclosure">
+                                  Your redacted CV, detected skill evidence, and this job description will be sent to
+                                  OpenRouter, an external AI service. Redaction is best-effort. The generated resume
+                                  should use only supported facts; review it carefully before use.
+                                </p>
+                                <label className="ai-consent">
+                                  <input
+                                    type="checkbox"
+                                    checked={aiConsent}
+                                    disabled={aiGenerating}
+                                    aria-describedby="ai-resume-disclosure"
+                                    onChange={(event) => setAIConsent(event.target.checked)}
+                                  />
+                                  <span>I agree to send this information to the external AI service.</span>
+                                </label>
+                                <button
+                                  className="compare-button ai-generate-button"
+                                  type="button"
+                                  disabled={!aiConsent || aiGenerating}
+                                  onClick={() => void generateResume()}
+                                >
+                                  {aiGenerating ? 'Preparing resume…' : 'Generate tailored resume'}
+                                </button>
+                                {aiError && <p className="result-error" role="alert">{aiError}</p>}
+                                {aiWeigh && (
+                                  <div className="ai-resume-result" aria-live="polite">
+                                    <p className={`offer-match-status${aiWeigh.status === 'failed' ? ' is-error' : ''}`}>
+                                      {aiWeigh.message}
+                                      {(aiWeigh.status === 'queued' || aiWeigh.status === 'processing') && ' · Working'}
+                                    </p>
+                                    {aiWeigh.status === 'completed' && aiWeigh.markdown && (
+                                      <>
+                                        <button
+                                          className="ai-download-button"
+                                          type="button"
+                                          onClick={downloadResumeMarkdown}
+                                        >
+                                          Download Markdown
+                                        </button>
+                                        <pre>{aiWeigh.markdown}</pre>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </section>
                             </>
                           )}
                         </div>
