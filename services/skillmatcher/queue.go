@@ -47,5 +47,9 @@ func errorText(err error) string {
 	if err == nil {
 		return ""
 	}
-	return err.Error()
+	message := strings.TrimSpace(err.Error())
+	if len(message) > 1024 {
+		return message[:1024]
+	}
+	return message
 }
