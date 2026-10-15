@@ -12,6 +12,7 @@ tasks:
     desc: Lints all projects
     cmds:
       - cd services/aiweighter && gofmt -l -e -w .
+      - cd services/datacleaner && gofmt -l -e -w .
       - cd services/extractor && gofmt -l -e -w .
       - cd services/piistripper && gofmt -l -e -w .
       - cd services/skillmatcher && gofmt -l -e -w .
@@ -26,6 +27,7 @@ tasks:
     cmds:
       - go install github.com/securego/gosec/v2/cmd/gosec@latest
       - cd aiweighter && gosec ./... || true
+      - cd datacleaner && gosec ./... || true
       - cd extractor && gosec ./... || true
       - cd piistripper && gosec ./... || true
       - cd skillmatcher && gosec ./... || true
@@ -77,6 +79,10 @@ tasks:
     desc: Start the offer matcher service
     cmds:
       - go -C services/offermatcher run .
+  services:datacleaner:start:
+    desc: Start the datacleaner service
+    cmds:
+      - go -C services/datacleaner run .
   docs:build-docs:
     dir: docs
     desc: Build the documentation
@@ -122,6 +128,12 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o aiweighter .
       - docker build -t aiweighter .
+  services:datacleaner:build:
+    dir: services/datacleaner
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o datacleaner .
+      - docker build -t datacleaner .
 
   
   # AI CODE REVIEW #

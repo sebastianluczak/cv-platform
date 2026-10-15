@@ -1016,3 +1016,663 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Table Styling for Policy Pages */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 16px 0;
+}
+
+table thead tr {
+  border-bottom: 2px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 650;
+  color: var(--accent);
+}
+
+table tbody tr {
+  border-bottom: 1px solid var(--line);
+  transition: background-color 150ms ease;
+}
+
+table tbody tr:nth-child(odd) {
+  background: rgba(232, 243, 239, 0.3);
+}
+
+table tbody tr:hover {
+  background: rgba(232, 243, 239, 0.6);
+}
+
+table td {
+  padding: 12px;
+  color: #52616a;
+}
+
+table code {
+  background: #f4f7f6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  color: #18232b;
+}
+
+table strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  table {
+    font-size: 11px;
+  }
+
+  table th,
+  table td {
+    padding: 9px;
+  }
+}
+
+/* Consent Checkbox Styling */
+.consent-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.consent-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 4px;
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+.consent-checkbox:hover:not(:disabled) {
+  background: rgba(232, 243, 239, 0.4);
+}
+
+.consent-checkbox input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  border-radius: 3px;
+}
+
+.consent-checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid #d47857;
+  outline-offset: 2px;
+}
+
+.consent-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.consent-checkbox-label {
+  flex: 1;
+  color: #344348;
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.consent-checkbox input[type="checkbox"]:disabled ~ .consent-checkbox-label {
+  opacity: 0.6;
+  color: #aab8b5;
+}
+
+.consent-link {
+  color: var(--accent);
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 150ms ease;
+}
+
+.consent-link:hover {
+  color: var(--accent-dark);
+  text-decoration-thickness: 2px;
+}
+
+.consent-link:focus-visible {
+  outline: 2px solid #d47857;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Footer Styling */
+footer,
+.page-footer-section {
+  margin-top: auto;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.page-footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 150ms ease;
+}
+
+.footer-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.footer-link:focus-visible {
+  outline: 2px solid #d47857;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.footer-divider {
+  padding: 0 5px;
+  color: #aab8b4;
+}
+
+.footer-text {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .footer-links {
+    gap: 12px;
+  }
+
+  .footer-link {
+    font-size: 10px;
+  }
+}
+
+/* Policy Page Link Enhancement */
+.privacy-section a,
+.data-retention a,
+article a {
+  color: var(--accent);
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 150ms ease;
+}
+
+.privacy-section a:hover,
+.data-retention a:hover,
+article a:hover {
+  color: var(--accent-dark);
+}
+
+.privacy-section a:focus-visible,
+.data-retention a:focus-visible,
+article a:focus-visible {
+  outline: 2px solid #d47857;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Code/Value Styling in Tables */
+.value-code,
+.data-code {
+  background: #f4f7f6;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  color: #18232b;
+  font-weight: 500;
+}
+
+/* Data Retention Page Specific */
+.data-retention-page {
+  width: min(1380px, 100%);
+  min-height: 0;
+  flex: 1 1 auto;
+  margin: 0 auto;
+  padding: 20px 0 16px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.data-retention-content {
+  flex: 1;
+  padding: 0;
+}
+
+.data-retention-section {
+  margin-bottom: 28px;
+}
+
+.data-retention-section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.data-retention-section p {
+  margin: 0 0 12px;
+  max-width: 900px;
+  color: #52616a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.data-retention-section p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 850px) {
+  .data-retention-page {
+    padding: 20px 0;
+  }
+
+  .data-retention-section {
+    margin-bottom: 20px;
+  }
+
+  .data-retention-section h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 540px) {
+  .data-retention-page {
+    padding: 16px 0 12px;
+  }
+
+  .data-retention-section {
+    margin-bottom: 16px;
+  }
+
+  .data-retention-section h2 {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .data-retention-section p {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  table {
+    font-size: 10px;
+  }
+
+  table th,
+  table td {
+    padding: 8px;
+  }
+}
+
+/* Privacy Policy Page Styles */
+.privacy-policy-page {
+  width: min(1380px, 100%);
+  min-height: 0;
+  flex: 1 1 auto;
+  margin: 0 auto;
+  padding: 20px 0 16px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.privacy-policy-content {
+  flex: 1;
+  padding: 0;
+}
+
+.privacy-header {
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.privacy-header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(27px, 3vw, 38px);
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  color: var(--ink);
+}
+
+.privacy-intro {
+  max-width: 700px;
+  margin: 0;
+  color: #52616a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.privacy-section {
+  margin-bottom: 28px;
+}
+
+.privacy-section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.privacy-section p {
+  margin: 0 0 12px;
+  max-width: 900px;
+  color: #52616a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.privacy-section p:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-list {
+  margin: 12px 0 16px;
+  padding-left: 20px;
+  list-style: disc;
+  color: #52616a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.privacy-list li {
+  margin-bottom: 10px;
+}
+
+.privacy-list strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.privacy-note {
+  padding: 12px;
+  margin: 16px 0 0;
+  border-left: 3px solid #d47857;
+  border-radius: 2px;
+  background: #fffbf7;
+  color: #52616a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.privacy-contact {
+  padding: 16px;
+  margin: 12px 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.privacy-contact p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.privacy-contact a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.privacy-contact a:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
+
+.privacy-contact a:focus-visible {
+  outline: 2px solid #d47857;
+  outline-offset: 2px;
+}
+
+.privacy-footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  text-align: right;
+}
+
+.privacy-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@media (max-width: 850px) {
+  .privacy-policy-page {
+    padding: 20px 0;
+  }
+
+  .privacy-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+  }
+
+  .privacy-header h1 {
+    font-size: clamp(24px, 6vw, 32px);
+  }
+
+  .privacy-section {
+    margin-bottom: 20px;
+  }
+
+  .privacy-section h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+
+  .privacy-list {
+    margin: 12px 0 12px;
+    padding-left: 18px;
+  }
+}
+
+@media (max-width: 540px) {
+  .privacy-policy-page {
+    padding: 16px 0 12px;
+  }
+
+  .privacy-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+  }
+
+  .privacy-header h1 {
+    margin-bottom: 10px;
+    font-size: clamp(20px, 8vw, 28px);
+  }
+
+  .privacy-intro {
+    font-size: 12px;
+  }
+
+  .privacy-section {
+    margin-bottom: 16px;
+  }
+
+  .privacy-section h2 {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .privacy-section p {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .privacy-list {
+    margin: 10px 0 10px;
+    padding-left: 16px;
+    font-size: 12px;
+  }
+
+  .privacy-list li {
+    margin-bottom: 8px;
+  }
+
+  .privacy-note {
+    padding: 10px;
+    margin-top: 12px;
+    font-size: 11px;
+  }
+
+  .privacy-contact {
+    padding: 12px;
+    margin: 12px 0 12px;
+  }
+
+  .privacy-contact p {
+    font-size: 12px;
+  }
+
+  .privacy-footer {
+    margin-top: 20px;
+    padding-top: 12px;
+  }
+
+  .privacy-footer p {
+    font-size: 10px;
+  }
+}
+
+/* Footer Navigation Styles */
+.app-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.footer-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 150ms ease, text-decoration 150ms ease;
+}
+
+.footer-link:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
+
+.footer-link:focus-visible {
+  outline: 2px solid #d47857;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.footer-divider {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+@media (max-width: 850px) {
+  .app-footer {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .footer-content {
+    gap: 8px;
+  }
+
+  .footer-links {
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .footer-meta {
+    font-size: 8px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 540px) {
+  .app-footer {
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  .footer-content {
+    gap: 6px;
+  }
+
+  .footer-links {
+    gap: 4px;
+    font-size: 9px;
+  }
+
+  .footer-meta {
+    font-size: 8px;
+    gap: 3px;
+  }
+}

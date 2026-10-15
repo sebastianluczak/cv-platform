@@ -1,0 +1,491 @@
+= Data Retention Policy and Datacleaner Operational Guide
+
+== Overview
+
+The datacleaner service implements automatic deletion of personal data according to configured retention policies. This guide is intended for operators, deployment engineers, and compliance teams responsible for running and maintaining the CV platform.
+
+The datacleaner service runs on a configurable interval (default 1 minute) to clean up expired data from the object store and message queues. It supports dry-run mode for testing and verification without making permanent deletions.
+
+=== Purpose
+
+The datacleaner service exists to:
+
+* Automatically delete personal data (resumes, extracted text, and results) after their retention period expires
+* Minimize unnecessary storage of personally identifiable information (PII)
+* Provide compliance support for privacy regulations (GDPR, CCPA, and similar)
+* Offer operators an inspection window for failed jobs before automatic purge
+
+=== Key characteristics
+
+* Runs independently on a configurable interval
+* Operates on S3-compatible object stores and RabbitMQ message queues
+* Supports dry-run mode for safe testing before production deployment
+* Logs all deletion operations for audit trails
+* Deletes data after retention periods expire; does not reprocess incomplete jobs
+
+== Retention Timelines
+
+[cols="1,2,3,2"]
+|===
+|Data Type |Location |Retention Period |Notes
+
+|Original resume file
+|S3 `uploads/<job-id>`
+|7 days
+|Configurable via `RETENTION_UPLOADS_DAYS`. Deleted after this period regardless of processing status.
+
+|Extracted text (unredacted)
+|S3 `results/<job-id>.txt`
+|Immediately after redaction completes
+|Deleted as soon as piistripper publishes the redacted version. Minimizes PII duplication and storage waste.
+
+|Redacted text
+|S3 `results/<job-id>.redacted.txt`
+|7 days
+|Configurable via `RETENTION_REDACTED_DAYS`. Best-effort redaction only; not guaranteed anonymization.
+
+|Skill match results
+|S3 `results/<job-id>.skills.json`
+|7 days
+|Deleted together with redacted text. Contains pattern matches and score evidence.
+
+|Offer comparison results
+|S3 `results/<offer-match-id>.offer.json`
+|7 days
+|Deleted based on the underlying resume job's redacted-text retention.
+
+|AI-generated resume
+|S3 `results/<weigh-id>.ai.json`
+|7 days
+|Deleted based on the underlying resume job's redacted-text retention.
+
+|Failed jobs
+|RabbitMQ `<QUEUE_NAME>.failed` (and other `.*.failed` queues)
+|7 days
+|Configurable via `RETENTION_FAILED_QUEUE_DAYS`. Provides an inspection window for operator review before purge.
+
+|Processing status events
+|RabbitMQ `<QUEUE_NAME>.events`
+|24 hours (uploader memory only)
+|Status snapshots are kept in uploader memory and lost on process restart. The datacleaner does not manage this queue.
+|===
+
+=== Important notes on retention
+
+* Redaction is *best-effort only* and is not guaranteed to produce anonymized data. Original extracted text and redacted versions should both be treated as personal data.
+* Original uploaded files are deleted after the retention period regardless of processing success. If extraction or redaction failed, the resume cannot be reprocessed from the object store; the client must re-upload.
+* Offer text and AI-generated content are retained together with the underlying resume data they reference.
+* Failed queue messages provide an inspection window for operators to review errors before automatic deletion.
+
+== Deployment Checklist
+
+Before deploying datacleaner to production, ensure the following steps are completed:
+
+=== Pre-deployment verification
+
+- [ ] Review data retention policy with legal and compliance teams
+- [ ] Confirm retention timelines align with organizational privacy requirements (GDPR, CCPA, etc.)
+- [ ] Document any exceptions or custom retention periods in your deployment guide
+
+=== Infrastructure and access control
+
+- [ ] Configure S3 credentials with `DeleteObject` and `ListBucket` permissions
+- [ ] Verify S3 bucket exists and is accessible from the datacleaner host
+- [ ] Verify RabbitMQ URL and credentials are correct
+- [ ] Test S3 and RabbitMQ connectivity before deployment
+- [ ] Ensure sufficient IAM/authorization scopes to purge failed queues (if applicable)
+
+=== Environment and configuration
+
+- [ ] Set retention period environment variables (see <<Configuration Reference>>)
+- [ ] Set cleanup interval (default 1 minute may be too aggressive; consider 10-60 minutes in production)
+- [ ] Configure S3 credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_BUCKET`)
+- [ ] Configure RabbitMQ URL and queue names
+- [ ] Enable logging to an appropriate level (debug for initial deployment, info for production)
+
+=== Testing and validation
+
+- [ ] Test in dry-run mode first (`DRY_RUN=true`) to verify configuration and see what would be deleted
+- [ ] Review dry-run logs to ensure retention logic is working as expected
+- [ ] Perform a small manual test (upload a resume, wait for processing, verify in dry-run mode)
+- [ ] Monitor logs for successful cleanup operations in dry-run mode
+- [ ] Verify that S3 objects and RabbitMQ messages are NOT actually deleted during dry-run
+
+=== Production deployment
+
+- [ ] Disable dry-run mode (`DRY_RUN=false`)
+- [ ] Deploy datacleaner service
+- [ ] Monitor logs for at least the first 24 hours
+- [ ] Verify that old data is being deleted as expected
+- [ ] Set up alerting for datacleaner errors or failures
+- [ ] Plan for audit logging of all deletions (optional but recommended)
+
+=== Ongoing operations
+
+- [ ] Review and tune cleanup interval based on data volume and performance
+- [ ] Monitor S3 and RabbitMQ performance impact
+- [ ] Maintain audit logs of deletions for compliance
+- [ ] Verify failed queue messages are purged after retention expires
+
+== Configuration Reference
+
+=== Environment variables
+
+[cols="1,1,3"]
+|===
+|Variable |Default |Description
+
+|`RETENTION_UPLOADS_DAYS`
+|`7`
+|Number of days to retain original uploaded resume files in S3 `uploads/` before deletion.
+
+|`RETENTION_REDACTED_DAYS`
+|`7`
+|Number of days to retain redacted text and skill results in S3 `results/` before deletion.
+
+|`RETENTION_FAILED_QUEUE_DAYS`
+|`7`
+|Number of days to retain failed job messages in RabbitMQ `.failed` queues before deletion.
+
+|`CLEANUP_INTERVAL_MINUTES`
+|`1`
+|How often (in minutes) the datacleaner runs the cleanup loop. Smaller values = more aggressive cleanup; larger values = less frequent cleanup and reduced query load on S3/RabbitMQ.
+
+|`DRY_RUN`
+|`false`
+|When `true`, log all deletion operations but do not actually delete any data. Use for testing and validation.
+
+|`RABBITMQ_URL`
+|Required
+|RabbitMQ connection string (e.g., `amqp://user:pass@localhost:5672/`).
+
+|`QUEUE_NAME`
+|Required
+|Base queue name prefix (e.g., `cv-platform-queue`). The datacleaner deletes messages from `<QUEUE_NAME>.failed`, `<QUEUE_NAME>.pii.failed`, `<QUEUE_NAME>.skills.failed`, etc.
+
+|`S3_ENDPOINT`
+|Required
+|S3-compatible endpoint URL (e.g., `http://localhost:9000` for local Minio).
+
+|`S3_BUCKET`
+|Required
+|S3 bucket name where uploads, results, and artifacts are stored.
+
+|`AWS_ACCESS_KEY_ID`
+|Required
+|S3 access key for authentication.
+
+|`AWS_SECRET_ACCESS_KEY`
+|Required
+|S3 secret key for authentication.
+
+|`LOG_LEVEL`
+|`info`
+|Logging level (`debug`, `info`, `warn`, `error`).
+|===
+
+=== Example configuration (development)
+
+[source,env]
+----
+# Retention periods (in days)
+RETENTION_UPLOADS_DAYS=7
+RETENTION_REDACTED_DAYS=7
+RETENTION_FAILED_QUEUE_DAYS=7
+
+# Cleanup interval
+CLEANUP_INTERVAL_MINUTES=1
+
+# Testing mode (set to false for production)
+DRY_RUN=true
+
+# RabbitMQ
+RABBITMQ_URL=amqp://guest:guest@localhost:5672/
+QUEUE_NAME=cv-platform-queue
+
+# S3 (local Minio)
+S3_ENDPOINT=http://localhost:9000
+S3_BUCKET=cv-platform
+AWS_ACCESS_KEY_ID=minioadmin
+AWS_SECRET_ACCESS_KEY=minioadmin
+LOG_LEVEL=debug
+----
+
+=== Example configuration (production)
+
+[source,env]
+----
+# Retention periods (longer cleanup interval)
+RETENTION_UPLOADS_DAYS=7
+RETENTION_REDACTED_DAYS=7
+RETENTION_FAILED_QUEUE_DAYS=7
+
+# Cleanup interval (reduce query load)
+CLEANUP_INTERVAL_MINUTES=60
+
+# Testing mode disabled
+DRY_RUN=false
+
+# RabbitMQ (production instance)
+RABBITMQ_URL=amqp://rabbitmq-user:${RABBITMQ_PASSWORD}@rabbitmq.prod.internal:5672/cv-platform
+QUEUE_NAME=cv-platform-queue
+
+# S3 (AWS S3)
+S3_ENDPOINT=https://s3.amazonaws.com
+S3_BUCKET=company-cv-platform-prod
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+LOG_LEVEL=info
+----
+
+== Operational Procedures
+
+=== Enable dry-run mode for testing
+
+To test the datacleaner without permanently deleting data:
+
+[source,bash]
+----
+# Set dry-run mode
+export DRY_RUN=true
+
+# Start the datacleaner service
+./datacleaner
+
+# Monitor logs for deletion operations
+tail -f datacleaner.log | grep -E "would delete|DELETE|removing"
+
+# Review what would be deleted
+grep "would delete" datacleaner.log | wc -l
+----
+
+=== Review cleanup logs
+
+Logs contain detailed information about what was deleted and why:
+
+[source,bash]
+----
+# Show all deletion operations
+grep "DELETE\|removed" datacleaner.log
+
+# Show deletions by type
+grep "S3.*DELETE" datacleaner.log      # Object store deletions
+grep "RabbitMQ.*DELETE" datacleaner.log # Message queue purges
+
+# Count deletions by date
+grep "DELETE" datacleaner.log | cut -d' ' -f1 | sort | uniq -c
+----
+
+=== Manually delete data before retention expires
+
+In cases where immediate deletion is required (e.g., user GDPR right-to-be-forgotten requests):
+
+[source,bash]
+----
+# Set dry-run mode first to preview
+export DRY_RUN=true
+export FORCE_DELETE_JOB_ID=<job-id>
+
+./datacleaner
+
+# If the preview looks correct, disable dry-run
+export DRY_RUN=false
+./datacleaner
+----
+
+IMPORTANT: Manual deletion should only be performed by authorized operators and should be logged and audited.
+
+=== Pause or resume the datacleaner service
+
+To temporarily stop automatic cleanup (e.g., during investigation):
+
+[source,bash]
+----
+# Stop the datacleaner process
+sudo systemctl stop datacleaner
+
+# Verify it is stopped
+sudo systemctl status datacleaner
+
+# Resume cleanup
+sudo systemctl start datacleaner
+----
+
+Data that would have been deleted during the pause period will be deleted on the next cleanup run.
+
+=== Adjust retention periods (requires service restart)
+
+To change retention periods, update environment variables and restart:
+
+[source,bash]
+----
+# Edit configuration
+sudo nano /etc/datacleaner/env  # or your config file
+
+# Update retention variables
+RETENTION_UPLOADS_DAYS=14
+RETENTION_REDACTED_DAYS=14
+RETENTION_FAILED_QUEUE_DAYS=30
+
+# Restart service
+sudo systemctl restart datacleaner
+
+# Verify changes took effect
+sudo systemctl status datacleaner
+journalctl -u datacleaner -n 50
+----
+
+== Compliance Considerations
+
+=== Privacy and data protection
+
+* *Redaction is best-effort, not guaranteed anonymization.* The piistripper service removes obvious PII patterns but may miss context-dependent information. Both original and redacted text should be treated as personal data.
+* *Original extracted text remains personal data.* The unredacted `results/<job-id>.txt` file is deleted immediately after redaction, but during processing it contains potentially sensitive information. Treat extraction logs and intermediate states as sensitive.
+* *Failed jobs provide inspection window.* Failed queue messages are retained for a configurable period (default 7 days) to allow operators to investigate errors. Review and delete failed messages on schedule to minimize PII retention.
+* *Deleted data cannot be recovered.* Once the datacleaner removes an object or message, it is permanently gone. Maintain backups if recovery may be needed for compliance investigations.
+
+=== GDPR / CCPA compliance
+
+Before deploying datacleaner, your organization should:
+
+. *Review and document data processing.* Confirm that automatic deletion aligns with your Data Processing Agreement and privacy policy.
+. *Define retention periods.* Work with legal and compliance teams to determine appropriate retention periods for your use case (not necessarily 7 days).
+. *Implement subject access and deletion rights.* The datacleaner automates expiration-based deletion, but you must also support user requests to delete their data on demand.
+. *Maintain audit trails.* Log all deletion operations for compliance investigations and audits. See <<Setup audit logging>>.
+. *Notify users.* Ensure privacy documentation and user-facing policies accurately describe how and when their data is deleted.
+. *Handle failures gracefully.* Failed jobs are retained to allow inspection; ensure your procedures delete them within the retention window.
+
+=== Setup audit logging
+
+To maintain compliance audit trails, configure logging to a persistent storage system:
+
+[source,bash]
+----
+# Example: write datacleaner logs to syslog and a file
+datacleaner 2>&1 | tee -a /var/log/datacleaner.log | logger -t datacleaner -p local0.info
+
+# Compress and archive older logs
+logrotate /etc/logrotate.d/datacleaner
+----
+
+Include deletion logs in your compliance reports and backup them according to your record retention policy.
+
+== Troubleshooting
+
+=== Cleanup is slow or not keeping up
+
+*Symptom:* Storage usage continues to grow; old data is not being deleted fast enough.
+
+*Diagnosis:*
+* Check cleanup interval: is `CLEANUP_INTERVAL_MINUTES` too large?
+* Check S3 performance: high latency or timeouts?
+* Check RabbitMQ queue depth: are there many old failed messages?
+
+*Resolution:*
+[source,bash]
+----
+# Reduce cleanup interval for more aggressive deletion
+CLEANUP_INTERVAL_MINUTES=5
+
+# Or increase performance
+# - Use S3 list pagination to reduce API calls
+# - Increase batch size for message deletions
+# - Check S3 and RabbitMQ connection limits
+
+# Monitor performance
+journalctl -u datacleaner -f | grep -E "duration|completed|DELETE"
+----
+
+=== Permission denied errors
+
+*Symptom:* Logs contain `AccessDenied` or `PermissionDenied` errors.
+
+*Diagnosis:*
+* S3 credentials lack `DeleteObject` permission?
+* RabbitMQ user lacks purge or delete permissions?
+* S3 bucket policy blocks the datacleaner principal?
+
+*Resolution:*
+[source,bash]
+----
+# Verify S3 credentials
+aws s3 ls s3://<bucket>/uploads/ --endpoint-url <S3_ENDPOINT>
+
+# Test delete permission (use dry-run first)
+DRY_RUN=true ./datacleaner
+
+# Check RabbitMQ user permissions
+rabbitmqctl list_user_permissions <user>
+
+# Update IAM policy with DeleteObject permission (AWS S3):
+# {
+#   "Effect": "Allow",
+#   "Action": ["s3:GetObject", "s3:DeleteObject", "s3:ListBucket"],
+#   "Resource": ["arn:aws:s3:::bucket-name", "arn:aws:s3:::bucket-name/*"]
+# }
+----
+
+=== Messages not purging from failed queues
+
+*Symptom:* Messages accumulate in `<QUEUE_NAME>.failed` and are not deleted after retention expires.
+
+*Diagnosis:*
+* RabbitMQ connection lost or queue name mismatch?
+* Retention period is set to 0 or disabled?
+* Failed queue has a message TTL that conflicts with datacleaner?
+
+*Resolution:*
+[source,bash]
+----
+# Verify RabbitMQ connectivity
+rabbitmq-diagnostics check_running
+rabbitmq-diagnostics check_alarms
+
+# Check failed queue configuration
+rabbitmqctl list_queues name durable arguments
+
+# Verify retention config is set
+echo $RETENTION_FAILED_QUEUE_DAYS
+
+# Manually purge a queue (if necessary)
+rabbitmqctl purge_queue <QUEUE_NAME>.failed
+----
+
+=== Missing data or unexpected deletion
+
+*Symptom:* Data that should have been retained was deleted early, or needed data is missing.
+
+*Diagnosis:*
+* Was dry-run mode properly configured for testing?
+* Was manual deletion triggered by mistake?
+* Are there multiple datacleaner processes running?
+
+*Resolution:*
+[source,bash]
+----
+# Stop the datacleaner to prevent further deletions
+sudo systemctl stop datacleaner
+
+# Review logs to identify what was deleted
+grep -E "DELETE|removed" datacleaner.log | tail -100
+
+# Check backups
+aws s3 sync s3://<bucket-backup>/uploads/ . --dry-run
+
+# Restore from backups if necessary
+aws s3 sync <local-backup>/ s3://<bucket>/uploads/
+
+# Verify only one datacleaner is running
+ps aux | grep datacleaner
+
+# Resume after investigation
+sudo systemctl start datacleaner
+----
+
+IMPORTANT: Always maintain backups and test restore procedures before deploying the datacleaner to production.
+
+== See also
+
+* xref:data-lifecycle.adoc[Data and Persistence] — Technical details on stored data, lifetime, and current behavior
+* Privacy Policy — User-facing privacy documentation (available in UI)
+* Data Retention Policy — User-facing retention timeline (available in UI)

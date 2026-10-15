@@ -1,0 +1,170 @@
+version: '3.8'
+
+services:
+  # S3-compatible object storage (RustFS)
+  s3:
+    image: quay.io/minio/minio:latest
+    container_name: rustfs
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: rustfsadmin
+      MINIO_ROOT_PASSWORD: rustfsadmin
+    volumes:
+      - s3_data:/data
+    command: minio server /data --console-address ":9001"
+    networks:
+      - cv-platform
+    restart: on-failure
+
+  # Message broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - cv-platform
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # CV Upload service
+  uploader:
+    build:
+      context: .
+      dockerfile: services/uploader/Dockerfile
+    image: cv-platform-uploader:latest
+    container_name: uploader
+    ports:
+      - "8080:8080"
+    environment:
+      - RUSTFS_REGION=us-east-1
+      - RUSTFS_ACCESS_KEY_ID=rustfsadmin
+      - RUSTFS_SECRET_ACCESS_KEY=rustfsadmin
+      - RUSTFS_ENDPOINT_URL=http://s3:9000
+      - RUSTFS_BUCKET=cv-platform-uploads
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - QUEUE_NAME=cv-platform-queue
+    depends_on:
+      - s3
+      - rabbitmq
+    networks:
+      - cv-platform
+    restart: on-failure
+
+  # Text extraction service
+  extractor:
+    build:
+      context: .
+      dockerfile: services/extractor/Dockerfile
+    image: cv-platform-extractor:latest
+    container_name: extractor
+    environment:
+      - RUSTFS_REGION=us-east-1
+      - RUSTFS_ACCESS_KEY_ID=rustfsadmin
+      - RUSTFS_SECRET_ACCESS_KEY=rustfsadmin
+      - RUSTFS_ENDPOINT_URL=http://s3:9000
+      - RUSTFS_BUCKET=cv-platform-uploads
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - QUEUE_NAME=cv-platform-queue
+    depends_on:
+      - s3
+      - rabbitmq
+      - uploader
+    networks:
+      - cv-platform
+    restart: on-failure
+
+  # PII redaction service
+  piistripper:
+    build:
+      context: .
+      dockerfile: services/piistripper/Dockerfile
+    image: cv-platform-piistripper:latest
+    container_name: piistripper
+    environment:
+      - RUSTFS_REGION=us-east-1
+      - RUSTFS_ACCESS_KEY_ID=rustfsadmin
+      - RUSTFS_SECRET_ACCESS_KEY=rustfsadmin
+      - RUSTFS_ENDPOINT_URL=http://s3:9000
+      - RUSTFS_BUCKET=cv-platform-uploads
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - QUEUE_NAME=cv-platform-queue
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-nvidia/nemotron-3-super-120b-a12b:free}
+    depends_on:
+      - s3
+      - rabbitmq
+      - extractor
+    networks:
+      - cv-platform
+    restart: on-failure
+
+  # Skill matching service
+  skillmatcher:
+    build:
+      context: .
+      dockerfile: services/skillmatcher/Dockerfile
+    image: cv-platform-skillmatcher:latest
+    container_name: skillmatcher
+    environment:
+      - RUSTFS_REGION=us-east-1
+      - RUSTFS_ACCESS_KEY_ID=rustfsadmin
+      - RUSTFS_SECRET_ACCESS_KEY=rustfsadmin
+      - RUSTFS_ENDPOINT_URL=http://s3:9000
+      - RUSTFS_BUCKET=cv-platform-uploads
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - QUEUE_NAME=cv-platform-queue
+    depends_on:
+      - s3
+      - rabbitmq
+      - piistripper
+    networks:
+      - cv-platform
+    restart: on-failure
+
+  # Data cleanup service
+  datacleaner:
+    build:
+      context: .
+      dockerfile: services/datacleaner/Dockerfile
+    image: cv-platform-datacleaner:latest
+    container_name: datacleaner
+    environment:
+      - RUSTFS_REGION=us-east-1
+      - RUSTFS_ACCESS_KEY_ID=rustfsadmin
+      - RUSTFS_SECRET_ACCESS_KEY=rustfsadmin
+      - RUSTFS_ENDPOINT_URL=http://s3:9000
+      - RUSTFS_BUCKET=cv-platform-uploads
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - QUEUE_NAME=cv-platform-queue
+      - RETENTION_UPLOADS_DAYS=7
+      - RETENTION_REDACTED_DAYS=7
+      - RETENTION_FAILED_QUEUE_DAYS=7
+      - CLEANUP_INTERVAL_MINUTES=1
+      - DRY_RUN=false
+    depends_on:
+      - s3
+      - rabbitmq
+    networks:
+      - cv-platform
+    restart: on-failure
+
+networks:
+  cv-platform:
+    driver: bridge
+
+volumes:
+  s3_data:
+  rabbitmq_data:
