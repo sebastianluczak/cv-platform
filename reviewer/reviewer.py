@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -215,36 +216,39 @@ def review(diff: str, model: str) -> dict:
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY is not set")
 
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": (
+                "Review this Git diff.\n"
+                "The diff may be truncated; if so, review only "
+                "the available evidence and do not guess.\n\n"
+                f"```diff\n{diff}\n```"
+            ),
+        },
+    ]
+    request_params = {
+        "model": model,
+        "messages": messages,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "code_review",
+                "strict": True,
+                "schema": REVIEW_SCHEMA,
+            },
+        },
+        "temperature": 0.1,
+    }
+
     response = post_with_retry(
         API_URL,
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
-        json={
-            "model": model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": (
-                        "Review this Git diff.\n"
-                        "The diff may be truncated; if so, review only "
-                        "the available evidence and do not guess.\n\n"
-                        f"```diff\n{diff}\n```"
-                    ),
-                },
-            ],
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "code_review",
-                    "strict": True,
-                    "schema": REVIEW_SCHEMA,
-                },
-            },
-            "temperature": 0.1,
-        },
+        json=request_params,
         timeout=180,
     )
     response.raise_for_status()
@@ -259,9 +263,38 @@ def review(diff: str, model: str) -> dict:
 
     # Basic semantic validation. Schema-conforming JSON can still
     # contain invalid locations or fabricated findings.
-    for finding in result["findings"]:
+    for index, finding in enumerate(result["findings"]):
         if not 0 <= finding["confidence"] <= 1:
-            raise ValueError("Finding confidence must be between 0 and 1")
+            prompt_metadata = [
+                {
+                    "role": message["role"],
+                    "content_characters": len(message["content"]),
+                }
+                for message in messages
+            ]
+            diagnostics = {
+                "error": "Finding confidence must be between 0 and 1",
+                "finding_index": index,
+                "finding": finding,
+                "request_params": {
+                    "model": request_params["model"],
+                    "temperature": request_params["temperature"],
+                    "response_format": request_params["response_format"],
+                    "messages": prompt_metadata,
+                    "diff": {
+                        "characters": len(diff),
+                        "sha256": hashlib.sha256(diff.encode("utf-8")).hexdigest(),
+                    },
+                },
+                "response_status": response.status_code,
+                "response_payload": payload,
+                "raw_response_text": response.text,
+            }
+            raise ValueError(
+                "Finding confidence must be between 0 and 1. "
+                "OpenRouter diagnostics (prompt text omitted to avoid logging source code):\n"
+                + json.dumps(diagnostics, indent=2, ensure_ascii=False)
+            )
         if finding["line"] < 1:
             raise ValueError("Finding line numbers must be positive")
         if not isinstance(finding["severity"], str) or finding["severity"] not in (
