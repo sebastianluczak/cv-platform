@@ -114,3 +114,8 @@ tasks:
     deps: [review:install]
     cmds:
       - .venv/bin/python reviewer.py --base "{{.BASE | default "origin/main"}}" --model "{{.MODEL | default "nvidia/nemotron-3-super-120b-a12b:free"}}"
+
+  review:check-limits:
+    desc: Checks current limits for currently set OpenRouter API Key
+    cmds:
+      - python3 reviewer/check_limits.py

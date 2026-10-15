@@ -6,6 +6,8 @@ import json
 import os
 import subprocess
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -13,6 +15,8 @@ import requests
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 MAX_DIFF_CHARS = 200_000
+MAX_REQUEST_ATTEMPTS = 3
+MAX_RETRY_DELAY_SECONDS = 30
 
 REVIEW_SCHEMA = {
     "type": "object",
@@ -105,12 +109,104 @@ def collect_diff(base: str) -> tuple[str, str]:
     return head, diff
 
 
+def retry_delay(headers, attempt: int) -> float:
+    retry_after = headers.get("Retry-After", "")
+    if retry_after.isdigit():
+        return min(int(retry_after), MAX_RETRY_DELAY_SECONDS)
+
+    reset_at = headers.get("X-RateLimit-Reset", "")
+    if reset_at.isdigit():
+        delay = int(reset_at) / 1000 - time.time()
+        if delay > 0:
+            return delay
+
+    return 2**attempt
+
+
+def rate_limit_error(response: requests.Response) -> RuntimeError:
+    details = ["OpenRouter is still rate-limiting the request (HTTP 429)."]
+    remaining = response.headers.get("X-RateLimit-Remaining")
+    if remaining is not None:
+        details.append(f"Requests remaining in the current window: {remaining}.")
+
+    reset_at = response.headers.get("X-RateLimit-Reset", "")
+    if reset_at.isdigit():
+        reset_timestamp = int(reset_at) / (1000 if len(reset_at) >= 13 else 1)
+        reset_time = datetime.fromtimestamp(reset_timestamp, timezone.utc)
+        details.append(
+            "Rate limit reset: "
+            f"{reset_time.isoformat(timespec='seconds')} "
+            "(UTC; retry after this time)."
+        )
+    elif response.headers.get("Retry-After"):
+        details.append(
+            f"Retry-After: {response.headers['Retry-After']}."
+        )
+
+    details.append(
+        "Wait for the limit to reset, or select a model with available capacity."
+    )
+    return RuntimeError(" ".join(details))
+
+
+def log_request(message: str) -> None:
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    print(f"[{timestamp}] {message}", file=sys.stderr, flush=True)
+
+
+def post_with_retry(*args, **kwargs) -> requests.Response:
+    for attempt in range(MAX_REQUEST_ATTEMPTS):
+        url = args[0] if args else kwargs.get("url", "<unknown URL>")
+        log_request(
+            f"Sending OpenRouter request to {url} "
+            f"(attempt {attempt + 1}/{MAX_REQUEST_ATTEMPTS})"
+        )
+        started_at = time.monotonic()
+        try:
+            response = requests.post(*args, **kwargs)
+        except requests.RequestException as exc:
+            elapsed = time.monotonic() - started_at
+            log_request(
+                f"OpenRouter request failed after {elapsed:.2f}s "
+                f"({type(exc).__name__})"
+            )
+            raise
+
+        elapsed = time.monotonic() - started_at
+        log_request(
+            f"OpenRouter responded with HTTP {response.status_code} "
+            f"after {elapsed:.2f}s"
+        )
+        if response.status_code != 429:
+            return response
+
+        headers = dict(response.headers)
+        if "Set-Cookie" in headers:
+            headers["Set-Cookie"] = "[redacted]"
+        print(
+            f"OpenRouter 429 response headers: {headers}",
+            file=sys.stderr,
+        )
+        if attempt == MAX_REQUEST_ATTEMPTS - 1:
+            log_request("Retry limit reached; giving up on this request")
+            raise rate_limit_error(response)
+
+        delay = retry_delay(response.headers, attempt)
+        log_request(
+            f"Rate limited; waiting {delay:.1f}s before retry "
+            f"{attempt + 2}/{MAX_REQUEST_ATTEMPTS}"
+        )
+        time.sleep(delay)
+
+    raise RuntimeError("OpenRouter retry loop ended unexpectedly")
+
+
 def review(diff: str, model: str) -> dict:
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY is not set")
 
-    response = requests.post(
+    response = post_with_retry(
         API_URL,
         headers={
             "Authorization": f"Bearer {api_key}",
