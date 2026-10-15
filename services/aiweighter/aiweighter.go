@@ -1,111 +1,125 @@
-package aiweighter
+package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
+
+	"brodaty.dev/cv-platform/common/objectstore"
+	"github.com/streadway/amqp"
 )
 
-const endpoint = "https://openrouter.ai/api/v1/chat/completions"
+const defaultModel = "nvidia/nemotron-3-super-120b-a12b:free"
 
-type ChatRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-}
-
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-func SendToWeighter(content string) {
-	apiKey := os.Getenv("OPENROUTER_API_KEY")
+func run() error {
+	rabbitMQURL := strings.TrimSpace(os.Getenv("RABBITMQ_URL"))
+	if rabbitMQURL == "" {
+		return fmt.Errorf("RABBITMQ_URL is not set")
+	}
+	queueName := strings.TrimSpace(os.Getenv("QUEUE_NAME"))
+	if queueName == "" {
+		return fmt.Errorf("QUEUE_NAME is not set")
+	}
+	apiKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY"))
 	if apiKey == "" {
-		panic("OPENROUTER_API_KEY is not set")
+		return fmt.Errorf("OPENROUTER_API_KEY is not set")
+	}
+	model := strings.TrimSpace(os.Getenv("OPENROUTER_MODEL"))
+	if model == "" {
+		model = defaultModel
+	}
+	port := strings.TrimSpace(os.Getenv("AIWEIGHTER_PORT"))
+	if port == "" {
+		port = "8082"
 	}
 
-	payload := ChatRequest{
-		Model: "nvidia/nemotron-3-ultra-550b-a55b:free",
-		Messages: []Message{
-			{
-				Role:    "user",
-				Content: content,
-			},
-		},
-	}
-
-	body, err := json.Marshal(payload)
+	connection, err := amqp.Dial(rabbitMQURL)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("connect to RabbitMQ: %w", err)
+	}
+	defer connection.Close()
+
+	workQueue := queueName + ".aiweight"
+	failedQueue := workQueue + ".failed"
+	consumerChannel, err := connection.Channel()
+	if err != nil {
+		return fmt.Errorf("open RabbitMQ consumer channel: %w", err)
+	}
+	defer consumerChannel.Close()
+	for _, name := range []string{workQueue, failedQueue} {
+		if _, err := consumerChannel.QueueDeclare(name, true, false, false, false, nil); err != nil {
+			return fmt.Errorf("declare queue %q: %w", name, err)
+		}
+	}
+	if err := consumerChannel.Qos(1, 0, false); err != nil {
+		return fmt.Errorf("configure RabbitMQ prefetch: %w", err)
+	}
+	deliveries, err := consumerChannel.Consume(workQueue, "", false, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("consume queue %q: %w", workQueue, err)
 	}
 
-	req, err := http.NewRequest(
-		http.MethodPost,
-		endpoint,
-		bytes.NewReader(body),
+	workerPublisherChannel, err := connection.Channel()
+	if err != nil {
+		return fmt.Errorf("open worker publisher channel: %w", err)
+	}
+	defer workerPublisherChannel.Close()
+	if err := workerPublisherChannel.Confirm(false); err != nil {
+		return fmt.Errorf("enable worker publisher confirms: %w", err)
+	}
+	workerConfirmations := workerPublisherChannel.NotifyPublish(make(chan amqp.Confirmation, 1))
+
+	apiPublisherChannel, err := connection.Channel()
+	if err != nil {
+		return fmt.Errorf("open API publisher channel: %w", err)
+	}
+	defer apiPublisherChannel.Close()
+	if err := apiPublisherChannel.Confirm(false); err != nil {
+		return fmt.Errorf("enable API publisher confirms: %w", err)
+	}
+	apiConfirmations := apiPublisherChannel.NotifyPublish(make(chan amqp.Confirmation, 1))
+
+	storageClient, storageConfig := objectstore.NewClient()
+	modelClient := newOpenRouterClient(apiKey, model)
+	handler := newAIweighterHandler(
+		storageClient, storageConfig.Bucket, workQueue,
+		&confirmedPublisher{channel: apiPublisherChannel, confirmations: apiConfirmations},
 	)
-	if err != nil {
-		panic(err)
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
+	workerErr := make(chan error, 1)
+	go func() {
+		workerErr <- consumeWeights(
+			deliveries, workerPublisherChannel, workerConfirmations,
+			workQueue, failedQueue, storageConfig.Bucket, storageClient, modelClient,
+		)
+	}()
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- server.ListenAndServe()
+	}()
+	// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
+	log.Printf("AIweighter listening on port %q; queue %q; bucket %q; model %q",
+		safeLogField(port), safeLogField(workQueue), safeLogField(storageConfig.Bucket), safeLogField(model))
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
+	select {
+	case err := <-serverErr:
+		if err != http.ErrServerClosed {
+			return fmt.Errorf("serve AIweighter HTTP API: %w", err)
+		}
+		return nil
+	case err := <-workerErr:
+		_ = server.Close()
+		return err
 	}
-	defer resp.Body.Close()
-
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		panic(fmt.Sprintf(
-			"OpenRouter returned HTTP %d: %s",
-			resp.StatusCode,
-			responseBody,
-		))
-	}
-
-	/**
-		 * The response from OpenRouter is a JSON object that contains the model's response.
-
-		 {"id":"gen-x-x","object":"chat.completion","created":1791895087,"model":"nvidia/nemotron-3-ultra-550b-a55b:free","provider":"Nvidia","system_fingerprint":null,"
-	  │   service_tier":null,"choices":[{"index":0,"logprobs":null,"finish_reason":"stop","native_finish_reason":"stop","message":{"role":"assistant","content":"2 + 2 = 4","refusal":null,"reasoning"
-	  │   :"The user is asking a very simple math question: 2 + 2.\nThe answer is 4.","reasoning_details":[{"type":"reasoning.text","text":"The user is asking a very simple math question: 2 + 2.\nTh
-	  │   e answer is 4.","format":"unknown","index":0}]}}],"usage":{"prompt_tokens":23,"completion_tokens":31,"total_tokens":54,"cost":0,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"
-	  │   cache_write_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion
-	  │   _tokens_details":{"reasoning_tokens":19,"image_tokens":0,"audio_tokens":0}}}
-
-		So basically, we need to parse the JSON and extract the content of the first choice's message.
-	*/
-	finalResponse := struct {
-		Choices []struct {
-			Message struct {
-				Content   string `json:"content"`
-				Reasoning string `json:"reasoning"`
-			} `json:"message"`
-		} `json:"choices"`
-	}{}
-
-	if err := json.Unmarshal(responseBody, &finalResponse); err != nil {
-		panic(err)
-	}
-
-	if len(finalResponse.Choices) == 0 {
-		panic("No choices returned from OpenRouter")
-	}
-
-	fmt.Println("[THIS] OpenRouter response:", finalResponse.Choices[0].Message.Content)
-	// optionally, you can also print the reasoning if you want
-	fmt.Println("[THIS] OpenRouter reasoning:", finalResponse.Choices[0].Message.Reasoning)
-
-	fmt.Println(string(responseBody))
 }

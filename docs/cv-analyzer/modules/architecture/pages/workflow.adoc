@@ -19,7 +19,16 @@
 . The offer matcher publishes a persistent job to `QUEUE_NAME.offers` and returns `202 Accepted` with a separate offer-match ID after publisher confirmation.
 . The worker reads `results/<resume-job-id>.skills.json`. For URLs it fetches bounded static HTML from public HTTP(S) destinations, parses visible text, and does not store the fetched page.
 . It finds required skill patterns in explicitly required/must-have sections. If no such section exists, it uses all detected skill patterns in the offer. It writes an `unscorable` result if no patterns are detected; otherwise it writes rounded percentage coverage plus matched/missing skill evidence to `results/<offer-match-id>.offer.json`.
+. The offer result retains bounded normalized offer text for later AI tailoring; `GET /matches/<offer-match-id>` omits this private field.
 . The UI polls `GET /matches/<offer-match-id>` until the result is completed, unscorable, or failed.
+
+== Optional AI resume generation
+
+. After a completed offer match, the UI explains that the redacted resume, skill evidence, and job-offer text will be sent to OpenRouter.
+. The user must explicitly opt in before the UI submits `POST /weights` with the offer-match ID and consent affirmation.
+. AIweighter publishes a persistent ID-only job to `QUEUE_NAME.aiweight` and returns an AI resume ID. The worker reads the redacted resume, skill result, and bounded normalized offer text from storage, then requests a Markdown resume from the configured model.
+. The worker stores the versioned result at `results/<weigh-id>.ai.json`; the UI polls `GET /weights/<weigh-id>` and displays the returned Markdown as text for review or download.
+. The prompt instructs the model to use only source-supported facts and omit unsupported qualifications, dates, achievements, or metrics. User-provided resume and offer content is treated as untrusted data, not instructions.
 
 == Extraction failures and retries
 
@@ -28,6 +37,7 @@ The initial attempt plus up to three retries means a job may be attempted four t
 
 A job still failing extraction is published to `QUEUE_NAME.failed`; a job still failing redaction is published to `QUEUE_NAME.pii.failed`; a job still failing skill matching is published to `QUEUE_NAME.skills.failed`.
 A job still failing offer matching is published to `QUEUE_NAME.offers.failed`.
+A job still failing AI resume generation is published to `QUEUE_NAME.aiweight.failed`.
 
 Malformed job JSON is also sent directly to the failed queue. 
 

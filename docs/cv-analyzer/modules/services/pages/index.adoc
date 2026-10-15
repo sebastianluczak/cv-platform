@@ -30,7 +30,7 @@
 |xref:offermatcher.adoc[Offer matcher]
 
 |`aiweighter`
-|Standalone OpenRouter chat-completion helper
-|Prototype package; not integrated into the upload/extraction pipeline
-|xref:prototypes.adoc[Prototype components]
+|Creates a tailored Markdown resume from a completed offer match after explicit user consent
+|Implemented; optional asynchronous AI resume generation
+|xref:aiweighter.adoc[AIweighter]
 |===

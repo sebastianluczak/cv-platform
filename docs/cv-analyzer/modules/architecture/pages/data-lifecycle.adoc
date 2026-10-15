@@ -31,6 +31,11 @@
 |`results/<offer-match-id>.offer.json`
 |Written by `offermatcher`; contains status, required-skill coverage, and matched/missing patterns. It references the resume job ID but does not copy the resume.
 
+|AI resume result
+|Configured S3-compatible bucket
+|`results/<weigh-id>.ai.json`
+|Written by `aiweighter`; contains status, Markdown output, and references to the offer-match and resume job IDs.
+
 |Extraction job
 |RabbitMQ work queue
 |`QUEUE_NAME`
@@ -50,6 +55,11 @@
 |RabbitMQ work queue
 |`QUEUE_NAME.offers`
 |Persistent message published by the offer matcher API; contains a resume job ID and either bounded offer text or an offer URL. The offer matcher manually acknowledges after writing a terminal result, retry republish, or failed-queue republish.
+
+|AI resume job
+|RabbitMQ work queue
+|`QUEUE_NAME.aiweight`
+|Persistent ID-only job published after explicit user consent. The worker loads the redacted resume, skill evidence, and offer text from storage.
 
 |Failed job
 |RabbitMQ failed queue
@@ -71,6 +81,11 @@
 |`QUEUE_NAME.offers.failed`
 |Persistent message retained for inspection or operator-managed requeue.
 
+|Failed AI resume job
+|RabbitMQ failed queue
+|`QUEUE_NAME.aiweight.failed`
+|Persistent message retained for inspection or operator-managed requeue.
+
 |Processing status
 |RabbitMQ status queue, then uploader memory
 |`QUEUE_NAME.events`; in memory for at most 24 hours and up to 10,000 jobs per uploader process
@@ -86,5 +101,7 @@ The extractor downloads each input to a temporary file. For scanned PDFs it rend
 The services do not implement a retention schedule for uploaded resumes, extracted text, or redacted results. The redacted result is not guaranteed to be anonymous, and the original extracted text remains unchanged.
 
 The offer matcher does not persist fetched offer HTML. Pasted offer text is carried in its durable RabbitMQ message until processing; configure queue retention accordingly. The offer matcher API has no user authorization or ownership model, so deployments must keep it behind an access-controlled boundary.
+
+After a user opts in, normalized offer text and generated Markdown persist as result artifacts, and the redacted resume and skill result are sent to the configured external OpenRouter model. Redaction is best-effort and does not guarantee anonymity. AIweighter and offermatcher do not implement authentication or ownership checks; keep both APIs behind an access-controlled boundary. Configure object-store lifecycle and access controls for all resume, offer, and AI output artifacts.
 
 IMPORTANT: Storage administrators must configure lifecycle expiration and access controls appropriate to their data policy.

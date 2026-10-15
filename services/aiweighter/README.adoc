@@ -1,0 +1,77 @@
+= AIweighter
+
+AIweighter creates an optional, offer-tailored Markdown resume from a completed
+resume/offer match. It only runs after an explicit user action and consent.
+The generated resume must be reviewed by the user before use; unsupported
+qualifications, dates, metrics, and achievements are omitted rather than
+invented.
+
+== HTTP API
+
+The service listens on `AIWEIGHTER_PORT` (default `8082`).
+
+`POST /weights` accepts a completed offer-match ID and an explicit consent
+affirmation:
+
+[source,json]
+----
+{"match_id":"<completed-offer-match-uuid>","consent":true}
+----
+
+The service validates that the referenced match is complete, creates a queued
+request, and publishes it with RabbitMQ publisher confirmation before returning
+`202 Accepted`:
+
+[source,json]
+----
+{"weigh_id":"<ai-resume-uuid>","status":"queued"}
+----
+
+Poll `GET /weights/<weigh-id>` for `queued`, `processing`, `completed`, or
+`failed`. Completed responses contain the Markdown in the `markdown` field.
+The generated artifact records the consent affirmation and request time.
+The UI displays the Markdown as text and provides a download; it does not render
+model output as HTML.
+
+== Inputs and output
+
+The worker reads only:
+
+* `results/<resume-job-id>.redacted.txt`
+* `results/<resume-job-id>.skills.json`
+* The bounded normalized offer text retained in
+  `results/<offer-match-id>.offer.json`
+
+The offer-match status API does not return the retained offer text. Raw resume
+uploads are not sent to the model. The worker sends the redacted resume, skill
+evidence, and offer text to OpenRouter only for a request explicitly confirmed
+by the user. These inputs are treated as untrusted data, not as instructions.
+The provider response must be non-empty UTF-8 within the output limit and is
+stored as `results/<weigh-id>.ai.json`.
+
+== Queues and delivery
+
+AIweighter consumes persistent JSON jobs from `QUEUE_NAME.aiweight` containing
+only the AI request and offer-match IDs. Malformed or exhausted jobs are routed
+to `QUEUE_NAME.aiweight.failed`. It uses manual acknowledgements, prefetch one,
+publisher confirms, deterministic result keys, and up to three retries after
+the initial attempt. Processing is at-least-once.
+
+== Privacy and operation
+
+The browser displays an external-provider disclosure before enabling the
+consent action. `OPENROUTER_API_KEY` is required and `OPENROUTER_MODEL` selects
+the model (default `nvidia/nemotron-3-super-120b-a12b:free`). The API key,
+prompt, resume text, offer text, and model reasoning are not logged. AIweighter
+uses the shared `RABBITMQ_URL`, `QUEUE_NAME`, and `RUSTFS_*` configuration.
+
+Offer text and generated Markdown are stored with the other result artifacts;
+the platform does not enforce artifact retention. Configure object-store
+lifecycle and access controls according to the applicable data policy.
+Neither AIweighter nor offermatcher has authentication or user-ownership
+checks. Keep both APIs behind an access-controlled application boundary and
+do not expose them directly to untrusted networks. Consent to external
+processing is not authentication or authorization.
+
+Start locally with `task services:aiweighter:start`; build with
+`task services:aiweighter:build`.

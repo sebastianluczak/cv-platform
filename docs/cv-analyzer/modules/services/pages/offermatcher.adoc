@@ -19,6 +19,10 @@ Poll `GET /matches/<match-id>` for `queued`, `processing`, `completed`,
 and matched counts, and matched/missing patterns. No detected required
 patterns produces an `unscorable` status instead of a 0% score.
 
+The result artifact retains bounded normalized offer text for the optional
+AIweighter flow. `GET /matches/<match-id>` deliberately omits that private
+field.
+
 == Matching behavior
 
 Offer and resume evidence use the shared curated pattern vocabulary also used

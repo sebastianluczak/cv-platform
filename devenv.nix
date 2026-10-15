@@ -56,6 +56,9 @@
     offermatcher = {
       exec = "sleep 3 && task services:offermatcher:start";
     };
+    aiweighter = {
+      exec = "sleep 3 && task services:aiweighter:start";
+    };
     frontend = {
       exec = "task ui:install && task ui:start";
     };

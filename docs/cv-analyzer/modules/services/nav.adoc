@@ -5,7 +5,7 @@
 * xref:piistripper.adoc[PII stripper]
 * xref:skillmatcher.adoc[Skill matcher]
 * xref:offermatcher.adoc[Offer matcher]
+* xref:aiweighter.adoc[AIweighter]
 * xref:contracts.adoc[Service contracts]
 * xref:configuration.adoc[Configuration]
 * xref:operations.adoc[Operations]
-* xref:prototypes.adoc[Prototype components]
