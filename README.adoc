@@ -2,8 +2,8 @@
 
 Microservice-based platform for managing and processing CVs (resumes).
 
-.Alpha version of UI
-image::product.png[]
+.Working Proof of Concept of the service
+video::output.mp4[]
 
 == Tech Stack
 
@@ -14,7 +14,7 @@ From the infrastructure point of view, it requires:
 . RabbitMQ
 . S3-compatible storage
 
-Optionally processes sent data through an AI model to assign a weight to the CV, but the core functionality works without any AI model.
+Optionally processes sent data through an AI model to assign a weight to the CV and propose changes accordingly to offer.
 
 Opens SSE connection to the client for real-time signals.
 
