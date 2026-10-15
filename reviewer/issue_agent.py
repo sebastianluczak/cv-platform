@@ -327,14 +327,26 @@ def openrouter_request(api_key: str, model: str, messages: list[dict]) -> dict:
             raise AgentError("OpenRouter returned invalid JSON") from exc
 
     if not isinstance(payload, dict):
-        raise AgentError("OpenRouter returned no completion choices")
+        raise AgentError(f"OpenRouter returned no completion choices: {describe_payload(payload)}")
     choices = payload.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-        raise AgentError("OpenRouter returned no completion choices")
+        raise AgentError(f"OpenRouter returned no completion choices: {describe_payload(payload)}")
     message = choices[0].get("message")
     if not isinstance(message, dict):
-        raise AgentError("OpenRouter returned a malformed completion message")
-    return message
+        raise AgentError(
+            f"OpenRouter returned a malformed completion message: {describe_payload(payload)}"
+        )
+    return {**message, "_diagnostics": describe_payload(payload)}
+
+
+def describe_payload(payload: object, limit: int = 3000) -> str:
+    try:
+        text = json.dumps(payload, ensure_ascii=False, default=str)
+    except (TypeError, ValueError):
+        text = repr(payload)
+    if len(text) > limit:
+        text = text[:limit] + f"... [truncated, {len(text)} chars total]"
+    return text
 
 
 def execute_tool(name: str, arguments_json: str) -> str:
@@ -396,7 +408,12 @@ def run_agent() -> None:
         if not tool_calls:
             final = message.get("content")
             if not isinstance(final, str) or not final.strip():
-                raise AgentError("Model returned neither tool calls nor a final response")
+                raise AgentError(
+                    "Model returned neither tool calls nor a final response "
+                    f"(model={model}, tool_calls_so_far={tool_call_count}, "
+                    f"messages={len(messages)}, content_type={type(final).__name__}). "
+                    f"Raw response: {message.get('_diagnostics', '<unavailable>')}"
+                )
             summary = final[:MAX_RESPONSE_CHARS]
             print(summary)
             summary_path = os.environ.get("AGENT_SUMMARY_FILE")
