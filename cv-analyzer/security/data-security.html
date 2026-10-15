@@ -59,6 +59,9 @@
     <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
   </li>
 </ul>
@@ -210,13 +213,13 @@ They persist the original file, extracted text, and a separate best-effort redac
 <p>The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.</p>
 </li>
 <li>
-<p>The services do not implement deletion, expiration, or a retention policy for stored objects.</p>
-</li>
-<li>
 <p>Temporary extractor files are created on the service host during processing and removed when processing finishes.</p>
 </li>
 <li>
 <p>The uploader&#8217;s HTTP endpoints do not implement authentication or authorization.</p>
+</li>
+<li>
+<p>The datacleaner service implements automated data lifecycle management with configurable retention periods and dry-run mode for testing.</p>
 </li>
 </ul>
 </div>
@@ -234,15 +237,18 @@ They persist the original file, extracted text, and a separate best-effort redac
 <p>private storage access,</p>
 </li>
 <li>
-<p>dedicated least-privilege credentials,</p>
+<p>dedicated least-privilege credentials (including DeleteObject permission for the datacleaner service),</p>
 </li>
 <li>
 <p>transport and network protections,</p>
 </li>
 <li>
-<p>an explicit retention/deletion policy.</p>
+<p>the datacleaner service with appropriate retention periods based on compliance requirements.</p>
 </li>
 </ol>
+</div>
+<div class="paragraph">
+<p>The datacleaner service automatically enforces retention policies by scanning the configured S3 bucket and deleting expired objects. Retention periods and cleanup frequency must be configured to align with GDPR, CCPA, or other applicable compliance obligations.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -275,10 +281,103 @@ Do not use development credentials in a deployed environment.
 <i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
-A redacted result is not guaranteed anonymization or GDPR compliance. Since the original extracted text is retained, it remains personal data and must continue to receive appropriate access control and retention/deletion handling. Obtain privacy/legal review before relying on this processing for a compliance obligation.
+A redacted result is not guaranteed anonymization or GDPR compliance. Datacleaner service must be properly configured and monitored to ensure compliance obligations are met. Obtain privacy/legal review before relying on this processing for a compliance obligation.
 </td>
 </tr>
 </table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_datacleaner_service"><a class="anchor" href="#_datacleaner_service"></a>Datacleaner service</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The datacleaner service implements automated data lifecycle management to enforce retention policies:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Runs on a configurable schedule (default: every minute).</p>
+</li>
+<li>
+<p>Scans the configured S3-compatible bucket for objects matching known patterns (<code>uploads/&lt;job-id&gt;</code>, <code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, <code>results/&lt;job-id&gt;.skills.json</code>, etc.).</p>
+</li>
+<li>
+<p>Deletes expired objects based on their age and configured retention periods.</p>
+</li>
+<li>
+<p>Supports per-object-type retention overrides (e.g., keep skill results longer than extracted text).</p>
+</li>
+<li>
+<p>Dry-run mode available for testing: operators can verify deletion behavior before enabling actual deletion.</p>
+</li>
+<li>
+<p>Logs all deletion operations, including object key, deletion timestamp, and reason (age exceeds retention period).</p>
+</li>
+<li>
+<p>Supports automatic purging of failed RabbitMQ messages (e.g., <code>QUEUE_NAME.failed</code>, <code>QUEUE_NAME.pii.failed</code>) after a configurable retention period.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Operators must ensure the datacleaner&#8217;s S3 credentials have the <code>DeleteObject</code> permission and that RabbitMQ access is configured for queue purge operations.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_security_considerations"><a class="anchor" href="#_security_considerations"></a>Security considerations</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Redaction is best-effort</strong>: Pattern matching and named-entity recognition can miss contextual, indirect, or domain-specific identifiers. A redacted result does not guarantee anonymization.</p>
+</li>
+<li>
+<p><strong>Original extracted text is automatically deleted</strong>: The datacleaner service deletes the original extracted text (<code>results/&lt;job-id&gt;.txt</code>) after the configured retention period expires. This reduces exposure time for personal data compared to indefinite retention.</p>
+</li>
+<li>
+<p><strong>Failed messages are auto-purged</strong>: Operator-configured retention policy on failed queues prevents indefinite storage of job messages containing job IDs and metadata. This applies to <code>QUEUE_NAME.failed</code> and all stage-specific failed queues (e.g., <code>QUEUE_NAME.pii.failed</code>, <code>QUEUE_NAME.skills.failed</code>).</p>
+</li>
+<li>
+<p><strong>Dry-run mode recommended</strong>: Operators should test the datacleaner service in dry-run mode to verify that the retention policy matches compliance requirements before enabling production deletion.</p>
+</li>
+<li>
+<p><strong>Temporary files are cleaned up</strong>: The extractor removes temporary files (OCR PDFs, extracted text copies) after processing finishes, but temporary data exists on the host during job processing.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_operational_security_notes"><a class="anchor" href="#_operational_security_notes"></a>Operational security notes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The datacleaner service improves compliance posture but requires operator diligence:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Monitor cleanup logs</strong>: Regularly review datacleaner logs to verify that deletion operations execute as expected. Failed deletions should trigger alerts.</p>
+</li>
+<li>
+<p><strong>Verify deletion success</strong>: Confirm that objects are actually deleted from storage and that no deletion errors are suppressed in logs.</p>
+</li>
+<li>
+<p><strong>Audit trail</strong>: Ensure deletion operations are logged with sufficient detail (object key, timestamp, reason) to support audit and compliance reviews.</p>
+</li>
+<li>
+<p><strong>Alert on failures</strong>: Configure alerting on cleanup job failures, S3 permission errors, or unexpected retention patterns.</p>
+</li>
+<li>
+<p><strong>Credential rotation</strong>: Regularly rotate S3 credentials used by the datacleaner service; follow principle of least privilege.</p>
+</li>
+<li>
+<p><strong>Compliance review</strong>: Before production deployment, conduct a privacy and legal review to ensure the retention policy aligns with GDPR, CCPA, and other applicable regulations.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The redacted result is still not guaranteed anonymization; coordinate retention policies with legal/privacy teams.</p>
 </div>
 </div>
 </div>
