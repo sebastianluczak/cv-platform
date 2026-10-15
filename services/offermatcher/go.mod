@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.3
 	github.com/aws/smithy-go v1.28.5
 	github.com/streadway/amqp v1.1.0
-	golang.org/x/net v0.42.0
+	golang.org/x/net v0.55.0
 )
 
 require (
