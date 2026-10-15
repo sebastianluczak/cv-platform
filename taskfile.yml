@@ -6,6 +6,8 @@ tasks:
     cmds:
       - cp product.png /tmp/image.png
       - cp sample_resume.pdf /tmp/resume.pdf
+  
+  # LINTING #
   prep:lint:
     desc: Lints all projects
     cmds:
@@ -14,6 +16,8 @@ tasks:
       - cd services/piistripper && gofmt -l -e -w .
       - cd services/skillmatcher && gofmt -l -e -w .
       - cd services/uploader && gofmt -l -e -w .
+
+  # SECURITY SCANS #
   security:scan:
     dir: services
     desc: Perform gosec scan on all projects
@@ -25,6 +29,8 @@ tasks:
       - cd skillmatcher && gosec ./... || true
       - cd uploader && gosec ./... || true
       - cd common && gosec ./... || true
+  
+  # UI THINGS #
   ui:install:
     dir: ui
     desc: Install the UI application dependencies
@@ -42,6 +48,8 @@ tasks:
     desc: Build the UI application
     cmds:
       - npm run build
+
+  # SERVICES SECTION #
   services:uploader:start:
     desc: Start the uploader service
     cmds:
@@ -103,18 +111,16 @@ tasks:
     desc: Set up the Python AI reviewer
     cmds:
       - python3 -m venv .venv
-      - .venv/bin/python -m pip install -r reviewer/requirements.txt
+      - .venv/bin/python -m pip install -r requirements.txt
     status:
       - test -x .venv/bin/python
       - .venv/bin/python -c "import requests"
-
   review:
     dir: reviewer
     desc: Review current branch with OpenRouter AI
     deps: [review:install]
     cmds:
       - .venv/bin/python reviewer.py --base "{{.BASE | default "origin/main"}}" --model "{{.MODEL | default "nvidia/nemotron-3-super-120b-a12b:free"}}"
-
   review:check-limits:
     desc: Checks current limits for currently set OpenRouter API Key
     cmds:
