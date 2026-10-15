@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Configuration :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Services</li>
+    <li><a href="configuration.html">Configuration</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/services/pages/configuration.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Configuration</h1>
+<div class="paragraph">
+<p>The uploader, extractor, piistripper, skill matcher, offer matcher, and
+AIweighter must point to the same RabbitMQ queue and S3-compatible storage
+namespace.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3335%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Variable</th>
+<th class="tableblock halign-left valign-top">Required by</th>
+<th class="tableblock halign-left valign-top">Default</th>
+<th class="tableblock halign-left valign-top">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NATS_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JetStream evaluation/pilot only</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>nats://localhost:4222</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Local NATS server URL. The development environment starts NATS with JetStream enabled, but the current services continue to use RabbitMQ until a JetStream pilot is implemented and explicitly selected.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, skill matching, offer matching, AIweighter, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.offers</code>, <code>.aiweight</code>, <code>.failed</code>, <code>.pii.failed</code>, <code>.skills.failed</code>, <code>.offers.failed</code>, and <code>.aiweight.failed</code>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, and AI resume results.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 signing region.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage access key.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage secret key.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8080</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP listen port.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OFFERMATCHER_PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8081</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AIWEIGHTER_PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8082</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_API_KEY</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API key for the explicitly consented external model request.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>nvidia/nemotron-3-super-120b-a12b:free</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OpenRouter chat-completion model slug.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Use the same <code>RUSTFS_*</code> values in all six services. In particular,
+<code>RUSTFS_BUCKET</code> must match across producers and consumers. Piistripper writes a
+separate redacted result; the skill matcher writes category scores; the offer
+matcher retains bounded normalized offer text with its private result artifact;
+AIweighter consumes <code>QUEUE_NAME.aiweight</code> and stores generated Markdown.</p>
+</div>
+<div class="paragraph">
+<p>For the JetStream evaluation, <code>devenv up</code> also starts a local NATS server with
+JetStream enabled and file-backed state under <code>.devenv/state/nats</code>. This is
+additional pilot infrastructure only: RabbitMQ remains the active broker, and
+no service reads <code>NATS_URL</code> until a pilot client is added.</p>
+</div>
+<div class="paragraph">
+<p>The offer matcher and AIweighter APIs have no authentication or account
+ownership checks and must not be exposed directly to untrusted networks.
+AIweighter sends the redacted resume, skill evidence, and retained offer text
+to OpenRouter only after explicit user consent. Consent is not authentication
+or authorization.</p>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

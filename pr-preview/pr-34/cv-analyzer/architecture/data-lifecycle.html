@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Data and Persistence :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Architecture</li>
+    <li><a href="data-lifecycle.html">Data and persistence</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/architecture/pages/data-lifecycle.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Data and Persistence</h1>
+<div class="sect1">
+<h2 id="_stored_data"><a class="anchor" href="#_stored_data"></a>Stored data</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 28.5714%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Data</th>
+<th class="tableblock halign-left valign-top">Location</th>
+<th class="tableblock halign-left valign-top">Key or lifetime</th>
+<th class="tableblock halign-left valign-top">Current behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Original resume</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uploads/&lt;job-id&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by the <code>uploader</code> before the job is queued.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extracted text</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;job-id&gt;.txt</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by the <code>extractor</code> after extraction.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Redacted extracted text</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;job-id&gt;.redacted.txt</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>piistripper</code> as a separate best-effort redacted copy; the original extracted text is retained.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Role-profile scores</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;job-id&gt;.skills.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>skillmatcher</code> from redacted text; contains category scores and matched pattern evidence.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer comparison result</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;offer-match-id&gt;.offer.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>offermatcher</code>; contains status, required-skill coverage, and matched/missing patterns. It references the resume job ID but does not copy the resume.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI resume result</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;weigh-id&gt;.ai.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>aiweighter</code>; contains status, Markdown output, and references to the offer-match and resume job IDs.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extraction job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message in a durable queue, manually acknowledged after success, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Redaction job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.pii</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by the extractor after storing the extracted text; manually acknowledged after redaction, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by piistripper after storing the redacted result; manually acknowledged after scoring, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by the offer matcher API; contains a resume job ID and either bounded offer text or an offer URL. The offer matcher manually acknowledges after writing a terminal result, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI resume job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent ID-only job published after explicit user consent. The worker loads the redacted resume, skill evidence, and offer text from storage.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed redaction job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.pii.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed skill matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed offer matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed AI resume job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Processing status</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ status queue, then uploader memory</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.events</code>; in memory for at most 24 hours and up to 10,000 jobs per uploader process</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The uploader consumes and acknowledges status messages. Its status history is lost when the process restarts.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_temporary_files"><a class="anchor" href="#_temporary_files"></a>Temporary files</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The extractor downloads each input to a temporary file. For scanned PDFs it renders pages to temporary PNG files before OCR. The code removes these files after processing, but temporary data exists on the extractor host while a job is running.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_retention_and_privacy"><a class="anchor" href="#_retention_and_privacy"></a>Retention and privacy</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_data_retention_policy"><a class="anchor" href="#_data_retention_policy"></a>Data retention policy</h3>
+<div class="paragraph">
+<p>The <code>datacleaner</code> service automates cleanup of aged objects and messages according to configurable retention policies. The following table summarizes retention timelines for each data type:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 40%;">
+<col style="width: 20%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Data Type</th>
+<th class="tableblock halign-left valign-top">Default Retention</th>
+<th class="tableblock halign-left valign-top">Deletion Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Original resume (<code>uploads/&lt;job-id&gt;</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deleted by datacleaner based on S3 object modification time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extracted text (<code>results/&lt;job-id&gt;.txt</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not cleaned by datacleaner</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manual operator lifecycle or S3 bucket policy; remains indefinitely unless configured</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Redacted text (<code>results/&lt;job-id&gt;.redacted.txt</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deleted by datacleaner based on S3 object modification time</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Role-profile scores (<code>results/&lt;job-id&gt;.skills.json</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not cleaned by datacleaner</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manual operator lifecycle or S3 bucket policy; remains indefinitely unless configured</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer comparison result (<code>results/&lt;offer-match-id&gt;.offer.json</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not cleaned by datacleaner</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manual operator lifecycle or S3 bucket policy; remains indefinitely unless configured</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI resume result (<code>results/&lt;weigh-id&gt;.ai.json</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not cleaned by datacleaner</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manual operator lifecycle or S3 bucket policy; remains indefinitely unless configured</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed messages (<code>&lt;QUEUE_NAME&gt;.&lt;stage&gt;.failed</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Purged by datacleaner based on message age or RabbitMQ headers</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_datacleaner_service"><a class="anchor" href="#_datacleaner_service"></a>Datacleaner service</h3>
+<div class="paragraph">
+<p>The <code>datacleaner</code> service runs on a configurable interval (default: every 1 minute) to maintain data retention policies. It is stateless and does not participate in the main processing pipeline.</p>
+</div>
+<div class="sect3">
+<h4 id="_purpose_and_scope"><a class="anchor" href="#_purpose_and_scope"></a>Purpose and scope</h4>
+<div class="paragraph">
+<p>The datacleaner service performs two primary functions:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>S3 cleanup</strong>: Scans and deletes expired objects from configured S3-compatible storage:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Original uploaded files (<code>uploads/&lt;job-id&gt;</code>) after <code>RETENTION_UPLOADS_DAYS</code> days</p>
+</li>
+<li>
+<p>Redacted text results (<code>results/&lt;job-id&gt;.redacted.txt</code>) after <code>RETENTION_REDACTED_DAYS</code> days</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>RabbitMQ failed queue cleanup</strong>: Purges expired messages from failed queues:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>&lt;QUEUE_NAME&gt;.extraction.failed</code></p>
+</li>
+<li>
+<p><code>&lt;QUEUE_NAME&gt;.pii.failed</code></p>
+</li>
+<li>
+<p><code>&lt;QUEUE_NAME&gt;.skills.failed</code></p>
+</li>
+<li>
+<p>Other stage-specific failed queues</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Messages are deleted after <code>RETENTION_FAILED_QUEUE_DAYS</code> days, allowing operators time to inspect and manually requeue failures if needed.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_cleanup_interval_and_dry_run_mode"><a class="anchor" href="#_cleanup_interval_and_dry_run_mode"></a>Cleanup interval and dry-run mode</h4>
+<div class="paragraph">
+<p>The service runs cleanup cycles at a configurable interval (<code>CLEANUP_INTERVAL_MINUTES</code>, default: 1 minute). Each cycle:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Scans S3 for expired objects</p>
+</li>
+<li>
+<p>Deletes expired S3 objects (unless <code>DRY_RUN=true</code>)</p>
+</li>
+<li>
+<p>Scans failed queues for expired messages</p>
+</li>
+<li>
+<p>Purges expired messages (unless <code>DRY_RUN=true</code>)</p>
+</li>
+<li>
+<p>Logs metrics and any errors</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>For testing and policy validation, the <code>DRY_RUN</code> environment variable logs what would be deleted without making any changes.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_configuration_reference"><a class="anchor" href="#_configuration_reference"></a>Configuration reference</h4>
+<div class="paragraph">
+<p>The datacleaner requires the same S3 and RabbitMQ configuration as other pipeline services to ensure consistent data handling:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Environment Variable</th>
+<th class="tableblock halign-left valign-top">Default</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ connection URL. Must match all other services.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Base queue name prefix (e.g., <code>cv-platform-queue</code>). Must match all other services.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint URL.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bucket name for uploads and results.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 region identifier.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 access key ID.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 secret access key.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RETENTION_UPLOADS_DAYS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>7</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Days to retain original uploaded files.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RETENTION_REDACTED_DAYS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>7</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Days to retain redacted text results.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RETENTION_FAILED_QUEUE_DAYS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>7</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Days to retain messages in failed queues before purge.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLEANUP_INTERVAL_MINUTES</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minutes between cleanup cycles.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DRY_RUN</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">If <code>true</code>, log deletions without performing them.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_rabbitmq_failed_queue_retention"><a class="anchor" href="#_rabbitmq_failed_queue_retention"></a>RabbitMQ failed queue retention</h4>
+<div class="paragraph">
+<p>Failed messages (messages that exhausted retry attempts) are retained in dedicated failed queues for operator inspection. The <code>datacleaner</code> periodically purges messages older than <code>RETENTION_FAILED_QUEUE_DAYS</code>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Operators can manually requeue failed messages for retry before expiration</p>
+</li>
+<li>
+<p>After the retention period, messages are automatically deleted</p>
+</li>
+<li>
+<p>The retention window allows time for incident investigation and diagnostics</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>See <a href="workflow.html" class="xref page">Processing Workflow</a> for details on failure handling and retry semantics.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_operator_configuration_for_production"><a class="anchor" href="#_operator_configuration_for_production"></a>Operator configuration for production</h3>
+<div class="paragraph">
+<p>Deploying datacleaner and configuring retention policies for production requires careful planning:</p>
+</div>
+<div class="sect3">
+<h4 id="_required_s3_permissions"><a class="anchor" href="#_required_s3_permissions"></a>Required S3 permissions</h4>
+<div class="paragraph">
+<p>The datacleaner service requires the following S3 IAM permissions on the configured bucket:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>s3:ListBucket</code>: List objects to identify candidates for deletion</p>
+</li>
+<li>
+<p><code>s3:DeleteObject</code>: Delete expired uploads and redacted text files</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Example minimal bucket policy (adjust principals and conditions as needed):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "cv-platform-datacleaner" },
+      "Action": ["s3:ListBucket", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::cv-platform-uploads",
+        "arn:aws:s3:::cv-platform-uploads/*"
+      ]
+    }
+  ]
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_compliance_and_data_retention"><a class="anchor" href="#_compliance_and_data_retention"></a>Compliance and data retention</h4>
+<div class="paragraph">
+<p>Before deploying datacleaner to production, verify that configured retention periods comply with applicable data protection and privacy regulations:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Extracted text</strong> (<code>results/&lt;job-id&gt;.txt</code>) and <strong>skill results</strong> are not automatically deleted. If these contain personal data, configure S3 lifecycle policies separately or rely on datacleaner for redacted text cleanup only.</p>
+</li>
+<li>
+<p><strong>Redaction is best-effort</strong>: The redacted text may still contain sensitive information. Review redaction quality and retention periods in the context of your data protection obligations.</p>
+</li>
+<li>
+<p><strong>Original uploads</strong> are deleted after <code>RETENTION_UPLOADS_DAYS</code>. Ensure this period aligns with user expectations and legal requirements.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_testing_retention_policies"><a class="anchor" href="#_testing_retention_policies"></a>Testing retention policies</h4>
+<div class="paragraph">
+<p>Before deploying to production, test retention policies using dry-run mode:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export DRY_RUN=true
+export RETENTION_UPLOADS_DAYS=7
+export RETENTION_REDACTED_DAYS=7
+export RETENTION_FAILED_QUEUE_DAYS=7
+./datacleaner</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Dry-run mode logs what would be deleted without modifying S3 or RabbitMQ. Verify that the logged deletions match your intended retention policy.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_additional_retention_considerations"><a class="anchor" href="#_additional_retention_considerations"></a>Additional retention considerations</h3>
+<div class="paragraph">
+<p>The offer matcher does not persist fetched offer HTML. Pasted offer text is carried in its durable RabbitMQ message until processing; configure queue retention accordingly. The offer matcher API has no user authorization or ownership model, so deployments must keep it behind an access-controlled boundary.</p>
+</div>
+<div class="paragraph">
+<p>After a user opts in, normalized offer text and generated Markdown persist as result artifacts, and the redacted resume and skill result are sent to the configured external OpenRouter model. Redaction is best-effort and does not guarantee anonymity. AIweighter and offermatcher do not implement authentication or ownership checks; keep both APIs behind an access-controlled boundary. Configure object-store lifecycle and access controls for all resume, offer, and AI output artifacts.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Storage administrators must configure lifecycle expiration and access controls appropriate to their data policy. Review <a href="../security/data-security.html" class="xref page">Data Security (PII)</a> for additional security and privacy considerations.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

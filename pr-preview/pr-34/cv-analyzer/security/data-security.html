@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Data Security (PII) :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Security</li>
+    <li><a href="data-security.html">Data Security (PII)</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/security/pages/data-security.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Data Security (PII)</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The upload, extraction, and redaction services process resume data, which may contain personal information.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+They persist the original file, extracted text, and a separate best-effort redacted copy in the configured S3-compatible bucket.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_current_implementation"><a class="anchor" href="#_current_implementation"></a>Current implementation</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>The uploader, extractor, and piistripper use static S3 credentials from environment variables; local-development defaults are <code>rustfsadmin</code> / <code>rustfsadmin</code>.</p>
+</li>
+<li>
+<p>Uploaded objects are stored under <code>uploads/&lt;job-id&gt;</code> and extracted text under <code>results/&lt;job-id&gt;.txt</code>.</p>
+</li>
+<li>
+<p>Piistripper writes <code>results/&lt;job-id&gt;.redacted.txt</code> without modifying or deleting the extracted source.</p>
+</li>
+<li>
+<p>Piistripper performs local pattern matching and English named-entity recognition; it does not call a hosted model/API. Detection can miss direct, contextual, or indirect identifiers and can produce false positives.</p>
+</li>
+<li>
+<p>The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.</p>
+</li>
+<li>
+<p>Temporary extractor files are created on the service host during processing and removed when processing finishes.</p>
+</li>
+<li>
+<p>The uploader&#8217;s HTTP endpoints do not implement authentication or authorization.</p>
+</li>
+<li>
+<p>The datacleaner service implements automated data lifecycle management with configurable retention periods and dry-run mode for testing.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deployment_responsibilities"><a class="anchor" href="#_deployment_responsibilities"></a>Deployment responsibilities</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before handling real resumes, operators must configure:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>private storage access,</p>
+</li>
+<li>
+<p>dedicated least-privilege credentials (including DeleteObject permission for the datacleaner service),</p>
+</li>
+<li>
+<p>transport and network protections,</p>
+</li>
+<li>
+<p>the datacleaner service with appropriate retention periods based on compliance requirements.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The datacleaner service automatically enforces retention policies by scanning the configured S3 bucket and deleting expired objects. Retention periods and cleanup frequency must be configured to align with GDPR, CCPA, or other applicable compliance obligations.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Protect the uploader behind an authenticated and appropriately restricted network boundary.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Do not use development credentials in a deployed environment.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+A redacted result is not guaranteed anonymization or GDPR compliance. Datacleaner service must be properly configured and monitored to ensure compliance obligations are met. Obtain privacy/legal review before relying on this processing for a compliance obligation.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_datacleaner_service"><a class="anchor" href="#_datacleaner_service"></a>Datacleaner service</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The datacleaner service implements automated data lifecycle management to enforce retention policies:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Runs on a configurable schedule (default: every minute).</p>
+</li>
+<li>
+<p>Scans the configured S3-compatible bucket for objects matching known patterns (<code>uploads/&lt;job-id&gt;</code>, <code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, <code>results/&lt;job-id&gt;.skills.json</code>, etc.).</p>
+</li>
+<li>
+<p>Deletes expired objects based on their age and configured retention periods.</p>
+</li>
+<li>
+<p>Supports per-object-type retention overrides (e.g., keep skill results longer than extracted text).</p>
+</li>
+<li>
+<p>Dry-run mode available for testing: operators can verify deletion behavior before enabling actual deletion.</p>
+</li>
+<li>
+<p>Logs all deletion operations, including object key, deletion timestamp, and reason (age exceeds retention period).</p>
+</li>
+<li>
+<p>Supports automatic purging of failed RabbitMQ messages (e.g., <code>QUEUE_NAME.failed</code>, <code>QUEUE_NAME.pii.failed</code>) after a configurable retention period.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Operators must ensure the datacleaner&#8217;s S3 credentials have the <code>DeleteObject</code> permission and that RabbitMQ access is configured for queue purge operations.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_security_considerations"><a class="anchor" href="#_security_considerations"></a>Security considerations</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Redaction is best-effort</strong>: Pattern matching and named-entity recognition can miss contextual, indirect, or domain-specific identifiers. A redacted result does not guarantee anonymization.</p>
+</li>
+<li>
+<p><strong>Original extracted text is automatically deleted</strong>: The datacleaner service deletes the original extracted text (<code>results/&lt;job-id&gt;.txt</code>) after the configured retention period expires. This reduces exposure time for personal data compared to indefinite retention.</p>
+</li>
+<li>
+<p><strong>Failed messages are auto-purged</strong>: Operator-configured retention policy on failed queues prevents indefinite storage of job messages containing job IDs and metadata. This applies to <code>QUEUE_NAME.failed</code> and all stage-specific failed queues (e.g., <code>QUEUE_NAME.pii.failed</code>, <code>QUEUE_NAME.skills.failed</code>).</p>
+</li>
+<li>
+<p><strong>Dry-run mode recommended</strong>: Operators should test the datacleaner service in dry-run mode to verify that the retention policy matches compliance requirements before enabling production deletion.</p>
+</li>
+<li>
+<p><strong>Temporary files are cleaned up</strong>: The extractor removes temporary files (OCR PDFs, extracted text copies) after processing finishes, but temporary data exists on the host during job processing.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_operational_security_notes"><a class="anchor" href="#_operational_security_notes"></a>Operational security notes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The datacleaner service improves compliance posture but requires operator diligence:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Monitor cleanup logs</strong>: Regularly review datacleaner logs to verify that deletion operations execute as expected. Failed deletions should trigger alerts.</p>
+</li>
+<li>
+<p><strong>Verify deletion success</strong>: Confirm that objects are actually deleted from storage and that no deletion errors are suppressed in logs.</p>
+</li>
+<li>
+<p><strong>Audit trail</strong>: Ensure deletion operations are logged with sufficient detail (object key, timestamp, reason) to support audit and compliance reviews.</p>
+</li>
+<li>
+<p><strong>Alert on failures</strong>: Configure alerting on cleanup job failures, S3 permission errors, or unexpected retention patterns.</p>
+</li>
+<li>
+<p><strong>Credential rotation</strong>: Regularly rotate S3 credentials used by the datacleaner service; follow principle of least privilege.</p>
+</li>
+<li>
+<p><strong>Compliance review</strong>: Before production deployment, conduct a privacy and legal review to ensure the retention policy aligns with GDPR, CCPA, and other applicable regulations.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The redacted result is still not guaranteed anonymization; coordinate retention policies with legal/privacy teams.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

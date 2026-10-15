@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Offer Matcher Service :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Services</li>
+    <li><a href="offermatcher.html">Offer matcher</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/services/pages/offermatcher.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Offer Matcher Service</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The offer matcher compares the active resume&#8217;s stored skill evidence with an
+offer supplied as text or as a public, server-rendered HTML page. It produces
+deterministic required-skill keyword coverage; it does not evaluate candidate
+ability or suitability.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_workflow_and_api"><a class="anchor" href="#_workflow_and_api"></a>Workflow and API</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The UI submits <code>POST /matches</code> after the resume&#8217;s <code>results/&lt;resume-job-id&gt;.skills.json</code>
+artifact is available. The JSON body contains <code>resume_job_id</code> and exactly one
+of <code>offer_text</code> or <code>offer_url</code>. The service validates the request, publishes a
+persistent job to <code>QUEUE_NAME.offers</code> with publisher confirmation, and returns
+<code>202 Accepted</code> with a separate <code>match_id</code>.</p>
+</div>
+<div class="paragraph">
+<p>Poll <code>GET /matches/&lt;match-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>,
+<code>unscorable</code>, or <code>failed</code> status. The completed artifact is stored at
+<code>results/&lt;match-id&gt;.offer.json</code>. It contains a rounded percentage, required
+and matched counts, and matched/missing patterns. No detected required
+patterns produces an <code>unscorable</code> status instead of a 0% score.</p>
+</div>
+<div class="paragraph">
+<p>The result artifact retains bounded normalized offer text for the optional
+AIweighter flow. <code>GET /matches/&lt;match-id&gt;</code> deliberately omits that private
+field.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_matching_behavior"><a class="anchor" href="#_matching_behavior"></a>Matching behavior</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Offer and resume evidence use the shared curated pattern vocabulary also used
+by the skill matcher. The worker extracts patterns from an explicit
+required/must-have section when present; otherwise it uses patterns detected
+throughout the offer. Coverage is <code>round(100 * matched distinct patterns /
+required distinct patterns)</code>. This keyword heuristic can miss unsupported
+wording and may treat related aliases as different patterns.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_url_and_privacy_boundaries"><a class="anchor" href="#_url_and_privacy_boundaries"></a>URL and privacy boundaries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>URL fetches allow only HTTP(S) on default ports, enforce time, redirect, and
+response-size limits, reject credentials and private/reserved destinations,
+validate DNS addresses, and dial only validated public IP addresses. HTTPS
+redirects cannot downgrade to HTTP. Ordinary static HTML is supported;
+client-rendered pages are not. The service extracts HTML text in memory and
+does not store the fetched page.</p>
+</div>
+<div class="paragraph">
+<p>Pasted offer text remains in a durable RabbitMQ message until processed. The
+worker reads the existing resume skill artifact, not the original resume.
+Because the API has no authentication or account ownership checks, deployments
+must place it behind an access-controlled boundary.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_configuration_and_operations"><a class="anchor" href="#_configuration_and_operations"></a>Configuration and operations</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Set the shared <code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and <code>RUSTFS_*</code> configuration.
+<code>OFFERMATCHER_PORT</code> defaults to <code>8081</code>. The worker consumes
+<code>QUEUE_NAME.offers</code>, uses manual acknowledgements, prefetch one, publisher
+confirms, and up to three retries after the initial attempt. Exhausted or
+malformed jobs go to <code>QUEUE_NAME.offers.failed</code>. See
+<a href="configuration.html" class="xref page">configuration</a> and <a href="operations.html" class="xref page">local
+operations</a>.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
