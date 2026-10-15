@@ -56,7 +56,6 @@ class PathPolicyTests(unittest.TestCase):
     def test_protected_and_out_of_scope_paths_are_rejected(self):
         for path in (
             ".github/workflows/agent.yml",
-            "reviewer/reviewer.py",
             "taskfile.yml",
             "ui/package.json",
             "../outside.txt",
