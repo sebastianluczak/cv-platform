@@ -44,8 +44,9 @@ func safeLogField(value string) string {
 }
 
 func errorText(err error) string {
-	if err == nil {
-		return ""
+	message := strings.TrimSpace(err.Error())
+	if len(message) > 1024 {
+		return message[:1024]
 	}
-	return err.Error()
+	return message
 }
