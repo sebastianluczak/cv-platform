@@ -13,7 +13,7 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 MAX_ISSUE_CHARS = 12_000
 MAX_FILE_CHARS = 80_000
 MAX_RESPONSE_CHARS = 12_000
-MAX_TOOL_CALLS = 30
+MAX_TOOL_CALLS = 100
 MAX_DIFF_CHARS = 250_000
 
 READ_ONLY_PATHS = {".github/copilot-instructions.md"}
