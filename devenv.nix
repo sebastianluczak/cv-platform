@@ -22,6 +22,7 @@
     pkgs.leptonica
     pkgs.tesseract4
     pkgs.vips
+    pkgs.nats-server
   ];
   dotenv.enable = true;
   languages.go.enable = true;
@@ -41,6 +42,9 @@
     managementPlugin.enable = true;
   };
   processes = { } // lib.optionalAttrs (!config.devenv.isTesting) {
+    nats-jetstream = {
+      exec = "nats-server --jetstream --store_dir .devenv/state/nats";
+    };
     uploader = {
       exec = "sleep 3 && task services:uploader:start";
     };

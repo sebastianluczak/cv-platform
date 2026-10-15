@@ -13,6 +13,11 @@ namespace.
 |None
 |AMQP connection URL. Required at startup.
 
+|`NATS_URL`
+|JetStream evaluation/pilot only
+|`nats://localhost:4222`
+|Local NATS server URL. The development environment starts NATS with JetStream enabled, but the current services continue to use RabbitMQ until a JetStream pilot is implemented and explicitly selected.
+
 |`QUEUE_NAME`
 |Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |None
@@ -74,6 +79,11 @@ Use the same `RUSTFS_*` values in all six services. In particular,
 separate redacted result; the skill matcher writes category scores; the offer
 matcher retains bounded normalized offer text with its private result artifact;
 AIweighter consumes `QUEUE_NAME.aiweight` and stores generated Markdown.
+
+For the JetStream evaluation, `devenv up` also starts a local NATS server with
+JetStream enabled and file-backed state under `.devenv/state/nats`. This is
+additional pilot infrastructure only: RabbitMQ remains the active broker, and
+no service reads `NATS_URL` until a pilot client is added.
 
 The offer matcher and AIweighter APIs have no authentication or account
 ownership checks and must not be exposed directly to untrusted networks.
