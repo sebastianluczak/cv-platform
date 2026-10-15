@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
+import Footer from './components/Footer'
+import PrivacyPolicy from './components/PrivacyPolicy'
+import DataRetentionPolicy from './components/DataRetentionPolicy'
+import ConsentCheckbox from './components/ConsentCheckbox'
 
 type ProgressEvent = {
   job_id: string
@@ -95,6 +99,20 @@ function App() {
   const [aiConsent, setAIConsent] = useState(false)
   const [offerPanelOpen, setOfferPanelOpen] = useState(false)
   const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | null>(null)
+  const [consentGiven, setConsentGiven] = useState(false)
+  const [currentPath, setCurrentPath] = useState(() => {
+    const hash = window.location.hash.slice(1)
+    return hash || '/'
+  })
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1)
+      setCurrentPath(hash || '/')
+    }
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
 
   useEffect(() => () => eventSource.current?.close(), [])
 
@@ -148,7 +166,7 @@ function App() {
   }
 
   async function uploadResume() {
-    if (!file) return
+    if (!file || !consentGiven) return
     const generation = ++requestGeneration.current
     setUploading(true)
     setMessage('')
@@ -322,24 +340,30 @@ function App() {
       onPointerMove={trackCursorTint}
       onPointerLeave={clearCursorTint}
     >
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="Draftline home">
-          <span className="brand-mark">d.</span>
-          <span>draftline</span>
-        </a>
-        <span className="topbar-note">Technical experience, in focus</span>
-      </header>
+      {currentPath === '/privacy' ? (
+        <PrivacyPolicy />
+      ) : currentPath === '/data-retention' ? (
+        <DataRetentionPolicy />
+      ) : (
+        <>
+          <header className="topbar">
+            <a className="brand" href="#/" aria-label="Draftline home">
+              <span className="brand-mark">d.</span>
+              <span>draftline</span>
+            </a>
+            <span className="topbar-note">Technical experience, in focus</span>
+          </header>
 
-      <section className="hero-section" id="top">
-        <div className="hero-copy">
-          <p className="eyebrow"><span /> A TECHNICAL CV REVIEW</p>
-          <h1>Make your experience <em>work in context.</em></h1>
-          <p className="intro">
-            See how your CV maps to technical domains and role profiles. Compare it with a job description when you are ready.
-          </p>
-        </div>
+          <section className="hero-section" id="top">
+            <div className="hero-copy">
+              <p className="eyebrow"><span /> A TECHNICAL CV REVIEW</p>
+              <h1>Make your experience <em>work in context.</em></h1>
+              <p className="intro">
+                See how your CV maps to technical domains and role profiles. Compare it with a job description when you are ready.
+              </p>
+            </div>
 
-        <div className="review-workspace">
+            <div className="review-workspace">
           <section className="workspace-panel upload-panel" aria-label="CV upload and processing">
             <div className="panel-heading">
               <span className="panel-kicker">01 / INPUT</span>
@@ -370,10 +394,12 @@ function App() {
                 {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Select to change` : 'Click to browse · PDF or image · up to 10 MB'}
               </span>
             </label>
+            <ConsentCheckbox checked={consentGiven} onChange={setConsentGiven} />
             <button
               className="upload-button"
               type="button"
-              disabled={!file || uploading || uploaded}
+              disabled={!file || uploading || uploaded || !consentGiven}
+              title={!consentGiven ? 'Please review and accept the privacy and data retention policies' : ''}
               onClick={uploadResume}
             >
               {uploading ? 'Uploading…' : uploaded ? 'CV received' : 'Review my CV'}
@@ -588,10 +614,9 @@ function App() {
         </div>
       </section>
 
-      <footer className="page-footer">
-        <span>draftline <span className="footer-divider">/</span> Technical CV signals, clearly presented.</span>
-        <span>PDF & IMAGES · MAX 10 MB</span>
-      </footer>
+      <Footer />
+        </>
+      )}
     </main>
   )
 }

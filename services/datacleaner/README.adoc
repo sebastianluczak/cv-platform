@@ -1,0 +1,156 @@
+= Datacleaner
+
+The `datacleaner` service scans S3-compatible object storage for expired uploads and redacted text files, and purges expired messages from RabbitMQ failed queues. It runs on a configurable interval (default: every minute) to maintain data retention policies.
+
+== Overview
+
+The CV Platform is designed as an at-least-once, queue-backed pipeline. Over time, processing artifacts accumulate in storage and failed queues. The datacleaner service automates cleanup of expired objects based on configured retention periods.
+
+The service is stateless and can run as a standalone periodic task or daemon. It does not process user uploads or participate in the main pipeline.
+
+== S3 cleanup
+
+The datacleaner scans for and deletes expired objects matching these patterns:
+
+- `uploads/<job-id>`: Original uploaded files, retained for `RETENTION_UPLOADS_DAYS`
+- `results/<job-id>.redacted.txt`: Redacted text output, retained for `RETENTION_REDACTED_DAYS`
+
+Object deletion is based on S3 object modification time. Deletions are logged but not confirmed to any downstream queue; the service assumes eventual consistency.
+
+IMPORTANT: The original extracted text (`results/<job-id>.txt`) and skill results (`results/<job-id>.skills.json`) are handled separately and not cleaned up by this service. See the architecture documentation for retention strategy.
+
+== RabbitMQ failed queue cleanup
+
+The datacleaner processes messages in failed queues matching the pattern `<QUEUE_NAME>.<stage>.failed`. Failed queue messages are typically older processing attempts that exhausted retries. The service:
+
+1. Scans each failed queue
+2. Evaluates message age (or TTL if available)
+3. Deletes messages older than `RETENTION_FAILED_QUEUE_DAYS`
+4. Logs cleanup metrics
+
+Failed queues include:
+
+- `<QUEUE_NAME>.extraction.failed`
+- `<QUEUE_NAME>.pii.failed`
+- `<QUEUE_NAME>.skills.failed`
+
+== Configuration
+
+All settings are environment variables. Missing or invalid values fall back to documented defaults.
+Retention periods must be greater than 0 days.
+
+[cols="1,1,3"]
+|===
+|Variable |Default |Description
+
+|`RABBITMQ_URL`
+|Required
+|RabbitMQ connection URL (e.g., `amqp://localhost:5672`). Required; must be the same as uploader, extractor, piistripper, and skillmatcher.
+
+|`QUEUE_NAME`
+|Required
+|Base queue name prefix (e.g., `cv-platform-queue`). Required; must be the same across all pipeline services.
+
+|`RUSTFS_ENDPOINT_URL`
+|`http://localhost:9000`
+|S3-compatible endpoint URL.
+
+|`RUSTFS_BUCKET`
+|`cv-platform-uploads`
+|Bucket name for uploads and results.
+
+|`RUSTFS_REGION`
+|`us-east-1`
+|S3 region identifier.
+
+|`RUSTFS_ACCESS_KEY_ID`
+|`rustfsadmin`
+|S3 access key ID.
+
+|`RUSTFS_SECRET_ACCESS_KEY`
+|`rustfsadmin`
+|S3 secret access key.
+
+|`RETENTION_UPLOADS_DAYS`
+|`7`
+|Retention period in days for original uploaded resume files (`uploads/<job-id>`). Must be > 0.
+
+|`RETENTION_REDACTED_DAYS`
+|`7`
+|Retention period in days for redacted text results (`results/<job-id>.redacted.txt`). Must be > 0.
+
+|`RETENTION_FAILED_QUEUE_DAYS`
+|`7`
+|Retention period in days for messages in failed queues before deletion. Must be > 0.
+
+|`CLEANUP_INTERVAL_MINUTES`
+|`1`
+|Interval in minutes between cleanup cycles. Must be > 0.
+
+|`DRY_RUN`
+|`false`
+|If `true`, log what would be deleted without actually deleting. Useful for testing retention policies. Accepts: `true`, `false`, `1`, `0`, `yes`, `no`.
+|===
+
+=== Examples
+
+Retain data for 30 days (e.g., production):
+
+[source,bash]
+----
+export RETENTION_UPLOADS_DAYS=30
+export RETENTION_REDACTED_DAYS=30
+export RETENTION_FAILED_QUEUE_DAYS=30
+export CLEANUP_INTERVAL_MINUTES=60
+----
+
+Test retention policy without deleting (dry-run):
+
+[source,bash]
+----
+export DRY_RUN=true
+./datacleaner
+----
+
+== Graceful shutdown
+
+The service responds to `SIGTERM` and `SIGINT` signals. On receipt, it completes the current cleanup cycle (if running) and exits cleanly. Container orchestration systems should use these signals rather than forceful termination.
+
+== Usage
+
+Build the service (from the root of the repository):
+
+[source,bash]
+----
+cd services/datacleaner
+go build -v ./...
+----
+
+Or from the root using the build task:
+
+[source,bash]
+----
+task build
+----
+
+Run locally with sensible defaults:
+
+[source,bash]
+----
+export RABBITMQ_URL="amqp://localhost:5672"
+export QUEUE_NAME="cv-platform-queue"
+export RUSTFS_ENDPOINT_URL="http://localhost:9000"
+export RUSTFS_BUCKET="cv-platform-uploads"
+export RUSTFS_ACCESS_KEY_ID="minioadmin"
+export RUSTFS_SECRET_ACCESS_KEY="minioadmin"
+./datacleaner
+----
+
+See xref:operations.adoc[operations] and xref:configuration.adoc[configuration] for production deployment guidance.
+
+== Known limitations
+
+- The service assumes S3 modification times are reliable; system clock skew may affect cleanup.
+- Failed queue messages do not have standardized timestamps; cleanup relies on RabbitMQ headers or estimated age.
+- The service is best-effort; it does not guarantee all expired objects are deleted in a single cycle.
+- Deletions are not reversible; ensure retention policies are appropriate for compliance requirements before deploying.

@@ -63,6 +63,9 @@
     aiweighter = {
       exec = "sleep 3 && task services:aiweighter:start";
     };
+    datacleaner = {
+      exec = "sleep 8 && task services:datacleaner:start";
+    };
     frontend = {
       exec = "task ui:install && task ui:start";
     };

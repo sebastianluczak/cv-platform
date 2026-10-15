@@ -11,21 +11,58 @@ IMPORTANT: They persist the original file, extracted text, and a separate best-e
 * Piistripper writes `results/<job-id>.redacted.txt` without modifying or deleting the extracted source.
 * Piistripper performs local pattern matching and English named-entity recognition; it does not call a hosted model/API. Detection can miss direct, contextual, or indirect identifiers and can produce false positives.
 * The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.
-* The services do not implement deletion, expiration, or a retention policy for stored objects.
 * Temporary extractor files are created on the service host during processing and removed when processing finishes.
 * The uploader's HTTP endpoints do not implement authentication or authorization.
+* The datacleaner service implements automated data lifecycle management with configurable retention periods and dry-run mode for testing.
 
 == Deployment responsibilities
 
 Before handling real resumes, operators must configure:
 
-. private storage access, 
-. dedicated least-privilege credentials, 
-. transport and network protections, 
-. an explicit retention/deletion policy. 
+. private storage access,
+. dedicated least-privilege credentials (including DeleteObject permission for the datacleaner service),
+. transport and network protections,
+. the datacleaner service with appropriate retention periods based on compliance requirements.
 
-NOTE: Protect the uploader behind an authenticated and appropriately restricted network boundary. 
+The datacleaner service automatically enforces retention policies by scanning the configured S3 bucket and deleting expired objects. Retention periods and cleanup frequency must be configured to align with GDPR, CCPA, or other applicable compliance obligations.
+
+NOTE: Protect the uploader behind an authenticated and appropriately restricted network boundary.
 
 IMPORTANT: Do not use development credentials in a deployed environment.
 
-IMPORTANT: A redacted result is not guaranteed anonymization or GDPR compliance. Since the original extracted text is retained, it remains personal data and must continue to receive appropriate access control and retention/deletion handling. Obtain privacy/legal review before relying on this processing for a compliance obligation.
+IMPORTANT: A redacted result is not guaranteed anonymization or GDPR compliance. Datacleaner service must be properly configured and monitored to ensure compliance obligations are met. Obtain privacy/legal review before relying on this processing for a compliance obligation.
+
+== Datacleaner service
+
+The datacleaner service implements automated data lifecycle management to enforce retention policies:
+
+* Runs on a configurable schedule (default: every minute).
+* Scans the configured S3-compatible bucket for objects matching known patterns (`uploads/<job-id>`, `results/<job-id>.txt`, `results/<job-id>.redacted.txt`, `results/<job-id>.skills.json`, etc.).
+* Deletes expired objects based on their age and configured retention periods.
+* Supports per-object-type retention overrides (e.g., keep skill results longer than extracted text).
+* Dry-run mode available for testing: operators can verify deletion behavior before enabling actual deletion.
+* Logs all deletion operations, including object key, deletion timestamp, and reason (age exceeds retention period).
+* Supports automatic purging of failed RabbitMQ messages (e.g., `QUEUE_NAME.failed`, `QUEUE_NAME.pii.failed`) after a configurable retention period.
+
+Operators must ensure the datacleaner's S3 credentials have the `DeleteObject` permission and that RabbitMQ access is configured for queue purge operations.
+
+== Security considerations
+
+* *Redaction is best-effort*: Pattern matching and named-entity recognition can miss contextual, indirect, or domain-specific identifiers. A redacted result does not guarantee anonymization.
+* *Original extracted text is automatically deleted*: The datacleaner service deletes the original extracted text (`results/<job-id>.txt`) after the configured retention period expires. This reduces exposure time for personal data compared to indefinite retention.
+* *Failed messages are auto-purged*: Operator-configured retention policy on failed queues prevents indefinite storage of job messages containing job IDs and metadata. This applies to `QUEUE_NAME.failed` and all stage-specific failed queues (e.g., `QUEUE_NAME.pii.failed`, `QUEUE_NAME.skills.failed`).
+* *Dry-run mode recommended*: Operators should test the datacleaner service in dry-run mode to verify that the retention policy matches compliance requirements before enabling production deletion.
+* *Temporary files are cleaned up*: The extractor removes temporary files (OCR PDFs, extracted text copies) after processing finishes, but temporary data exists on the host during job processing.
+
+== Operational security notes
+
+The datacleaner service improves compliance posture but requires operator diligence:
+
+* *Monitor cleanup logs*: Regularly review datacleaner logs to verify that deletion operations execute as expected. Failed deletions should trigger alerts.
+* *Verify deletion success*: Confirm that objects are actually deleted from storage and that no deletion errors are suppressed in logs.
+* *Audit trail*: Ensure deletion operations are logged with sufficient detail (object key, timestamp, reason) to support audit and compliance reviews.
+* *Alert on failures*: Configure alerting on cleanup job failures, S3 permission errors, or unexpected retention patterns.
+* *Credential rotation*: Regularly rotate S3 credentials used by the datacleaner service; follow principle of least privilege.
+* *Compliance review*: Before production deployment, conduct a privacy and legal review to ensure the retention policy aligns with GDPR, CCPA, and other applicable regulations.
+
+The redacted result is still not guaranteed anonymization; coordinate retention policies with legal/privacy teams.
