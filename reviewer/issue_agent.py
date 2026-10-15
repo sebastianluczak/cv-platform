@@ -17,7 +17,7 @@ MAX_TOOL_CALLS = 100
 MAX_DIFF_CHARS = 250_000
 
 READ_ONLY_PATHS = {".github/copilot-instructions.md"}
-WRITABLE_ROOTS = {"services", "ui", "docs"}
+WRITABLE_ROOTS = {"services", "ui", "docs", "reviewer"}
 WRITABLE_FILES = {"README.adoc"}
 PROTECTED_FILES = {
     "test.sh",
