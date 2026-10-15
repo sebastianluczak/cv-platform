@@ -3,7 +3,11 @@
 Microservice-based platform for managing and processing CVs (resumes).
 
 .Working Proof of Concept of the service
-video::output.mp4[]
+image::product.png[]
+
+See xref:output.mp4[full video] in greater resolution.
+
+image::animation.gif[]
 
 == Tech Stack
 
