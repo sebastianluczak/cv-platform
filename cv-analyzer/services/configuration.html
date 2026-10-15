@@ -198,6 +198,12 @@ namespace.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NATS_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JetStream evaluation/pilot only</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>nats://localhost:4222</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Local NATS server URL. The development environment starts NATS with JetStream enabled, but the current services continue to use RabbitMQ until a JetStream pilot is implemented and explicitly selected.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
@@ -271,6 +277,12 @@ namespace.</p>
 separate redacted result; the skill matcher writes category scores; the offer
 matcher retains bounded normalized offer text with its private result artifact;
 AIweighter consumes <code>QUEUE_NAME.aiweight</code> and stores generated Markdown.</p>
+</div>
+<div class="paragraph">
+<p>For the JetStream evaluation, <code>devenv up</code> also starts a local NATS server with
+JetStream enabled and file-backed state under <code>.devenv/state/nats</code>. This is
+additional pilot infrastructure only: RabbitMQ remains the active broker, and
+no service reads <code>NATS_URL</code> until a pilot client is added.</p>
 </div>
 <div class="paragraph">
 <p>The offer matcher and AIweighter APIs have no authentication or account
