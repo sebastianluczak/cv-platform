@@ -14,7 +14,7 @@ tasks:
       - cd services/piistripper && gofmt -l -e -w .
       - cd services/skillmatcher && gofmt -l -e -w .
       - cd services/uploader && gofmt -l -e -w .
-      - cd service/offermatcher && gofmt -l -e -w .
+      - cd services/offermatcher && gofmt -l -e -w .
       - cd services/common && gofmt -l -e -w .
   security:scan:
     dir: services

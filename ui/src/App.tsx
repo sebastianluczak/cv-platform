@@ -20,6 +20,19 @@ type MatchResult = {
   }[]
 }
 
+type OfferMatch = {
+  match_id: string
+  resume_job_id: string
+  status: 'queued' | 'processing' | 'completed' | 'unscorable' | 'failed'
+  offer_source: 'text' | 'url'
+  message: string
+  percent?: number
+  required_count?: number
+  matched_count?: number
+  matched_skills?: string[]
+  missing_skills?: string[]
+}
+
 function App() {
   const fileInput = useRef<HTMLInputElement>(null)
   const eventSource = useRef<EventSource | null>(null)
@@ -33,6 +46,12 @@ function App() {
   const [progress, setProgress] = useState<ProgressEvent | null>(null)
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
   const [resultError, setResultError] = useState('')
+  const [offerInputMode, setOfferInputMode] = useState<'url' | 'text'>('url')
+  const [offerURL, setOfferURL] = useState('')
+  const [offerText, setOfferText] = useState('')
+  const [offerMatch, setOfferMatch] = useState<OfferMatch | null>(null)
+  const [offerMatching, setOfferMatching] = useState(false)
+  const [offerError, setOfferError] = useState('')
   const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | null>(null)
 
   useEffect(() => () => eventSource.current?.close(), [])
@@ -48,6 +67,11 @@ function App() {
     setProgress(null)
     setMatchResult(null)
     setResultError('')
+    setOfferURL('')
+    setOfferText('')
+    setOfferMatch(null)
+    setOfferMatching(false)
+    setOfferError('')
     setConnection(null)
     if (!nextFile) return
     if (nextFile.size > 10 * 1024 * 1024) {
@@ -63,6 +87,8 @@ function App() {
     const generation = ++requestGeneration.current
     setUploading(true)
     setMessage('')
+    setOfferMatch(null)
+    setOfferError('')
     const formData = new FormData()
     formData.append('file', file)
 
@@ -122,6 +148,51 @@ function App() {
     }
     } finally {
     if (generation === requestGeneration.current) setUploading(false)
+    }
+  }
+
+  async function compareOffer() {
+    const resumeJobID = activeJobID.current
+    if (!resumeJobID || !matchResult) return
+    const offer = offerInputMode === 'url' ? { offer_url: offerURL.trim() } : { offer_text: offerText.trim() }
+    if (!Object.values(offer)[0]) {
+      setOfferError(offerInputMode === 'url' ? 'Paste a job offer URL to continue.' : 'Paste the job offer text to continue.')
+      return
+    }
+    const generation = requestGeneration.current
+    setOfferMatching(true)
+    setOfferError('')
+    setOfferMatch(null)
+    try {
+      const endpoint = new URL(import.meta.env.VITE_OFFER_MATCHER_ENDPOINT || '/offer-api', window.location.href)
+      const matchesPath = `${endpoint.pathname.replace(/\/+$/, '')}/matches`
+      const response = await fetch(new URL(matchesPath, endpoint.origin), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume_job_id: resumeJobID, ...offer }),
+      })
+      if (!response.ok) throw new Error('Could not start the offer comparison. Try again.')
+      const accepted = await response.json() as { match_id?: string }
+      if (!accepted.match_id) throw new Error('Offer matcher did not return a match ID.')
+
+      for (let attempt = 0; attempt < 150; attempt++) {
+        if (generation !== requestGeneration.current || activeJobID.current !== resumeJobID) return
+        const statusEndpoint = new URL(`${matchesPath}/${encodeURIComponent(accepted.match_id)}`, endpoint.origin)
+        const statusResponse = await fetch(statusEndpoint)
+        if (!statusResponse.ok) throw new Error('Could not load the offer comparison status.')
+        const result = await statusResponse.json() as OfferMatch
+        if (result.match_id !== accepted.match_id) throw new Error('Received an invalid offer comparison result.')
+        setOfferMatch(result)
+        if (result.status === 'completed' || result.status === 'unscorable' || result.status === 'failed') return
+        await new Promise((resolve) => window.setTimeout(resolve, 2000))
+      }
+      setOfferError('The comparison is taking longer than expected. You can wait and try again.')
+    } catch (error) {
+      if (generation === requestGeneration.current) {
+        setOfferError(error instanceof Error ? error.message : 'Offer comparison failed. Try again.')
+      }
+    } finally {
+      if (generation === requestGeneration.current) setOfferMatching(false)
     }
   }
 
@@ -217,6 +288,67 @@ function App() {
                     </li>
                   ))}
                 </ul>
+              </section>
+            )}
+            {matchResult && (
+              <section className="offer-panel" aria-label="Compare resume with a job offer">
+                <div className="match-results-heading">
+                  <strong>Compare with a job offer</strong>
+                  <span>Using your completed resume</span>
+                </div>
+                <div className="offer-input-tabs" role="group" aria-label="Offer input type">
+                  <button type="button" aria-pressed={offerInputMode === 'url'} disabled={offerMatching} onClick={() => { setOfferInputMode('url'); setOfferMatch(null); setOfferError('') }}>Offer URL</button>
+                  <button type="button" aria-pressed={offerInputMode === 'text'} disabled={offerMatching} onClick={() => { setOfferInputMode('text'); setOfferMatch(null); setOfferError('') }}>Paste text</button>
+                </div>
+                {offerInputMode === 'url' ? (
+                  <label className="offer-input-label">
+                    Job offer URL
+                    <input
+                      type="url"
+                      value={offerURL}
+                      disabled={offerMatching}
+                      onChange={(event) => { setOfferURL(event.target.value); setOfferMatch(null); setOfferError('') }}
+                      placeholder="https://company.example/jobs/role"
+                    />
+                  </label>
+                ) : (
+                  <label className="offer-input-label">
+                    Job offer text
+                    <textarea
+                      value={offerText}
+                      disabled={offerMatching}
+                      onChange={(event) => { setOfferText(event.target.value); setOfferMatch(null); setOfferError('') }}
+                      rows={5}
+                      maxLength={100 * 1024}
+                      placeholder="Paste the job description here"
+                    />
+                  </label>
+                )}
+                <button className="upload-button" type="button" disabled={offerMatching} onClick={() => void compareOffer()}>
+                  {offerMatching ? 'Comparing…' : 'Compare required skills'}
+                  {!offerMatching && <span aria-hidden="true">↗</span>}
+                </button>
+                {offerError && <p className="result-error" role="alert">{offerError}</p>}
+                {offerMatch && (
+                  <div className="offer-match-result" aria-live="polite">
+                    <p className={`offer-match-status${offerMatch.status === 'failed' ? ' is-error' : ''}`}>
+                      {offerMatch.status === 'completed' ? `${offerMatch.percent}% required-skill coverage` : offerMatch.message}
+                      {(offerMatch.status === 'queued' || offerMatch.status === 'processing') && ' · Working'}
+                    </p>
+                    {offerMatch.status === 'completed' && (
+                      <>
+                        <p className="offer-match-count">{offerMatch.matched_count} of {offerMatch.required_count} identified required skills found in your resume.</p>
+                        <dl>
+                          <dt>Matched</dt>
+                          <dd>{offerMatch.matched_skills?.length ? offerMatch.matched_skills.join(', ') : 'No matching signals found'}</dd>
+                          <dt>Not found</dt>
+                          <dd>{offerMatch.missing_skills?.length ? offerMatch.missing_skills.join(', ') : 'None'}</dd>
+                        </dl>
+                        <small>Deterministic keyword coverage from curated skill patterns; it is not an assessment of ability or suitability.</small>
+                      </>
+                    )}
+                  </div>
+                )}
               </section>
             )}
             <p className={`upload-message${message && !uploaded ? ' is-error' : ''}`} aria-live="polite">

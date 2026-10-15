@@ -4,12 +4,14 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"brodaty.dev/cv-platform/common/skillpatterns"
 )
 
 func TestScoreTextFindsRoleSignalsAndSortsByDescendingScore(t *testing.T) {
 	result := scoreText("job-1", "Backend engineer using Go, PostgreSQL, Docker, Kubernetes and Terraform.", time.Unix(1, 0))
-	if len(result.Categories) != len(profiles) {
-		t.Fatalf("expected %d categories; got %d", len(profiles), len(result.Categories))
+	if len(result.Categories) != 14 {
+		t.Fatalf("expected 14 categories; got %d", len(result.Categories))
 	}
 	if result.Categories[0].Category != "backend" || result.Categories[0].Score != 3 {
 		t.Fatalf("unexpected backend score: %+v", result.Categories[0])
@@ -28,13 +30,13 @@ func TestScoreTextFindsRoleSignalsAndSortsByDescendingScore(t *testing.T) {
 }
 
 func TestPatternMatchingUsesWholeTerms(t *testing.T) {
-	if patternMatches("go", "governance and golang") {
+	if skillpatterns.MatchesPattern("go", "governance and golang") {
 		t.Fatal("short pattern matched inside unrelated words")
 	}
-	if !patternMatches("go", "Worked with Go and services") {
+	if !skillpatterns.MatchesPattern("go", "Worked with Go and services") {
 		t.Fatal("expected case-insensitive whole-word match")
 	}
-	if !patternMatches("ci/cd", "Owned CI/CD pipelines") {
+	if !skillpatterns.MatchesPattern("ci/cd", "Owned CI/CD pipelines") {
 		t.Fatal("expected punctuation-bearing phrase to match")
 	}
 }
@@ -53,8 +55,8 @@ func TestScoreEvidenceCount(t *testing.T) {
 		{count: 20, score: 5},
 	}
 	for _, test := range tests {
-		if got := scoreEvidenceCount(test.count); got != test.score {
-			t.Errorf("scoreEvidenceCount(%d) = %d; want %d", test.count, got, test.score)
+		if got := skillpatterns.ScoreEvidenceCount(test.count); got != test.score {
+			t.Errorf("ScoreEvidenceCount(%d) = %d; want %d", test.count, got, test.score)
 		}
 	}
 }

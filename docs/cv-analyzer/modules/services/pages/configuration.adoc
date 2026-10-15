@@ -1,43 +1,43 @@
 = Configuration
 
-The uploader, extractor, piistripper, and skill matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.
+The uploader, extractor, piistripper, skill matcher, and offer matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.
 
 [cols="1,1,2,2"]
 |===
 |Variable |Required by |Default |Purpose
 
 |`RABBITMQ_URL`
-|Uploader, extractor, piistripper, skill matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher
 |None
 |AMQP connection URL. Required at startup.
 
 |`QUEUE_NAME`
-|Uploader, extractor, piistripper, skill matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher
 |None
-|Durable extraction queue name. Redaction, status, matching, and failed queue names append `.pii`, `.events`, `.skills`, `.failed`, `.pii.failed`, and `.skills.failed`.
+|Durable extraction queue name. Redaction, status, skill matching, offer matching, and failed queue names append `.pii`, `.events`, `.skills`, `.offers`, `.failed`, `.pii.failed`, `.skills.failed`, and `.offers.failed`.
 
 |`RUSTFS_ENDPOINT_URL`
-|Uploader, extractor, piistripper, skill matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher
 |`http://localhost:9000`
 |S3-compatible endpoint.
 
 |`RUSTFS_BUCKET`
-|Uploader, extractor, piistripper, skill matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher
 |`cv-platform-uploads`
-|Shared bucket for original uploads, extracted text, redacted results, and score results.
+|Shared bucket for original uploads, extracted text, redacted results, resume scores, and offer-match results.
 
 |`RUSTFS_REGION`
-|Uploader, extractor, piistripper, skill matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher
 |`us-east-1`
 |S3 signing region.
 
 |`RUSTFS_ACCESS_KEY_ID`
-|Uploader, extractor, piistripper, skill matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher
 |`rustfsadmin`
 |Object-storage access key.
 
 |`RUSTFS_SECRET_ACCESS_KEY`
-|Uploader, extractor, piistripper, skill matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher
 |`rustfsadmin`
 |Object-storage secret key.
 
@@ -46,10 +46,15 @@ The uploader, extractor, piistripper, and skill matcher must point to the same R
 |`8080`
 |HTTP listen port.
 
+|`OFFERMATCHER_PORT`
+|Offer matcher
+|`8081`
+|HTTP API listen port.
+
 |`OPENROUTER_API_KEY`
 |`aiweighter` prototype only
 |None
 |API key required if the standalone `SendToWeighter` helper is called.
 |===
 
-Use the same `RUSTFS_*` values in all four services. In particular, `RUSTFS_BUCKET` must match or a worker rejects the job reference. Piistripper consumes `<QUEUE_NAME>.pii` and writes a separate redacted result; the skill matcher consumes `<QUEUE_NAME>.skills` and writes category scores.
+Use the same `RUSTFS_*` values in all five services. In particular, `RUSTFS_BUCKET` must match or a worker rejects the job reference. Piistripper consumes `<QUEUE_NAME>.pii` and writes a separate redacted result; the skill matcher consumes `<QUEUE_NAME>.skills` and writes category scores; the offer matcher consumes `<QUEUE_NAME>.offers` and writes offer-comparison results. The offer matcher API has no authentication or account ownership checks and must not be exposed directly to untrusted networks.

@@ -13,12 +13,21 @@
 . The client connects to `GET /events?job_id=<job-id>`. SSE sends the current snapshot first, then subsequent updates, with a 20-second keep-alive comment.
 . After completion, the UI retrieves the persisted score artifact from `GET /results?job_id=<job-id>`.
 
+== Offer comparison
+
+. After a resume score is loaded, the UI submits `POST /matches` to the offer matcher with the completed resume job ID and either pasted offer text or a public offer URL.
+. The offer matcher publishes a persistent job to `QUEUE_NAME.offers` and returns `202 Accepted` with a separate offer-match ID after publisher confirmation.
+. The worker reads `results/<resume-job-id>.skills.json`. For URLs it fetches bounded static HTML from public HTTP(S) destinations, parses visible text, and does not store the fetched page.
+. It finds required skill patterns in explicitly required/must-have sections. If no such section exists, it uses all detected skill patterns in the offer. It writes an `unscorable` result if no patterns are detected; otherwise it writes rounded percentage coverage plus matched/missing skill evidence to `results/<offer-match-id>.offer.json`.
+. The UI polls `GET /matches/<offer-match-id>` until the result is completed, unscorable, or failed.
+
 == Extraction failures and retries
 
 The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented `x-retry-count`, then the original delivery is acknowledged. Piistripper and the skill matcher similarly retry processing failures.
 The initial attempt plus up to three retries means a job may be attempted four times at each stage. During redaction retries the status remains `redacting` and includes a retry message, keeping the UI progress step accurate.
 
 A job still failing extraction is published to `QUEUE_NAME.failed`; a job still failing redaction is published to `QUEUE_NAME.pii.failed`; a job still failing skill matching is published to `QUEUE_NAME.skills.failed`.
+A job still failing offer matching is published to `QUEUE_NAME.offers.failed`.
 
 Malformed job JSON is also sent directly to the failed queue. 
 
@@ -28,7 +37,7 @@ The workflow is **at-least-once**, not exactly-once.
 
 If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job. 
 
-Result writes use deterministic keys (`results/<job-id>.txt`, `results/<job-id>.redacted.txt`, and `results/<job-id>.skills.json`), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.
+Result writes use deterministic keys (`results/<job-id>.txt`, `results/<job-id>.redacted.txt`, `results/<job-id>.skills.json`, and `results/<offer-match-id>.offer.json`), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.
 
 There is no separate deduplication store, operation is idempotent.
 

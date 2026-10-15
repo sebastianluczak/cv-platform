@@ -46,6 +46,29 @@ After writing the redacted result, piistripper publishes a persistent job to `QU
 
 The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to `results/<job-id>.skills.json`. The result includes `version`, `job_id`, `scored_at`, and `categories`; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to `QUEUE_NAME.skills.failed`.
 
+== Offer matching
+
+After a resume's skill result is ready, the client submits an offer comparison:
+
+[source,json]
+----
+{
+  "resume_job_id": "<completed-resume-job-uuid>",
+  "offer_url": "https://example.com/jobs/role"
+}
+----
+
+`POST /matches` accepts exactly one of `offer_url` or `offer_text` and returns `202 Accepted` after the persistent job publish is confirmed:
+
+[source,json]
+----
+{"match_id":"<offer-match-uuid>","status":"queued"}
+----
+
+The client polls `GET /matches/<match-id>`. The worker consumes `QUEUE_NAME.offers`, reads `results/<resume-job-id>.skills.json`, and stores the state/result at `results/<offer-match-id>.offer.json`. Queue jobs contain the match ID, resume job ID, and either offer text or URL. Text is size-limited; fetched pages must be public HTTP(S), use the default port, and pass SSRF-safe resolution/connection checks. The fetcher supports ordinary static HTML, not client-rendered pages. Raw fetched HTML is not persisted.
+
+Required skills are the distinct curated skill patterns identified in an explicit required/must-have section; if none is found, all detected patterns in the offer are used. The percentage is rounded `100 * matched / required`; results include matched and missing patterns and their counts. If no requirement patterns are identified the result is `unscorable`, not 0%. This is heuristic keyword coverage, not an assessment of ability or suitability.
+
 == Status event
 
 The extractor and piistripper publish status messages to the durable `QUEUE_NAME.events` queue. The uploader consumes these messages and retains the latest one per job in memory.
@@ -95,8 +118,16 @@ IMPORTANT: Status updates are not a durable client-facing event log.
 |Piistripper
 |Skill matcher
 
+|`QUEUE_NAME.offers`
+|Offer matcher HTTP API
+|Offer matcher worker
+
 |`QUEUE_NAME.skills.failed`
 |Skill matcher
+|None
+
+|`QUEUE_NAME.offers.failed`
+|Offer matcher
 |None
 
 |`QUEUE_NAME.events`
