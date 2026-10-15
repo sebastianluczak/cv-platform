@@ -110,6 +110,9 @@
     <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
   <li class="nav-item is-current-page" data-depth="1">
@@ -168,7 +171,7 @@
 <article class="doc">
 <h1 class="page">Configuration</h1>
 <div class="paragraph">
-<p>The uploader, extractor, piistripper, and skill matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.</p>
+<p>The uploader, extractor, piistripper, skill matcher, and offer matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -188,43 +191,43 @@
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, matching, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.failed</code>, <code>.pii.failed</code>, and <code>.skills.failed</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, skill matching, offer matching, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.offers</code>, <code>.failed</code>, <code>.pii.failed</code>, <code>.skills.failed</code>, and <code>.offers.failed</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for original uploads, extracted text, redacted results, and score results.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for original uploads, extracted text, redacted results, resume scores, and offer-match results.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3 signing region.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage access key.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage secret key.</p></td>
 </tr>
@@ -235,6 +238,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">HTTP listen port.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OFFERMATCHER_PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8081</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_API_KEY</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>aiweighter</code> prototype only</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
@@ -243,7 +252,7 @@
 </tbody>
 </table>
 <div class="paragraph">
-<p>Use the same <code>RUSTFS_*</code> values in all four services. In particular, <code>RUSTFS_BUCKET</code> must match or a worker rejects the job reference. Piistripper consumes <code>&lt;QUEUE_NAME&gt;.pii</code> and writes a separate redacted result; the skill matcher consumes <code>&lt;QUEUE_NAME&gt;.skills</code> and writes category scores.</p>
+<p>Use the same <code>RUSTFS_*</code> values in all five services. In particular, <code>RUSTFS_BUCKET</code> must match or a worker rejects the job reference. Piistripper consumes <code>&lt;QUEUE_NAME&gt;.pii</code> and writes a separate redacted result; the skill matcher consumes <code>&lt;QUEUE_NAME&gt;.skills</code> and writes category scores; the offer matcher consumes <code>&lt;QUEUE_NAME&gt;.offers</code> and writes offer-comparison results. The offer matcher API has no authentication or account ownership checks and must not be exposed directly to untrusted networks.</p>
 </div>
 </article>
   </div>

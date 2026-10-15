@@ -110,6 +110,9 @@
     <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -190,10 +193,10 @@
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, frontend, and documentation builder.</p>
+<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, offer matcher, frontend, and documentation builder.</p>
 </div>
 <div class="paragraph">
-<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, and <code>skillmatcher</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, and <code>task services:skillmatcher:build</code> build the binaries and Docker images.</p>
+<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, <code>skillmatcher</code>, and <code>offermatcher</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, <code>task services:skillmatcher:build</code>, and <code>task services:offermatcher:build</code> build the binaries and Docker images.</p>
 </div>
 </div>
 </div>
@@ -229,6 +232,9 @@
 </li>
 <li>
 <p><strong>No role scores appear:</strong> confirm piistripper and skillmatcher are running with matching RabbitMQ/storage settings; inspect the durable <code>&lt;QUEUE_NAME&gt;.skills.failed</code> queue and the skillmatcher logs.</p>
+</li>
+<li>
+<p><strong>Offer comparison does not complete:</strong> confirm the frontend can reach the offer matcher on <code>OFFERMATCHER_PORT</code>, that the service shares the resume&#8217;s <code>RUSTFS_BUCKET</code>, and inspect <code>&lt;QUEUE_NAME&gt;.offers.failed</code>. Public offer pages only are supported; private-network destinations, non-HTML content, and SPA-rendered pages are rejected or unsupported.</p>
 </li>
 <li>
 <p><strong>Upload returns <code>503</code>:</strong> inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.</p>

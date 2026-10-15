@@ -707,13 +707,34 @@ end note
 </li>
 </ol>
 </div>
+<h4 id="architecture:workflow:::_offer_comparison" class="discrete">Offer comparison</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>After a resume score is loaded, the UI submits <code>POST /matches</code> to the offer matcher with the completed resume job ID and either pasted offer text or a public offer URL.</p>
+</li>
+<li>
+<p>The offer matcher publishes a persistent job to <code>QUEUE_NAME.offers</code> and returns <code>202 Accepted</code> with a separate offer-match ID after publisher confirmation.</p>
+</li>
+<li>
+<p>The worker reads <code>results/&lt;resume-job-id&gt;.skills.json</code>. For URLs it fetches bounded static HTML from public HTTP(S) destinations, parses visible text, and does not store the fetched page.</p>
+</li>
+<li>
+<p>It finds required skill patterns in explicitly required/must-have sections. If no such section exists, it uses all detected skill patterns in the offer. It writes an <code>unscorable</code> result if no patterns are detected; otherwise it writes rounded percentage coverage plus matched/missing skill evidence to <code>results/&lt;offer-match-id&gt;.offer.json</code>.</p>
+</li>
+<li>
+<p>The UI polls <code>GET /matches/&lt;offer-match-id&gt;</code> until the result is completed, unscorable, or failed.</p>
+</li>
+</ol>
+</div>
 <h4 id="architecture:workflow:::_extraction_failures_and_retries" class="discrete">Extraction failures and retries</h4>
 <div class="paragraph">
 <p>The extractor gives each job a five-minute processing timeout. A failed extraction is republished to the work queue with an incremented <code>x-retry-count</code>, then the original delivery is acknowledged. Piistripper and the skill matcher similarly retry processing failures.
 The initial attempt plus up to three retries means a job may be attempted four times at each stage. During redaction retries the status remains <code>redacting</code> and includes a retry message, keeping the UI progress step accurate.</p>
 </div>
 <div class="paragraph">
-<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.</p>
+<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.
+A job still failing offer matching is published to <code>QUEUE_NAME.offers.failed</code>.</p>
 </div>
 <div class="paragraph">
 <p>Malformed job JSON is also sent directly to the failed queue.</p>
@@ -726,7 +747,7 @@ The initial attempt plus up to three retries means a job may be attempted four t
 <p>If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job.</p>
 </div>
 <div class="paragraph">
-<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, and <code>results/&lt;job-id&gt;.skills.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
+<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, <code>results/&lt;job-id&gt;.skills.json</code>, and <code>results/&lt;offer-match-id&gt;.offer.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
 </div>
 <div class="paragraph">
 <p>There is no separate deduplication store, operation is idempotent.</p>
@@ -805,6 +826,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>skillmatcher</code> from redacted text; contains category scores and matched pattern evidence.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer comparison result</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;offer-match-id&gt;.offer.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>offermatcher</code>; contains status, required-skill coverage, and matched/missing patterns. It references the resume job ID but does not copy the resume.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extraction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
@@ -821,6 +848,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by piistripper after storing the redacted result; manually acknowledged after scoring, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by the offer matcher API; contains a resume job ID and either bounded offer text or an offer URL. The offer matcher manually acknowledges after writing a terminal result, retry republish, or failed-queue republish.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed job</p></td>
@@ -841,6 +874,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed offer matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Processing status</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ status queue, then uploader memory</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.events</code>; in memory for at most 24 hours and up to 10,000 jobs per uploader process</p></td>
@@ -855,6 +894,9 @@ This is serious and needs proper addressing.
 <h4 id="architecture:data-lifecycle:::_retention_and_privacy" class="discrete">Retention and privacy</h4>
 <div class="paragraph">
 <p>The services do not implement a retention schedule for uploaded resumes, extracted text, or redacted results. The redacted result is not guaranteed to be anonymous, and the original extracted text remains unchanged.</p>
+</div>
+<div class="paragraph">
+<p>The offer matcher does not persist fetched offer HTML. Pasted offer text is carried in its durable RabbitMQ message until processing; configure queue retention accordingly. The offer matcher API has no user authorization or ownership model, so deployments must keep it behind an access-controlled boundary.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -1104,6 +1146,12 @@ Storage administrators must configure lifecycle expiration and access controls a
 <td class="tableblock halign-left valign-top"><p class="tableblock">Scores redacted resume text against deterministic IT role-profile patterns</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Implemented; part of the running upload/review flow</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:skillmatcher">Skill matcher</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>offermatcher</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compares the active resume&#8217;s saved skill evidence with a pasted or fetched job offer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implemented; asynchronous offer comparison after resume matching</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:offermatcher">Offer matcher</a></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>aiweighter</code></p></td>
@@ -1379,6 +1427,64 @@ see <a href="#services:operations">local operations</a>.</p>
 </div>
 </div>
 <div class="sect2">
+<h3 id="services:offermatcher"><a class="anchor" href="#services:offermatcher"></a>Offer matcher</h3>
+<div class="paragraph">
+<p>The offer matcher compares the active resume&#8217;s stored skill evidence with an
+offer supplied as text or as a public, server-rendered HTML page. It produces
+deterministic required-skill keyword coverage; it does not evaluate candidate
+ability or suitability.</p>
+</div>
+<h4 id="services:offermatcher:::_workflow_and_api" class="discrete">Workflow and API</h4>
+<div class="paragraph">
+<p>The UI submits <code>POST /matches</code> after the resume&#8217;s <code>results/&lt;resume-job-id&gt;.skills.json</code>
+artifact is available. The JSON body contains <code>resume_job_id</code> and exactly one
+of <code>offer_text</code> or <code>offer_url</code>. The service validates the request, publishes a
+persistent job to <code>QUEUE_NAME.offers</code> with publisher confirmation, and returns
+<code>202 Accepted</code> with a separate <code>match_id</code>.</p>
+</div>
+<div class="paragraph">
+<p>Poll <code>GET /matches/&lt;match-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>,
+<code>unscorable</code>, or <code>failed</code> status. The completed artifact is stored at
+<code>results/&lt;match-id&gt;.offer.json</code>. It contains a rounded percentage, required
+and matched counts, and matched/missing patterns. No detected required
+patterns produces an <code>unscorable</code> status instead of a 0% score.</p>
+</div>
+<h4 id="services:offermatcher:::_matching_behavior" class="discrete">Matching behavior</h4>
+<div class="paragraph">
+<p>Offer and resume evidence use the shared curated pattern vocabulary also used
+by the skill matcher. The worker extracts patterns from an explicit
+required/must-have section when present; otherwise it uses patterns detected
+throughout the offer. Coverage is <code>round(100 * matched distinct patterns /
+required distinct patterns)</code>. This keyword heuristic can miss unsupported
+wording and may treat related aliases as different patterns.</p>
+</div>
+<h4 id="services:offermatcher:::_url_and_privacy_boundaries" class="discrete">URL and privacy boundaries</h4>
+<div class="paragraph">
+<p>URL fetches allow only HTTP(S) on default ports, enforce time, redirect, and
+response-size limits, reject credentials and private/reserved destinations,
+validate DNS addresses, and dial only validated public IP addresses. HTTPS
+redirects cannot downgrade to HTTP. Ordinary static HTML is supported;
+client-rendered pages are not. The service extracts HTML text in memory and
+does not store the fetched page.</p>
+</div>
+<div class="paragraph">
+<p>Pasted offer text remains in a durable RabbitMQ message until processed. The
+worker reads the existing resume skill artifact, not the original resume.
+Because the API has no authentication or account ownership checks, deployments
+must place it behind an access-controlled boundary.</p>
+</div>
+<h4 id="services:offermatcher:::_configuration_and_operations" class="discrete">Configuration and operations</h4>
+<div class="paragraph">
+<p>Set the shared <code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and <code>RUSTFS_*</code> configuration.
+<code>OFFERMATCHER_PORT</code> defaults to <code>8081</code>. The worker consumes
+<code>QUEUE_NAME.offers</code>, uses manual acknowledgements, prefetch one, publisher
+confirms, and up to three retries after the initial attempt. Exhausted or
+malformed jobs go to <code>QUEUE_NAME.offers.failed</code>. See
+<a href="#services:configuration">configuration</a> and <a href="operations.html">local
+operations</a>.</p>
+</div>
+</div>
+<div class="sect2">
 <h3 id="services:contracts"><a class="anchor" href="#services:contracts"></a>Service contracts</h3>
 <h4 id="services:contracts:::_extraction_job" class="discrete">Extraction job</h4>
 <div class="paragraph">
@@ -1428,6 +1534,32 @@ see <a href="#services:operations">local operations</a>.</p>
 </div>
 <div class="paragraph">
 <p>The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to <code>results/&lt;job-id&gt;.skills.json</code>. The result includes <code>version</code>, <code>job_id</code>, <code>scored_at</code>, and <code>categories</code>; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to <code>QUEUE_NAME.skills.failed</code>.</p>
+</div>
+<h4 id="services:contracts:::_offer_matching" class="discrete">Offer matching</h4>
+<div class="paragraph">
+<p>After a resume&#8217;s skill result is ready, the client submits an offer comparison:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "resume_job_id": "&lt;completed-resume-job-uuid&gt;",
+  "offer_url": "https://example.com/jobs/role"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>POST /matches</code> accepts exactly one of <code>offer_url</code> or <code>offer_text</code> and returns <code>202 Accepted</code> after the persistent job publish is confirmed:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"match_id":"&lt;offer-match-uuid&gt;","status":"queued"}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The client polls <code>GET /matches/&lt;match-id&gt;</code>. The worker consumes <code>QUEUE_NAME.offers</code>, reads <code>results/&lt;resume-job-id&gt;.skills.json</code>, and stores the state/result at <code>results/&lt;offer-match-id&gt;.offer.json</code>. Queue jobs contain the match ID, resume job ID, and either offer text or URL. Text is size-limited; fetched pages must be public HTTP(S), use the default port, and pass SSRF-safe resolution/connection checks. The fetcher supports ordinary static HTML, not client-rendered pages. Raw fetched HTML is not persisted.</p>
+</div>
+<div class="paragraph">
+<p>Required skills are the distinct curated skill patterns identified in an explicit required/must-have section; if none is found, all detected patterns in the offer are used. The percentage is rounded <code>100 * matched / required</code>; results include matched and missing patterns and their counts. If no requirement patterns are identified the result is <code>unscorable</code>, not 0%. This is heuristic keyword coverage, not an assessment of ability or suitability.</p>
 </div>
 <h4 id="services:contracts:::_status_event" class="discrete">Status event</h4>
 <div class="paragraph">
@@ -1502,8 +1634,18 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher HTTP API</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher worker</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 </tr>
 <tr>
@@ -1530,7 +1672,7 @@ Status updates are not a durable client-facing event log.
 <div class="sect2">
 <h3 id="services:configuration"><a class="anchor" href="#services:configuration"></a>Configuration</h3>
 <div class="paragraph">
-<p>The uploader, extractor, piistripper, and skill matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.</p>
+<p>The uploader, extractor, piistripper, skill matcher, and offer matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -1550,43 +1692,43 @@ Status updates are not a durable client-facing event log.
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, matching, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.failed</code>, <code>.pii.failed</code>, and <code>.skills.failed</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, skill matching, offer matching, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.offers</code>, <code>.failed</code>, <code>.pii.failed</code>, <code>.skills.failed</code>, and <code>.offers.failed</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for original uploads, extracted text, redacted results, and score results.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for original uploads, extracted text, redacted results, resume scores, and offer-match results.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3 signing region.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage access key.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage secret key.</p></td>
 </tr>
@@ -1597,6 +1739,12 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock">HTTP listen port.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OFFERMATCHER_PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8081</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_API_KEY</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>aiweighter</code> prototype only</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
@@ -1605,7 +1753,7 @@ Status updates are not a durable client-facing event log.
 </tbody>
 </table>
 <div class="paragraph">
-<p>Use the same <code>RUSTFS_*</code> values in all four services. In particular, <code>RUSTFS_BUCKET</code> must match or a worker rejects the job reference. Piistripper consumes <code>&lt;QUEUE_NAME&gt;.pii</code> and writes a separate redacted result; the skill matcher consumes <code>&lt;QUEUE_NAME&gt;.skills</code> and writes category scores.</p>
+<p>Use the same <code>RUSTFS_*</code> values in all five services. In particular, <code>RUSTFS_BUCKET</code> must match or a worker rejects the job reference. Piistripper consumes <code>&lt;QUEUE_NAME&gt;.pii</code> and writes a separate redacted result; the skill matcher consumes <code>&lt;QUEUE_NAME&gt;.skills</code> and writes category scores; the offer matcher consumes <code>&lt;QUEUE_NAME&gt;.offers</code> and writes offer-comparison results. The offer matcher API has no authentication or account ownership checks and must not be exposed directly to untrusted networks.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1627,10 +1775,10 @@ Status updates are not a durable client-facing event log.
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, frontend, and documentation builder.</p>
+<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, offer matcher, frontend, and documentation builder.</p>
 </div>
 <div class="paragraph">
-<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, and <code>skillmatcher</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, and <code>task services:skillmatcher:build</code> build the binaries and Docker images.</p>
+<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, <code>skillmatcher</code>, and <code>offermatcher</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, <code>task services:skillmatcher:build</code>, and <code>task services:offermatcher:build</code> build the binaries and Docker images.</p>
 </div>
 <h4 id="services:operations:::_verification" class="discrete">Verification</h4>
 <div class="paragraph">
@@ -1658,6 +1806,9 @@ Status updates are not a durable client-facing event log.
 </li>
 <li>
 <p><strong>No role scores appear:</strong> confirm piistripper and skillmatcher are running with matching RabbitMQ/storage settings; inspect the durable <code>&lt;QUEUE_NAME&gt;.skills.failed</code> queue and the skillmatcher logs.</p>
+</li>
+<li>
+<p><strong>Offer comparison does not complete:</strong> confirm the frontend can reach the offer matcher on <code>OFFERMATCHER_PORT</code>, that the service shares the resume&#8217;s <code>RUSTFS_BUCKET</code>, and inspect <code>&lt;QUEUE_NAME&gt;.offers.failed</code>. Public offer pages only are supported; private-network destinations, non-HTML content, and SPA-rendered pages are rejected or unsupported.</p>
 </li>
 <li>
 <p><strong>Upload returns <code>503</code>:</strong> inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.</p>

@@ -110,6 +110,9 @@
     <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -211,6 +214,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>skillmatcher</code> from redacted text; contains category scores and matched pattern evidence.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer comparison result</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;offer-match-id&gt;.offer.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>offermatcher</code>; contains status, required-skill coverage, and matched/missing patterns. It references the resume job ID but does not copy the resume.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extraction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
@@ -229,6 +238,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by piistripper after storing the redacted result; manually acknowledged after scoring, retry republish, or failed-queue republish.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by the offer matcher API; contains a resume job ID and either bounded offer text or an offer URL. The offer matcher manually acknowledges after writing a terminal result, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.failed</code></p></td>
@@ -244,6 +259,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed skill matching job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed offer matching job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
 </tr>
 <tr>
@@ -269,6 +290,9 @@
 <div class="sectionbody">
 <div class="paragraph">
 <p>The services do not implement a retention schedule for uploaded resumes, extracted text, or redacted results. The redacted result is not guaranteed to be anonymous, and the original extracted text remains unchanged.</p>
+</div>
+<div class="paragraph">
+<p>The offer matcher does not persist fetched offer HTML. Pasted offer text is carried in its durable RabbitMQ message until processing; configure queue retention accordingly. The offer matcher API has no user authorization or ownership model, so deployments must keep it behind an access-controlled boundary.</p>
 </div>
 <div class="admonitionblock important">
 <table>

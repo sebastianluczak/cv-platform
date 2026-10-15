@@ -109,6 +109,9 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
   </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="offermatcher.html">Offer matcher</a>
+  </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
@@ -229,6 +232,36 @@
 </div>
 </div>
 <div class="sect1">
+<h2 id="_offer_matching"><a class="anchor" href="#_offer_matching"></a>Offer matching</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After a resume&#8217;s skill result is ready, the client submits an offer comparison:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "resume_job_id": "&lt;completed-resume-job-uuid&gt;",
+  "offer_url": "https://example.com/jobs/role"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>POST /matches</code> accepts exactly one of <code>offer_url</code> or <code>offer_text</code> and returns <code>202 Accepted</code> after the persistent job publish is confirmed:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"match_id":"&lt;offer-match-uuid&gt;","status":"queued"}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The client polls <code>GET /matches/&lt;match-id&gt;</code>. The worker consumes <code>QUEUE_NAME.offers</code>, reads <code>results/&lt;resume-job-id&gt;.skills.json</code>, and stores the state/result at <code>results/&lt;offer-match-id&gt;.offer.json</code>. Queue jobs contain the match ID, resume job ID, and either offer text or URL. Text is size-limited; fetched pages must be public HTTP(S), use the default port, and pass SSRF-safe resolution/connection checks. The fetcher supports ordinary static HTML, not client-rendered pages. Raw fetched HTML is not persisted.</p>
+</div>
+<div class="paragraph">
+<p>Required skills are the distinct curated skill patterns identified in an explicit required/must-have section; if none is found, all detected patterns in the offer are used. The percentage is rounded <code>100 * matched / required</code>; results include matched and missing patterns and their counts. If no requirement patterns are identified the result is <code>unscorable</code>, not 0%. This is heuristic keyword coverage, not an assessment of ability or suitability.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_status_event"><a class="anchor" href="#_status_event"></a>Status event</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -311,8 +344,18 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher HTTP API</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher worker</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 </tr>
 <tr>

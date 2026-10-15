@@ -110,6 +110,9 @@
     <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -207,6 +210,30 @@
 </div>
 </div>
 <div class="sect1">
+<h2 id="_offer_comparison"><a class="anchor" href="#_offer_comparison"></a>Offer comparison</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>After a resume score is loaded, the UI submits <code>POST /matches</code> to the offer matcher with the completed resume job ID and either pasted offer text or a public offer URL.</p>
+</li>
+<li>
+<p>The offer matcher publishes a persistent job to <code>QUEUE_NAME.offers</code> and returns <code>202 Accepted</code> with a separate offer-match ID after publisher confirmation.</p>
+</li>
+<li>
+<p>The worker reads <code>results/&lt;resume-job-id&gt;.skills.json</code>. For URLs it fetches bounded static HTML from public HTTP(S) destinations, parses visible text, and does not store the fetched page.</p>
+</li>
+<li>
+<p>It finds required skill patterns in explicitly required/must-have sections. If no such section exists, it uses all detected skill patterns in the offer. It writes an <code>unscorable</code> result if no patterns are detected; otherwise it writes rounded percentage coverage plus matched/missing skill evidence to <code>results/&lt;offer-match-id&gt;.offer.json</code>.</p>
+</li>
+<li>
+<p>The UI polls <code>GET /matches/&lt;offer-match-id&gt;</code> until the result is completed, unscorable, or failed.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_extraction_failures_and_retries"><a class="anchor" href="#_extraction_failures_and_retries"></a>Extraction failures and retries</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -214,7 +241,8 @@
 The initial attempt plus up to three retries means a job may be attempted four times at each stage. During redaction retries the status remains <code>redacting</code> and includes a retry message, keeping the UI progress step accurate.</p>
 </div>
 <div class="paragraph">
-<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.</p>
+<p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.
+A job still failing offer matching is published to <code>QUEUE_NAME.offers.failed</code>.</p>
 </div>
 <div class="paragraph">
 <p>Malformed job JSON is also sent directly to the failed queue.</p>
@@ -231,7 +259,7 @@ The initial attempt plus up to three retries means a job may be attempted four t
 <p>If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job.</p>
 </div>
 <div class="paragraph">
-<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, and <code>results/&lt;job-id&gt;.skills.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
+<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, <code>results/&lt;job-id&gt;.skills.json</code>, and <code>results/&lt;offer-match-id&gt;.offer.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
 </div>
 <div class="paragraph">
 <p>There is no separate deduplication store, operation is idempotent.</p>
