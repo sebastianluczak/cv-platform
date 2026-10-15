@@ -1,0 +1,39 @@
+= JetStream pilot
+
+This package contains an opt-in integration pilot, not a production messaging
+adapter. Existing services continue to use RabbitMQ.
+
+The pilot creates isolated streams with explicit retention policies:
+
+* Work messages use a file-backed `WorkQueuePolicy` stream, durable pull
+  consumers, explicit acknowledgements, a bounded delivery count, and an
+  explicit acknowledgement wait.
+* Status events use a separate limits-retention stream. This tests durable
+  storage for transport but does not change the uploader's in-memory SSE
+  snapshot contract.
+* Failed messages use a separate limits-retention stream so terminal failures
+  remain inspectable rather than being removed when acknowledged by a worker.
+
+The test simulates a confirmed publish, an explicit delayed negative
+acknowledgement and redelivery, a downstream publish before acknowledging the
+current job, and publishes for offer matching, AI generation, status, and
+terminal failure. These are broker-semantics checks, not a migration of the
+service handlers. The handoff is still at-least-once: a crash after the
+downstream publish but before acknowledging the input can cause duplicate
+processing. Existing deterministic object keys remain important.
+
+Run the pilot against the local NATS server started by `devenv up`:
+
+[source,shell]
+----
+NATS_URL=nats://localhost:4222 go -C services/common test -v ./jetstream
+----
+
+The test creates uniquely named streams and removes them after success. If it
+fails before cleanup, inspect and remove the `CVPLATFORM_PILOT_*` streams from
+the local server before rerunning.
+
+The initial retention values are for local evaluation only. Production
+retention, replication, consumer names, acknowledgement deadlines, retry and
+terminal-failure policies, credentials, and status replay behavior require an
+explicit architecture decision before any service cutover.

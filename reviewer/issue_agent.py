@@ -125,7 +125,7 @@ def list_files(directory: str) -> str:
 
     results: list[str] = []
     if path_text == ".":
-        results = ["README.adoc", "services/", "ui/", "docs/"]
+        results = ["README.adoc", "services/", "ui/", "docs/", "reviewer/"]
     else:
         for current, dirs, files in os.walk(directory_path, followlinks=False):
             dirs[:] = sorted(
