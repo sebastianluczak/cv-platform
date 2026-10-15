@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import argparse
@@ -112,15 +111,25 @@ def collect_diff(base: str) -> tuple[str, str]:
 def retry_delay(headers, attempt: int) -> float:
     retry_after = headers.get("Retry-After", "")
     if retry_after.isdigit():
-        return min(int(retry_after), MAX_RETRY_DELAY_SECONDS)
+        delay = int(retry_after)
+        return min(delay, MAX_RETRY_DELAY_SECONDS)
 
     reset_at = headers.get("X-RateLimit-Reset", "")
     if reset_at.isdigit():
-        delay = int(reset_at) / 1000 - time.time()
+        # Determine if reset_at is milliseconds or seconds
+        if len(reset_at) >= 13:
+            # milliseconds
+            reset_time = int(reset_at) / 1000.0
+        else:
+            # seconds
+            reset_time = int(reset_at)
+        delay = reset_time - time.time()
         if delay > 0:
-            return delay
+            return min(delay, MAX_RETRY_DELAY_SECONDS)
 
-    return 2**attempt
+    # Exponential backoff
+    delay = 2 ** attempt
+    return min(delay, MAX_RETRY_DELAY_SECONDS)
 
 
 def rate_limit_error(response: requests.Response) -> RuntimeError:
