@@ -107,11 +107,13 @@ jobs:
 
       - name: Run applicable repository checks
         id: checks
+        shell: devenv shell -- bash -e {0}
         continue-on-error: true
         run: python reviewer/run_issue_checks.py
 
       - name: Ask the agent to address failed checks
         id: repair
+        shell: devenv shell -- bash -e {0}
         if: steps.checks.outcome == 'failure'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -125,6 +127,7 @@ jobs:
 
       - name: Revalidate repaired changes
         id: repaired-changes
+        shell: devenv shell -- bash -e {0}
         if: steps.checks.outcome == 'failure'
         run: |
           python reviewer/issue_agent.py --validate
@@ -133,11 +136,13 @@ jobs:
 
       - name: Rerun applicable repository checks
         id: retry-checks
+        shell: devenv shell -- bash -e {0}
         if: steps.checks.outcome == 'failure'
         continue-on-error: true
         run: python reviewer/run_issue_checks.py
 
       - name: Require successful validation
+        shell: devenv shell -- bash -e {0}
         if: always()
         env:
           INITIAL_CHECKS: ${{ steps.checks.outcome }}
@@ -163,11 +168,13 @@ jobs:
           exit 0
 
       - name: Validate the final patch after test execution
+        shell: devenv shell -- bash -e {0}
         run: |
           python reviewer/issue_agent.py --validate
           git diff HEAD --check
 
       - name: Export the validated patch
+        shell: devenv shell -- bash -e {0}
         run: git diff HEAD --binary --no-ext-diff > "$RUNNER_TEMP/agent.patch"
 
       - name: Upload the patch for PR creation
