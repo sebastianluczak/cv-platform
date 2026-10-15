@@ -89,7 +89,6 @@ def normalized_path(raw_path: str, writing: bool = False) -> tuple[str, Path]:
     if (
         path_text in PROTECTED_FILES
         or (path_text.startswith(".github/") and not read_only)
-        or path_text.startswith("reviewer/")
     ):
         raise ToolError("Path is protected from agent edits")
     if any(
