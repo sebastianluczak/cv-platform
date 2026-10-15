@@ -42,7 +42,34 @@ type AIWeigh = {
   markdown?: string
 }
 
+const reviewStages = [
+  { label: 'Queued', stage: 0 },
+  { label: 'Text extraction', stage: 1 },
+  { label: 'Privacy filtering', stage: 2 },
+  { label: 'Role matching', stage: 3 },
+]
+
+const reviewAreas = [
+  { title: 'Engineering', categories: 'Backend · Frontend · Mobile · Embedded' },
+  { title: 'Systems', categories: 'DevOps · Platform · Architecture · Security' },
+  { title: 'Quality & data', categories: 'QA · Data · Support' },
+  { title: 'Technology leadership', categories: 'Management · Product · Business' },
+]
+
+function currentReviewStage(stage: ProgressEvent['stage']) {
+  switch (stage) {
+    case 'queued': return 0
+    case 'processing':
+    case 'retrying': return 1
+    case 'redacting': return 2
+    case 'matching':
+    case 'completed': return 3
+    case 'failed': return -1
+  }
+}
+
 function App() {
+  const pageShell = useRef<HTMLElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const eventSource = useRef<EventSource | null>(null)
   const activeJobID = useRef('')
@@ -66,6 +93,7 @@ function App() {
   const [aiGenerating, setAIGenerating] = useState(false)
   const [aiError, setAIError] = useState('')
   const [aiConsent, setAIConsent] = useState(false)
+  const [offerPanelOpen, setOfferPanelOpen] = useState(false)
   const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | null>(null)
 
   useEffect(() => () => eventSource.current?.close(), [])
@@ -76,6 +104,19 @@ function App() {
     setAIGenerating(false)
     setAIError('')
     setAIConsent(false)
+  }
+
+  function trackCursorTint(event: React.PointerEvent<HTMLElement>) {
+    if (event.pointerType !== 'mouse' || !pageShell.current) return
+    const bounds = pageShell.current.getBoundingClientRect()
+    pageShell.current.style.setProperty('--cursor-x', `${event.clientX - bounds.left}px`)
+    pageShell.current.style.setProperty('--cursor-y', `${event.clientY - bounds.top}px`)
+    pageShell.current.style.setProperty('--cursor-glow-opacity', '1')
+  }
+
+  function clearCursorTint(event: React.PointerEvent<HTMLElement>) {
+    if (event.pointerType !== 'mouse' || !pageShell.current) return
+    pageShell.current.style.setProperty('--cursor-glow-opacity', '0')
   }
 
   function chooseFile(nextFile?: File) {
@@ -95,6 +136,7 @@ function App() {
     setOfferMatching(false)
     setOfferError('')
     clearAIWeight()
+    setOfferPanelOpen(false)
     setConnection(null)
     if (!nextFile) return
     if (nextFile.size > 10 * 1024 * 1024) {
@@ -128,7 +170,7 @@ function App() {
 
       activeJobID.current = result.job_id
       setUploaded(true)
-      setMessage('Resume received. Follow its progress below.')
+      setMessage('CV received. Technical review is underway.')
       setConnection('connecting')
       const endpoint = new URL(import.meta.env.VITE_EVENTS_ENDPOINT || '/api/events', window.location.href)
       endpoint.searchParams.set('job_id', result.job_id)
@@ -274,25 +316,35 @@ function App() {
   }
 
   return (
-    <main className="page-shell">
+    <main
+      className="page-shell"
+      ref={pageShell}
+      onPointerMove={trackCursorTint}
+      onPointerLeave={clearCursorTint}
+    >
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Draftline home">
           <span className="brand-mark">d.</span>
           <span>draftline</span>
         </a>
-        <span className="topbar-note">A clearer next step</span>
+        <span className="topbar-note">Technical experience, in focus</span>
       </header>
 
       <section className="hero-section" id="top">
         <div className="hero-copy">
-          <p className="eyebrow"><span /> YOUR RESUME, WITH DIRECTION</p>
-          <h1>Make your next move <em>make sense.</em></h1>
+          <p className="eyebrow"><span /> A TECHNICAL CV REVIEW</p>
+          <h1>Make your experience <em>work in context.</em></h1>
           <p className="intro">
-            Upload your resume and get a clearer picture of what is working,
-            what is missing, and where to go next.
+            See how your CV maps to technical domains and role profiles. Compare it with a job description when you are ready.
           </p>
+        </div>
 
-          <div className={`upload-panel${uploaded ? ' is-uploaded' : ''}`}>
+        <div className="review-workspace">
+          <section className="workspace-panel upload-panel" aria-label="CV upload and processing">
+            <div className="panel-heading">
+              <span className="panel-kicker">01 / INPUT</span>
+              <h2>Start with your CV</h2>
+            </div>
             <label
               className={`dropzone${dragging ? ' is-dragging' : ''}`}
               onDragOver={(event) => {
@@ -313,11 +365,9 @@ function App() {
                 onChange={(event) => chooseFile(event.target.files?.[0])}
               />
               <span className="upload-symbol" aria-hidden="true">↑</span>
-              <span className="dropzone-title">
-                {file ? file.name : 'Drop your resume here'}
-              </span>
+              <span className="dropzone-title">{file ? file.name : 'Drop your CV here'}</span>
               <span className="dropzone-caption">
-                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Click to change` : 'or click to browse · PDF or image · up to 10 MB'}
+                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Select to change` : 'Click to browse · PDF or image · up to 10 MB'}
               </span>
             </label>
             <button
@@ -326,189 +376,171 @@ function App() {
               disabled={!file || uploading || uploaded}
               onClick={uploadResume}
             >
-              {uploading ? 'Uploading…' : uploaded ? 'Resume received' : 'Get resume feedback'}
+              {uploading ? 'Uploading…' : uploaded ? 'CV received' : 'Review my CV'}
               {!uploading && !uploaded && <span aria-hidden="true">↗</span>}
             </button>
-            {progress && (
-              <section className="progress-panel" aria-live="polite" aria-label="Resume processing progress">
+
+            {(progress || connection) && (
+              <section className={`progress-panel${progress?.stage === 'failed' ? ' has-failed' : ''}`} aria-live="polite" aria-label="CV review progress">
                 <div className="progress-heading">
-                  <strong>Processing your resume</strong>
+                  <strong>{progress?.stage === 'completed' ? 'Technical review complete' : progress?.stage === 'failed' ? 'Review needs attention' : 'Review in progress'}</strong>
                   {connection && <span>{connection === 'reconnecting' ? 'Reconnecting…' : connection === 'connecting' ? 'Connecting…' : 'Live'}</span>}
                 </div>
-                <ol className="progress-steps">
-                  <li className="is-complete"><span>01</span><div><strong>Queued</strong><small>{progress.stage === 'queued' ? progress.message : 'Your resume is safely in line.'}</small></div></li>
-                  <li className={progress.stage === 'processing' || progress.stage === 'retrying' ? 'is-active' : progress.stage === 'redacting' || progress.stage === 'matching' || progress.stage === 'completed' ? 'is-complete' : progress.stage === 'failed' ? 'is-failed' : ''}>
-                    <span>02</span>
-                    <div>
-                      <strong>{progress.stage === 'retrying' ? 'Retrying processing' : 'Extracting text'}</strong>
-                      <small>{progress.stage === 'queued' ? 'Waiting for extraction to start.' : progress.message}{progress.stage === 'retrying' && progress.attempt > 0 ? ` (attempt ${progress.attempt})` : ''}</small>
-                    </div>
-                  </li>
-                  <li className={progress.stage === 'redacting' ? 'is-active' : progress.stage === 'matching' || progress.stage === 'completed' ? 'is-complete' : progress.stage === 'failed' ? 'is-failed' : ''}><span>03</span><div><strong>{progress.stage === 'failed' ? 'Needs attention' : 'Removing personal identifiers'}</strong><small>{progress.stage === 'failed' ? 'We could not prepare the redacted resume.' : progress.stage === 'redacting' ? progress.message : progress.stage === 'matching' || progress.stage === 'completed' ? 'Personal identifiers were removed from the resume.' : 'Waiting for text extraction to finish.'}</small></div></li>
-                  <li className={progress.stage === 'matching' ? 'is-active' : progress.stage === 'completed' ? 'is-complete' : progress.stage === 'failed' ? 'is-failed' : ''}><span>04</span><div><strong>{progress.stage === 'failed' ? 'Needs attention' : progress.stage === 'completed' ? 'Role scores ready' : 'Matching role profiles'}</strong><small>{progress.stage === 'failed' ? 'We could not finish the resume review.' : progress.stage === 'matching' ? progress.message : progress.stage === 'completed' ? 'Your role profile scores are ready.' : 'Waiting for redaction to finish.'}</small></div></li>
-                </ol>
+                {progress && (
+                  <>
+                    <ol className="progress-steps">
+                      {reviewStages.map((step, index) => {
+                        const activeStage = currentReviewStage(progress.stage)
+                        const state = progress.stage === 'completed' || index < activeStage
+                          ? 'is-complete'
+                          : index === activeStage && progress.stage !== 'failed'
+                            ? 'is-active'
+                            : ''
+                        return (
+                          <li className={state} key={step.label}>
+                            <span aria-hidden="true">{state === 'is-complete' ? '✓' : `0${index + 1}`}</span>
+                            <small>{step.label}</small>
+                          </li>
+                        )
+                      })}
+                    </ol>
+                    <p className={`progress-message${progress.stage === 'failed' ? ' is-error' : ''}`}>
+                      {progress.stage === 'retrying' ? `Retrying · attempt ${progress.attempt}` : progress.message}
+                    </p>
+                  </>
+                )}
               </section>
             )}
             {resultError && <p className="result-error" role="alert">{resultError}</p>}
-            {matchResult && (
-              <section className="match-results" aria-label="Role profile scores">
-                <div className="match-results-heading">
-                  <strong>Your role profile scores</strong>
-                  <span>Heuristic match · out of 5</span>
+            <p className={`upload-message${message && !uploaded ? ' is-error' : ''}`} aria-live="polite">
+              {message || 'Your CV is processed for this review and is not used to assess your ability.'}
+            </p>
+          </section>
+
+          <section className="workspace-panel results-panel" aria-label="Technical role review">
+            {matchResult ? (
+              <>
+                <div className="results-heading">
+                  <div>
+                    <span className="panel-kicker">02 / REVIEW</span>
+                    <h2>Technical domain signals</h2>
+                  </div>
+                  <span className="score-legend">Pattern matches · each area scored 1–5</span>
                 </div>
-                <ul>
+                <ul className="match-grid">
                   {matchResult.categories.map((category) => (
                     <li key={category.category}>
-                      <span className="match-category-name">{category.category}</span>
-                      <span className="match-score">{category.score}/5</span>
-                      <small>{category.evidence.length > 0 ? category.evidence.join(', ') : 'No matching patterns found'}</small>
+                      <details className="category-detail">
+                        <summary>
+                          <span className="match-category-name">{category.category}</span>
+                          <span className="match-score">{category.score}<small>/5</small></span>
+                        </summary>
+                        <p>{category.evidence.length > 0 ? category.evidence.join(', ') : 'No matching patterns found in the CV.'}</p>
+                      </details>
                     </li>
                   ))}
                 </ul>
-              </section>
-            )}
-            {matchResult && (
-              <section className="offer-panel" aria-label="Compare resume with a job offer">
-                <div className="match-results-heading">
-                  <strong>Compare with a job offer</strong>
-                  <span>Using your completed resume</span>
-                </div>
-                <div className="offer-input-tabs" role="group" aria-label="Offer input type">
-                  <button type="button" aria-pressed={offerInputMode === 'url'} disabled={offerMatching || aiGenerating} onClick={() => { setOfferInputMode('url'); setOfferMatch(null); setOfferError(''); clearAIWeight() }}>Offer URL</button>
-                  <button type="button" aria-pressed={offerInputMode === 'text'} disabled={offerMatching || aiGenerating} onClick={() => { setOfferInputMode('text'); setOfferMatch(null); setOfferError(''); clearAIWeight() }}>Paste text</button>
-                </div>
-                {offerInputMode === 'url' ? (
-                  <label className="offer-input-label">
-                    Job offer URL
-                    <input
-                      type="url"
-                      value={offerURL}
-                      disabled={offerMatching || aiGenerating}
-                      onChange={(event) => { setOfferURL(event.target.value); setOfferMatch(null); setOfferError(''); clearAIWeight() }}
-                      placeholder="https://company.example/jobs/role"
-                    />
-                  </label>
-                ) : (
-                  <label className="offer-input-label">
-                    Job offer text
-                    <textarea
-                      value={offerText}
-                      disabled={offerMatching || aiGenerating}
-                      onChange={(event) => { setOfferText(event.target.value); setOfferMatch(null); setOfferError(''); clearAIWeight() }}
-                      rows={5}
-                      maxLength={100 * 1024}
-                      placeholder="Paste the job description here"
-                    />
-                  </label>
-                )}
-                <small className="offer-retention-note">The job description is retained with this private match result. It is sent to an external AI service only if you separately request resume generation and consent.</small>
-                <button className="upload-button" type="button" disabled={offerMatching || aiGenerating} onClick={() => void compareOffer()}>
-                  {offerMatching ? 'Comparing…' : 'Compare required skills'}
-                  {!offerMatching && <span aria-hidden="true">↗</span>}
-                </button>
-                {offerError && <p className="result-error" role="alert">{offerError}</p>}
-                {offerMatch && (
-                  <div className="offer-match-result" aria-live="polite">
-                    <p className={`offer-match-status${offerMatch.status === 'failed' ? ' is-error' : ''}`}>
-                      {offerMatch.status === 'completed' ? `${offerMatch.percent}% required-skill coverage` : offerMatch.message}
-                      {(offerMatch.status === 'queued' || offerMatch.status === 'processing') && ' · Working'}
-                    </p>
-                    {offerMatch.status === 'completed' && (
-                      <>
-                        <p className="offer-match-count">{offerMatch.matched_count} of {offerMatch.required_count} identified required skills found in your resume.</p>
-                        <dl>
-                          <dt>Matched</dt>
-                          <dd>{offerMatch.matched_skills?.length ? offerMatch.matched_skills.join(', ') : 'No matching signals found'}</dd>
-                          <dt>Not found</dt>
-                          <dd>{offerMatch.missing_skills?.length ? offerMatch.missing_skills.join(', ') : 'None'}</dd>
-                        </dl>
-                        <small>Deterministic keyword coverage from curated skill patterns; it is not an assessment of ability or suitability.</small>
-                        <div className="ai-resume-panel">
-                          <strong>Prepare a tailored resume</strong>
-                          <p>Your redacted resume, detected skill evidence, and this job description will be sent to OpenRouter, an external AI service. Redaction is best-effort. Generated text should use only supported facts; review it carefully before use.</p>
-                          <label className="ai-consent">
-                            <input
-                              type="checkbox"
-                              checked={aiConsent}
-                              disabled={aiGenerating}
-                              onChange={(event) => setAIConsent(event.target.checked)}
-                            />
-                            I agree to send this information to the external AI service.
-                          </label>
-                          <button className="upload-button" type="button" disabled={!aiConsent || aiGenerating} onClick={() => void generateResume()}>
-                            {aiGenerating ? 'Preparing resume…' : 'Generate tailored resume'}
-                            {!aiGenerating && <span aria-hidden="true">↗</span>}
-                          </button>
-                          {aiError && <p className="result-error" role="alert">{aiError}</p>}
-                          {aiWeigh && (
-                            <div className="ai-resume-result" aria-live="polite">
-                              <p className={`offer-match-status${aiWeigh.status === 'failed' ? ' is-error' : ''}`}>
-                                {aiWeigh.message}
-                                {(aiWeigh.status === 'queued' || aiWeigh.status === 'processing') && ' · Working'}
-                              </p>
-                              {aiWeigh.status === 'completed' && aiWeigh.markdown && (
-                                <>
-                                  <button className="download-markdown" type="button" onClick={downloadResumeMarkdown}>Download Markdown</button>
-                                  <pre>{aiWeigh.markdown}</pre>
-                                </>
-                              )}
-                            </div>
+                <p className="results-note">Scores reflect matching terms in the CV, not demonstrated proficiency or role suitability. Select a domain to see detected terms.</p>
+
+                <section className={`offer-panel${offerPanelOpen ? ' is-open' : ''}`} aria-label="Compare with a job description">
+                  <button
+                    className="offer-toggle"
+                    type="button"
+                    aria-expanded={offerPanelOpen}
+                    aria-controls="offer-comparison-form"
+                    onClick={() => setOfferPanelOpen((open) => !open)}
+                  >
+                    <span>
+                      <strong>Compare with a job description</strong>
+                      <small>See which required skills appear in your CV</small>
+                    </span>
+                    <span className="offer-toggle-icon" aria-hidden="true">{offerPanelOpen ? '−' : '+'}</span>
+                  </button>
+                  {offerPanelOpen && (
+                    <div className="offer-form" id="offer-comparison-form">
+                      <div className="offer-input-tabs" role="group" aria-label="Job description input type">
+                        <button type="button" aria-pressed={offerInputMode === 'url'} disabled={offerMatching} onClick={() => { setOfferInputMode('url'); setOfferMatch(null); setOfferError('') }}>Job URL</button>
+                        <button type="button" aria-pressed={offerInputMode === 'text'} disabled={offerMatching} onClick={() => { setOfferInputMode('text'); setOfferMatch(null); setOfferError('') }}>Paste text</button>
+                      </div>
+                      {offerInputMode === 'url' ? (
+                        <label className="offer-input-label">
+                          Job description URL
+                          <input
+                            type="url"
+                            value={offerURL}
+                            disabled={offerMatching}
+                            onChange={(event) => { setOfferURL(event.target.value); setOfferMatch(null); setOfferError('') }}
+                            placeholder="https://company.example/jobs/role"
+                          />
+                        </label>
+                      ) : (
+                        <label className="offer-input-label">
+                          Job description
+                          <textarea
+                            value={offerText}
+                            disabled={offerMatching}
+                            onChange={(event) => { setOfferText(event.target.value); setOfferMatch(null); setOfferError('') }}
+                            rows={4}
+                            maxLength={100 * 1024}
+                            placeholder="Paste the job description"
+                          />
+                        </label>
+                      )}
+                      <button className="compare-button" type="button" disabled={offerMatching} onClick={() => void compareOffer()}>
+                        {offerMatching ? 'Comparing…' : 'Compare skill coverage'}
+                      </button>
+                      {offerError && <p className="result-error" role="alert">{offerError}</p>}
+                      {offerMatch && (
+                        <div className="offer-match-result" aria-live="polite">
+                          <p className={`offer-match-status${offerMatch.status === 'failed' || offerMatch.status === 'unscorable' ? ' is-error' : ''}`}>
+                            {offerMatch.status === 'completed' ? `${offerMatch.percent}% identified-skill coverage` : offerMatch.message}
+                            {(offerMatch.status === 'queued' || offerMatch.status === 'processing') && ' · Working'}
+                          </p>
+                          {offerMatch.status === 'completed' && (
+                            <>
+                              <p className="offer-match-count">{offerMatch.matched_count} of {offerMatch.required_count} identified requirements have matching terms in the CV.</p>
+                              <dl>
+                                <dt>Detected</dt>
+                                <dd>{offerMatch.matched_skills?.length ? offerMatch.matched_skills.join(', ') : 'No matching terms found'}</dd>
+                                <dt>Not detected</dt>
+                                <dd>{offerMatch.missing_skills?.length ? offerMatch.missing_skills.join(', ') : 'None'}</dd>
+                              </dl>
+                              <small>Keyword coverage from curated patterns; not an assessment of capability or fit.</small>
+                            </>
                           )}
                         </div>
-                      </>
-                    )}
+                      )}
+                    </div>
+                  )}
+                </section>
+              </>
+            ) : (
+              <>
+                <div className="results-heading">
+                  <div>
+                    <span className="panel-kicker">02 / REVIEW</span>
+                    <h2>Technical experience, in context</h2>
                   </div>
-                )}
-              </section>
+                  <span className="score-legend">14 technical domains</span>
+                </div>
+                <p className="results-intro">A focused scan for experience signals across software delivery, systems, and technology leadership.</p>
+                <div className="review-areas">
+                  {reviewAreas.map((area) => (
+                    <div className="review-area" key={area.title}>
+                      <strong>{area.title}</strong>
+                      <span>{area.categories}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="results-note">This is a pattern-based review of CV content, not a measure of capability or seniority. Your identity details are removed before role matching.</p>
+              </>
             )}
-            <p className={`upload-message${message && !uploaded ? ' is-error' : ''}`} aria-live="polite">
-              {message || 'Your resume stays yours. We only use it to prepare your review.'}
-            </p>
-          </div>
-          <div className="proof-line">
-            <span className="proof-dot" />
-            <span>Built for the job you want, not just the one you have.</span>
-          </div>
+          </section>
         </div>
-
-        <aside className="preview" aria-label="Resume review areas">
-          <div className="preview-topline">
-            <span>THE REVIEW</span>
-            <span className="preview-index">01 / 03</span>
-          </div>
-          <div className="preview-heading">
-            <span className="preview-icon" aria-hidden="true">✳</span>
-            <div>
-              <p>START WITH THE STORY</p>
-              <h2>A resume should sound like you.</h2>
-            </div>
-          </div>
-          <div className="review-list">
-            <div className="review-row">
-              <span className="row-number">01</span>
-              <span className="row-copy"><strong>Make it clear</strong><small>Structure and readability</small></span>
-              <span className="row-arrow" aria-hidden="true">↗</span>
-            </div>
-            <div className="review-row">
-              <span className="row-number">02</span>
-              <span className="row-copy"><strong>Show your strengths</strong><small>Skills and experience</small></span>
-              <span className="row-arrow" aria-hidden="true">↗</span>
-            </div>
-            <div className="review-row">
-              <span className="row-number">03</span>
-              <span className="row-copy"><strong>Find your next step</strong><small>Focused, useful feedback</small></span>
-              <span className="row-arrow" aria-hidden="true">↗</span>
-            </div>
-          </div>
-          <div className="preview-footer">
-            <span className="footer-spark" aria-hidden="true">✳</span>
-            <span>Thoughtful feedback. No career-bot clichés.</span>
-          </div>
-        </aside>
       </section>
 
       <footer className="page-footer">
-        <span>draftline <span className="footer-divider">/</span> Resume feedback, with a point of view.</span>
+        <span>draftline <span className="footer-divider">/</span> Technical CV signals, clearly presented.</span>
         <span>PDF & IMAGES · MAX 10 MB</span>
       </footer>
     </main>
