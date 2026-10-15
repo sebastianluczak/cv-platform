@@ -113,6 +113,9 @@
     <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -120,9 +123,6 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/operations.html">Operations</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../services/prototypes.html">Prototype components</a>
   </li>
 </ul>
   </li>
@@ -201,14 +201,24 @@ component Uploader
 queue RabbitMQ
 
 component Extractor
+component OfferMatcher
+component AIweighter
 
 database "S3-compatible Storage" as Storage
 
 Browser --&gt; Uploader : POST /upload
 Browser --&gt; Uploader : GET /events?job_id=...
+Browser --&gt; OfferMatcher : POST /matches\nGET /matches/&lt;match-id&gt;
+Browser --&gt; AIweighter : POST /weights after opt-in\nGET /weights/&lt;weigh-id&gt;
 
 Uploader --&gt; Storage : Upload file\nuploads/&lt;job-id&gt;
 Uploader --&gt; RabbitMQ : Publish extraction job
+OfferMatcher --&gt; RabbitMQ : Publish offer matching job
+RabbitMQ --&gt; OfferMatcher : Consume offer matching job
+OfferMatcher --&gt; Storage : Read skills\nWrite offer result
+AIweighter --&gt; RabbitMQ : Publish AI resume job
+RabbitMQ --&gt; AIweighter : Consume AI resume job
+AIweighter --&gt; Storage : Read redacted resume,\nskills and retained offer text\nWrite Markdown result
 
 RabbitMQ --&gt; Extractor : Consume extraction job
 Extractor --&gt; Storage : Download upload
@@ -230,6 +240,9 @@ end note
 <ol class="arabic">
 <li>
 <p>uses <code>/api/upload</code> and <code>/api/events</code>, so a deployment must route those browser paths to the uploader&#8217;s <code>/upload</code> and <code>/events</code> handlers.</p>
+</li>
+<li>
+<p>uses <code>/offer-api</code> and <code>/ai-api</code> for offer matching and AI resume generation in local development; production gateways must route those paths to the corresponding service APIs.</p>
 </li>
 </ol>
 </div>
@@ -264,6 +277,10 @@ end note
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extractor</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Consumes jobs, downloads the referenced upload, extracts PDF or image text, stores the result, and acknowledges or routes the job according to its outcome.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">After explicit user consent, sends the redacted resume, skill evidence, and retained offer text to the configured external model and stores a Markdown resume result.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ</p></td>

@@ -113,6 +113,9 @@
     <a class="nav-link" href="offermatcher.html">Offer matcher</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -120,9 +123,6 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="operations.html">Operations</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="prototypes.html">Prototype components</a>
   </li>
 </ul>
   </li>
@@ -196,6 +196,11 @@ persistent job to <code>QUEUE_NAME.offers</code> with publisher confirmation, an
 <code>results/&lt;match-id&gt;.offer.json</code>. It contains a rounded percentage, required
 and matched counts, and matched/missing patterns. No detected required
 patterns produces an <code>unscorable</code> status instead of a 0% score.</p>
+</div>
+<div class="paragraph">
+<p>The result artifact retains bounded normalized offer text for the optional
+AIweighter flow. <code>GET /matches/&lt;match-id&gt;</code> deliberately omits that private
+field.</p>
 </div>
 </div>
 </div>

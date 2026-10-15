@@ -113,6 +113,9 @@
     <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -120,9 +123,6 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/operations.html">Operations</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../services/prototypes.html">Prototype components</a>
   </li>
 </ul>
   </li>
@@ -227,7 +227,34 @@
 <p>It finds required skill patterns in explicitly required/must-have sections. If no such section exists, it uses all detected skill patterns in the offer. It writes an <code>unscorable</code> result if no patterns are detected; otherwise it writes rounded percentage coverage plus matched/missing skill evidence to <code>results/&lt;offer-match-id&gt;.offer.json</code>.</p>
 </li>
 <li>
+<p>The offer result retains bounded normalized offer text for later AI tailoring; <code>GET /matches/&lt;offer-match-id&gt;</code> omits this private field.</p>
+</li>
+<li>
 <p>The UI polls <code>GET /matches/&lt;offer-match-id&gt;</code> until the result is completed, unscorable, or failed.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_optional_ai_resume_generation"><a class="anchor" href="#_optional_ai_resume_generation"></a>Optional AI resume generation</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>After a completed offer match, the UI explains that the redacted resume, skill evidence, and job-offer text will be sent to OpenRouter.</p>
+</li>
+<li>
+<p>The user must explicitly opt in before the UI submits <code>POST /weights</code> with the offer-match ID and consent affirmation.</p>
+</li>
+<li>
+<p>AIweighter publishes a persistent ID-only job to <code>QUEUE_NAME.aiweight</code> and returns an AI resume ID. The worker reads the redacted resume, skill result, and bounded normalized offer text from storage, then requests a Markdown resume from the configured model.</p>
+</li>
+<li>
+<p>The worker stores the versioned result at <code>results/&lt;weigh-id&gt;.ai.json</code>; the UI polls <code>GET /weights/&lt;weigh-id&gt;</code> and displays the returned Markdown as text for review or download.</p>
+</li>
+<li>
+<p>The prompt instructs the model to use only source-supported facts and omit unsupported qualifications, dates, achievements, or metrics. User-provided resume and offer content is treated as untrusted data, not instructions.</p>
 </li>
 </ol>
 </div>
@@ -242,7 +269,8 @@ The initial attempt plus up to three retries means a job may be attempted four t
 </div>
 <div class="paragraph">
 <p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.
-A job still failing offer matching is published to <code>QUEUE_NAME.offers.failed</code>.</p>
+A job still failing offer matching is published to <code>QUEUE_NAME.offers.failed</code>.
+A job still failing AI resume generation is published to <code>QUEUE_NAME.aiweight.failed</code>.</p>
 </div>
 <div class="paragraph">
 <p>Malformed job JSON is also sent directly to the failed queue.</p>

@@ -112,6 +112,9 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="offermatcher.html">Offer matcher</a>
   </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="aiweighter.html">AIweighter</a>
+  </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
@@ -120,9 +123,6 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="operations.html">Operations</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="prototypes.html">Prototype components</a>
   </li>
 </ul>
   </li>
@@ -262,6 +262,29 @@
 </div>
 </div>
 <div class="sect1">
+<h2 id="_ai_resume_generation"><a class="anchor" href="#_ai_resume_generation"></a>AI resume generation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After a completed offer match, the UI submits an explicit consent affirmation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"match_id":"&lt;completed-offer-match-uuid&gt;","consent":true}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>POST /weights</code> validates the completed match, stores a queued AI resume
+artifact, publishes an ID-only persistent job to <code>QUEUE_NAME.aiweight</code>, and
+returns <code>202 Accepted</code> with <code>weigh_id</code>. The worker reads the redacted resume,
+skill result, and retained normalized offer text from storage and stores its
+Markdown result in <code>results/&lt;weigh-id&gt;.ai.json</code>. The client polls
+<code>GET /weights/&lt;weigh-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>, or <code>failed</code>.
+The result artifact and offer text remain subject to object-store lifecycle
+policy; the platform does not provide user ownership or authorization.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_status_event"><a class="anchor" href="#_status_event"></a>Status event</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -349,6 +372,11 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher worker</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter HTTP API after explicit consent</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter worker</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
@@ -356,6 +384,11 @@ Status updates are not a durable client-facing event log.
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 </tr>
 <tr>

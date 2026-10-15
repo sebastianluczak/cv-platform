@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Prototype Components :: CV Platform</title>
+    <title>AIweighter Service :: CV Platform</title>
     <meta name="generator" content="Antora 3.2.1">
     <link rel="stylesheet" href="../../_/css/site.css">
   </head>
@@ -112,6 +112,9 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="offermatcher.html">Offer matcher</a>
   </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="aiweighter.html">AIweighter</a>
+  </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
@@ -120,9 +123,6 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="operations.html">Operations</a>
-  </li>
-  <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="prototypes.html">Prototype components</a>
   </li>
 </ul>
   </li>
@@ -159,33 +159,84 @@
   <ul>
     <li><a href="../index.html">CV Platform</a></li>
     <li>Services</li>
-    <li><a href="prototypes.html">Prototype components</a></li>
+    <li><a href="aiweighter.html">AIweighter</a></li>
   </ul>
 </nav>
-<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/main/docs/cv-analyzer/modules/services/pages/prototypes.adoc">Edit this Page</a></div>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/main/docs/cv-analyzer/modules/services/pages/aiweighter.adoc">Edit this Page</a></div>
 </div>
   <div class="content">
 <aside class="toc sidebar" data-title="Contents" data-levels="2">
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Prototype Components</h1>
-<div class="sect1">
-<h2 id="_ai_weighter"><a class="anchor" href="#_ai_weighter"></a>AI weighter</h2>
+<h1 class="page">AIweighter Service</h1>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p><code>services/aiweighter/aiweighter.go</code> contains a standalone helper that sends supplied text to OpenRouter&#8217;s chat-completions endpoint. It selects a model directly in source and prints the response content, reasoning field, and full response body. It requires <code>OPENROUTER_API_KEY</code> and panics on errors.</p>
-</div>
-<div class="paragraph">
-<p>This package is not wired into the upload/extraction flow, has no service module or independently declared Go module, and should be treated as experimental code rather than a production service. If invoked with resume text, it sends that content to an external provider. Review data handling, provider terms, error behavior, model configuration, and logging before integrating it.</p>
+<p>AIweighter prepares an optional Markdown resume tailored to a completed resume
+and offer match. The UI requests generation only after an explicit user action
+and discloses that the redacted resume, skill evidence, and offer text will be
+sent to an external OpenRouter model. Generated content is limited to
+source-supported facts; the model is instructed to omit unsupported claims.
+Users should review the result before using it.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_before_connecting_a_prototype"><a class="anchor" href="#_before_connecting_a_prototype"></a>Before connecting a prototype</h2>
+<h2 id="_api_and_data_flow"><a class="anchor" href="#_api_and_data_flow"></a>API and data flow</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Define an explicit input/output contract, ownership of retries and failures, privacy and retention behavior, and operational configuration. Update the architecture and data-lifecycle pages when the running service boundaries change.</p>
+<p>The UI submits <code>POST /weights</code> with the completed offer-match ID and
+<code>consent: true</code>. The service verifies the referenced offer-match artifact is
+complete, writes a queued state to <code>results/&lt;weigh-id&gt;.ai.json</code>, and publishes
+an ID-only persistent job to <code>QUEUE_NAME.aiweight</code> with publisher
+confirmation. It returns <code>202 Accepted</code> with the new <code>weigh_id</code>.
+The stored request artifact records the consent affirmation and timestamp.</p>
+</div>
+<div class="paragraph">
+<p>Poll <code>GET /weights/&lt;weigh-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>, or
+<code>failed</code>. Completed results include a Markdown field. The UI displays it as
+plain text and offers a <code>.md</code> download rather than rendering model output as
+HTML.</p>
+</div>
+<div class="paragraph">
+<p>The worker reads <code>results/&lt;resume-job-id&gt;.redacted.txt</code>,
+<code>results/&lt;resume-job-id&gt;.skills.json</code>, and the bounded normalized offer text
+stored in <code>results/&lt;offer-match-id&gt;.offer.json</code>. Offer text is excluded from
+the public offer-match status response. Original resume uploads and unredacted
+extraction text are not sent to the model.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_provider_queue_and_privacy"><a class="anchor" href="#_provider_queue_and_privacy"></a>Provider, queue, and privacy</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>OPENROUTER_API_KEY</code> is required. <code>OPENROUTER_MODEL</code> selects the model and
+defaults to <code>nvidia/nemotron-3-super-120b-a12b:free</code>. AIweighter uses the shared
+<code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and <code>RUSTFS_*</code> configuration; its HTTP port is
+<code>AIWEIGHTER_PORT</code> (default <code>8082</code>).</p>
+</div>
+<div class="paragraph">
+<p>The consumer uses manual acknowledgements, prefetch one, publisher confirms,
+and up to three retries after the initial attempt. Malformed and exhausted jobs
+go to <code>QUEUE_NAME.aiweight.failed</code>. The workflow is at-least-once and uses a
+deterministic artifact key.</p>
+</div>
+<div class="paragraph">
+<p>The job queue carries only IDs, but the model request includes redacted resume
+text, skills, and offer text. Redaction is best-effort, and generated Markdown
+and retained offer text have no application-enforced retention schedule.
+Configure object-store lifecycle and access controls. AIweighter and
+offermatcher have no authentication or ownership model; keep both APIs behind
+an access-controlled boundary. Consent is not authorization.</p>
+</div>
+<div class="paragraph">
+<p>Run locally with <code>task services:aiweighter:start</code>; build with
+<code>task services:aiweighter:build</code>. See <a href="configuration.html" class="xref page">configuration</a>
+and <a href="operations.html" class="xref page">local operations</a>. The Vite development proxy uses
+<code>/ai-api</code>; production deployments must route the UI&#8217;s
+<code>VITE_AIWEIGHTER_ENDPOINT</code> to the AIweighter HTTP API.</p>
 </div>
 </div>
 </div>

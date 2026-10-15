@@ -599,14 +599,24 @@ component Uploader
 queue RabbitMQ
 
 component Extractor
+component OfferMatcher
+component AIweighter
 
 database "S3-compatible Storage" as Storage
 
 Browser --&gt; Uploader : POST /upload
 Browser --&gt; Uploader : GET /events?job_id=...
+Browser --&gt; OfferMatcher : POST /matches\nGET /matches/&lt;match-id&gt;
+Browser --&gt; AIweighter : POST /weights after opt-in\nGET /weights/&lt;weigh-id&gt;
 
 Uploader --&gt; Storage : Upload file\nuploads/&lt;job-id&gt;
 Uploader --&gt; RabbitMQ : Publish extraction job
+OfferMatcher --&gt; RabbitMQ : Publish offer matching job
+RabbitMQ --&gt; OfferMatcher : Consume offer matching job
+OfferMatcher --&gt; Storage : Read skills\nWrite offer result
+AIweighter --&gt; RabbitMQ : Publish AI resume job
+RabbitMQ --&gt; AIweighter : Consume AI resume job
+AIweighter --&gt; Storage : Read redacted resume,\nskills and retained offer text\nWrite Markdown result
 
 RabbitMQ --&gt; Extractor : Consume extraction job
 Extractor --&gt; Storage : Download upload
@@ -628,6 +638,9 @@ end note
 <ol class="arabic">
 <li>
 <p>uses <code>/api/upload</code> and <code>/api/events</code>, so a deployment must route those browser paths to the uploader&#8217;s <code>/upload</code> and <code>/events</code> handlers.</p>
+</li>
+<li>
+<p>uses <code>/offer-api</code> and <code>/ai-api</code> for offer matching and AI resume generation in local development; production gateways must route those paths to the corresponding service APIs.</p>
 </li>
 </ol>
 </div>
@@ -658,6 +671,10 @@ end note
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extractor</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Consumes jobs, downloads the referenced upload, extracts PDF or image text, stores the result, and acknowledges or routes the job according to its outcome.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">After explicit user consent, sends the redacted resume, skill evidence, and retained offer text to the configured external model and stores a Markdown resume result.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ</p></td>
@@ -723,7 +740,30 @@ end note
 <p>It finds required skill patterns in explicitly required/must-have sections. If no such section exists, it uses all detected skill patterns in the offer. It writes an <code>unscorable</code> result if no patterns are detected; otherwise it writes rounded percentage coverage plus matched/missing skill evidence to <code>results/&lt;offer-match-id&gt;.offer.json</code>.</p>
 </li>
 <li>
+<p>The offer result retains bounded normalized offer text for later AI tailoring; <code>GET /matches/&lt;offer-match-id&gt;</code> omits this private field.</p>
+</li>
+<li>
 <p>The UI polls <code>GET /matches/&lt;offer-match-id&gt;</code> until the result is completed, unscorable, or failed.</p>
+</li>
+</ol>
+</div>
+<h4 id="architecture:workflow:::_optional_ai_resume_generation" class="discrete">Optional AI resume generation</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>After a completed offer match, the UI explains that the redacted resume, skill evidence, and job-offer text will be sent to OpenRouter.</p>
+</li>
+<li>
+<p>The user must explicitly opt in before the UI submits <code>POST /weights</code> with the offer-match ID and consent affirmation.</p>
+</li>
+<li>
+<p>AIweighter publishes a persistent ID-only job to <code>QUEUE_NAME.aiweight</code> and returns an AI resume ID. The worker reads the redacted resume, skill result, and bounded normalized offer text from storage, then requests a Markdown resume from the configured model.</p>
+</li>
+<li>
+<p>The worker stores the versioned result at <code>results/&lt;weigh-id&gt;.ai.json</code>; the UI polls <code>GET /weights/&lt;weigh-id&gt;</code> and displays the returned Markdown as text for review or download.</p>
+</li>
+<li>
+<p>The prompt instructs the model to use only source-supported facts and omit unsupported qualifications, dates, achievements, or metrics. User-provided resume and offer content is treated as untrusted data, not instructions.</p>
 </li>
 </ol>
 </div>
@@ -734,7 +774,8 @@ The initial attempt plus up to three retries means a job may be attempted four t
 </div>
 <div class="paragraph">
 <p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.
-A job still failing offer matching is published to <code>QUEUE_NAME.offers.failed</code>.</p>
+A job still failing offer matching is published to <code>QUEUE_NAME.offers.failed</code>.
+A job still failing AI resume generation is published to <code>QUEUE_NAME.aiweight.failed</code>.</p>
 </div>
 <div class="paragraph">
 <p>Malformed job JSON is also sent directly to the failed queue.</p>
@@ -832,6 +873,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>offermatcher</code>; contains status, required-skill coverage, and matched/missing patterns. It references the resume job ID but does not copy the resume.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI resume result</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;weigh-id&gt;.ai.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>aiweighter</code>; contains status, Markdown output, and references to the offer-match and resume job IDs.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extraction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
@@ -854,6 +901,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message published by the offer matcher API; contains a resume job ID and either bounded offer text or an offer URL. The offer matcher manually acknowledges after writing a terminal result, retry republish, or failed-queue republish.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI resume job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent ID-only job published after explicit user consent. The worker loads the redacted resume, skill evidence, and offer text from storage.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed job</p></td>
@@ -880,6 +933,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed AI resume job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Processing status</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ status queue, then uploader memory</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.events</code>; in memory for at most 24 hours and up to 10,000 jobs per uploader process</p></td>
@@ -897,6 +956,9 @@ This is serious and needs proper addressing.
 </div>
 <div class="paragraph">
 <p>The offer matcher does not persist fetched offer HTML. Pasted offer text is carried in its durable RabbitMQ message until processing; configure queue retention accordingly. The offer matcher API has no user authorization or ownership model, so deployments must keep it behind an access-controlled boundary.</p>
+</div>
+<div class="paragraph">
+<p>After a user opts in, normalized offer text and generated Markdown persist as result artifacts, and the redacted resume and skill result are sent to the configured external OpenRouter model. Redaction is best-effort and does not guarantee anonymity. AIweighter and offermatcher do not implement authentication or ownership checks; keep both APIs behind an access-controlled boundary. Configure object-store lifecycle and access controls for all resume, offer, and AI output artifacts.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -1155,9 +1217,9 @@ Storage administrators must configure lifecycle expiration and access controls a
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>aiweighter</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Standalone OpenRouter chat-completion helper</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Prototype package; not integrated into the upload/extraction pipeline</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:prototypes">Prototype components</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Creates a tailored Markdown resume from a completed offer match after explicit user consent</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implemented; optional asynchronous AI resume generation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:aiweighter">AIweighter</a></p></td>
 </tr>
 </tbody>
 </table>
@@ -1449,6 +1511,11 @@ persistent job to <code>QUEUE_NAME.offers</code> with publisher confirmation, an
 and matched counts, and matched/missing patterns. No detected required
 patterns produces an <code>unscorable</code> status instead of a 0% score.</p>
 </div>
+<div class="paragraph">
+<p>The result artifact retains bounded normalized offer text for the optional
+AIweighter flow. <code>GET /matches/&lt;match-id&gt;</code> deliberately omits that private
+field.</p>
+</div>
 <h4 id="services:offermatcher:::_matching_behavior" class="discrete">Matching behavior</h4>
 <div class="paragraph">
 <p>Offer and resume evidence use the shared curated pattern vocabulary also used
@@ -1482,6 +1549,67 @@ confirms, and up to three retries after the initial attempt. Exhausted or
 malformed jobs go to <code>QUEUE_NAME.offers.failed</code>. See
 <a href="#services:configuration">configuration</a> and <a href="operations.html">local
 operations</a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="services:aiweighter"><a class="anchor" href="#services:aiweighter"></a>AIweighter</h3>
+<div class="paragraph">
+<p>AIweighter prepares an optional Markdown resume tailored to a completed resume
+and offer match. The UI requests generation only after an explicit user action
+and discloses that the redacted resume, skill evidence, and offer text will be
+sent to an external OpenRouter model. Generated content is limited to
+source-supported facts; the model is instructed to omit unsupported claims.
+Users should review the result before using it.</p>
+</div>
+<h4 id="services:aiweighter:::_api_and_data_flow" class="discrete">API and data flow</h4>
+<div class="paragraph">
+<p>The UI submits <code>POST /weights</code> with the completed offer-match ID and
+<code>consent: true</code>. The service verifies the referenced offer-match artifact is
+complete, writes a queued state to <code>results/&lt;weigh-id&gt;.ai.json</code>, and publishes
+an ID-only persistent job to <code>QUEUE_NAME.aiweight</code> with publisher
+confirmation. It returns <code>202 Accepted</code> with the new <code>weigh_id</code>.
+The stored request artifact records the consent affirmation and timestamp.</p>
+</div>
+<div class="paragraph">
+<p>Poll <code>GET /weights/&lt;weigh-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>, or
+<code>failed</code>. Completed results include a Markdown field. The UI displays it as
+plain text and offers a <code>.md</code> download rather than rendering model output as
+HTML.</p>
+</div>
+<div class="paragraph">
+<p>The worker reads <code>results/&lt;resume-job-id&gt;.redacted.txt</code>,
+<code>results/&lt;resume-job-id&gt;.skills.json</code>, and the bounded normalized offer text
+stored in <code>results/&lt;offer-match-id&gt;.offer.json</code>. Offer text is excluded from
+the public offer-match status response. Original resume uploads and unredacted
+extraction text are not sent to the model.</p>
+</div>
+<h4 id="services:aiweighter:::_provider_queue_and_privacy" class="discrete">Provider, queue, and privacy</h4>
+<div class="paragraph">
+<p><code>OPENROUTER_API_KEY</code> is required. <code>OPENROUTER_MODEL</code> selects the model and
+defaults to <code>nvidia/nemotron-3-super-120b-a12b:free</code>. AIweighter uses the shared
+<code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and <code>RUSTFS_*</code> configuration; its HTTP port is
+<code>AIWEIGHTER_PORT</code> (default <code>8082</code>).</p>
+</div>
+<div class="paragraph">
+<p>The consumer uses manual acknowledgements, prefetch one, publisher confirms,
+and up to three retries after the initial attempt. Malformed and exhausted jobs
+go to <code>QUEUE_NAME.aiweight.failed</code>. The workflow is at-least-once and uses a
+deterministic artifact key.</p>
+</div>
+<div class="paragraph">
+<p>The job queue carries only IDs, but the model request includes redacted resume
+text, skills, and offer text. Redaction is best-effort, and generated Markdown
+and retained offer text have no application-enforced retention schedule.
+Configure object-store lifecycle and access controls. AIweighter and
+offermatcher have no authentication or ownership model; keep both APIs behind
+an access-controlled boundary. Consent is not authorization.</p>
+</div>
+<div class="paragraph">
+<p>Run locally with <code>task services:aiweighter:start</code>; build with
+<code>task services:aiweighter:build</code>. See <a href="#services:configuration">configuration</a>
+and <a href="#services:operations">local operations</a>. The Vite development proxy uses
+<code>/ai-api</code>; production deployments must route the UI&#8217;s
+<code>VITE_AIWEIGHTER_ENDPOINT</code> to the AIweighter HTTP API.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1561,6 +1689,25 @@ operations</a>.</p>
 <div class="paragraph">
 <p>Required skills are the distinct curated skill patterns identified in an explicit required/must-have section; if none is found, all detected patterns in the offer are used. The percentage is rounded <code>100 * matched / required</code>; results include matched and missing patterns and their counts. If no requirement patterns are identified the result is <code>unscorable</code>, not 0%. This is heuristic keyword coverage, not an assessment of ability or suitability.</p>
 </div>
+<h4 id="services:contracts:::_ai_resume_generation" class="discrete">AI resume generation</h4>
+<div class="paragraph">
+<p>After a completed offer match, the UI submits an explicit consent affirmation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"match_id":"&lt;completed-offer-match-uuid&gt;","consent":true}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>POST /weights</code> validates the completed match, stores a queued AI resume
+artifact, publishes an ID-only persistent job to <code>QUEUE_NAME.aiweight</code>, and
+returns <code>202 Accepted</code> with <code>weigh_id</code>. The worker reads the redacted resume,
+skill result, and retained normalized offer text from storage and stores its
+Markdown result in <code>results/&lt;weigh-id&gt;.ai.json</code>. The client polls
+<code>GET /weights/&lt;weigh-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>, or <code>failed</code>.
+The result artifact and offer text remain subject to object-store lifecycle
+policy; the platform does not provide user ownership or authorization.</p>
+</div>
 <h4 id="services:contracts:::_status_event" class="discrete">Status event</h4>
 <div class="paragraph">
 <p>The extractor and piistripper publish status messages to the durable <code>QUEUE_NAME.events</code> queue. The uploader consumes these messages and retains the latest one per job in memory.</p>
@@ -1639,6 +1786,11 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher worker</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter HTTP API after explicit consent</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter worker</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
@@ -1646,6 +1798,11 @@ Status updates are not a durable client-facing event log.
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 </tr>
 <tr>
@@ -1672,7 +1829,9 @@ Status updates are not a durable client-facing event log.
 <div class="sect2">
 <h3 id="services:configuration"><a class="anchor" href="#services:configuration"></a>Configuration</h3>
 <div class="paragraph">
-<p>The uploader, extractor, piistripper, skill matcher, and offer matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.</p>
+<p>The uploader, extractor, piistripper, skill matcher, offer matcher, and
+AIweighter must point to the same RabbitMQ queue and S3-compatible storage
+namespace.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -1692,43 +1851,43 @@ Status updates are not a durable client-facing event log.
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, skill matching, offer matching, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.offers</code>, <code>.failed</code>, <code>.pii.failed</code>, <code>.skills.failed</code>, and <code>.offers.failed</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, skill matching, offer matching, AIweighter, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.offers</code>, <code>.aiweight</code>, <code>.failed</code>, <code>.pii.failed</code>, <code>.skills.failed</code>, <code>.offers.failed</code>, and <code>.aiweight.failed</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for original uploads, extracted text, redacted results, resume scores, and offer-match results.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, and AI resume results.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3 signing region.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage access key.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage secret key.</p></td>
 </tr>
@@ -1745,15 +1904,38 @@ Status updates are not a durable client-facing event log.
 <td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AIWEIGHTER_PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8082</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_API_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>aiweighter</code> prototype only</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API key required if the standalone <code>SendToWeighter</code> helper is called.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API key for the explicitly consented external model request.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>nvidia/nemotron-3-super-120b-a12b:free</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OpenRouter chat-completion model slug.</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>Use the same <code>RUSTFS_*</code> values in all five services. In particular, <code>RUSTFS_BUCKET</code> must match or a worker rejects the job reference. Piistripper consumes <code>&lt;QUEUE_NAME&gt;.pii</code> and writes a separate redacted result; the skill matcher consumes <code>&lt;QUEUE_NAME&gt;.skills</code> and writes category scores; the offer matcher consumes <code>&lt;QUEUE_NAME&gt;.offers</code> and writes offer-comparison results. The offer matcher API has no authentication or account ownership checks and must not be exposed directly to untrusted networks.</p>
+<p>Use the same <code>RUSTFS_*</code> values in all six services. In particular,
+<code>RUSTFS_BUCKET</code> must match across producers and consumers. Piistripper writes a
+separate redacted result; the skill matcher writes category scores; the offer
+matcher retains bounded normalized offer text with its private result artifact;
+AIweighter consumes <code>QUEUE_NAME.aiweight</code> and stores generated Markdown.</p>
+</div>
+<div class="paragraph">
+<p>The offer matcher and AIweighter APIs have no authentication or account
+ownership checks and must not be exposed directly to untrusted networks.
+AIweighter sends the redacted resume, skill evidence, and retained offer text
+to OpenRouter only after explicit user consent. Consent is not authentication
+or authorization.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1775,10 +1957,10 @@ Status updates are not a durable client-facing event log.
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, offer matcher, frontend, and documentation builder.</p>
+<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter, frontend, and documentation builder.</p>
 </div>
 <div class="paragraph">
-<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, <code>skillmatcher</code>, and <code>offermatcher</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, <code>task services:skillmatcher:build</code>, and <code>task services:offermatcher:build</code> build the binaries and Docker images.</p>
+<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, <code>skillmatcher</code>, <code>offermatcher</code>, and <code>aiweighter</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, <code>task services:skillmatcher:build</code>, <code>task services:offermatcher:build</code>, and <code>task services:aiweighter:build</code> build the binaries and Docker images.</p>
 </div>
 <h4 id="services:operations:::_verification" class="discrete">Verification</h4>
 <div class="paragraph">
@@ -1811,6 +1993,9 @@ Status updates are not a durable client-facing event log.
 <p><strong>Offer comparison does not complete:</strong> confirm the frontend can reach the offer matcher on <code>OFFERMATCHER_PORT</code>, that the service shares the resume&#8217;s <code>RUSTFS_BUCKET</code>, and inspect <code>&lt;QUEUE_NAME&gt;.offers.failed</code>. Public offer pages only are supported; private-network destinations, non-HTML content, and SPA-rendered pages are rejected or unsupported.</p>
 </li>
 <li>
+<p><strong>AI resume generation does not complete:</strong> confirm the UI can reach AIweighter on <code>AIWEIGHTER_PORT</code>, <code>OPENROUTER_API_KEY</code> is configured, the model name is valid, the service shares the same bucket, and inspect <code>&lt;QUEUE_NAME&gt;.aiweight.failed</code>.</p>
+</li>
+<li>
 <p><strong>Upload returns <code>503</code>:</strong> inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.</p>
 </li>
 <li>
@@ -1820,20 +2005,6 @@ Status updates are not a durable client-facing event log.
 <p><strong>A job repeatedly fails:</strong> inspect the extractor logs and the durable <code>QUEUE_NAME.failed</code> queue.</p>
 </li>
 </ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="services:prototypes"><a class="anchor" href="#services:prototypes"></a>Prototype components</h3>
-<h4 id="services:prototypes:::_ai_weighter" class="discrete">AI weighter</h4>
-<div class="paragraph">
-<p><code>services/aiweighter/aiweighter.go</code> contains a standalone helper that sends supplied text to OpenRouter&#8217;s chat-completions endpoint. It selects a model directly in source and prints the response content, reasoning field, and full response body. It requires <code>OPENROUTER_API_KEY</code> and panics on errors.</p>
-</div>
-<div class="paragraph">
-<p>This package is not wired into the upload/extraction flow, has no service module or independently declared Go module, and should be treated as experimental code rather than a production service. If invoked with resume text, it sends that content to an external provider. Review data handling, provider terms, error behavior, model configuration, and logging before integrating it.</p>
-</div>
-<h4 id="services:prototypes:::_before_connecting_a_prototype" class="discrete">Before connecting a prototype</h4>
-<div class="paragraph">
-<p>Define an explicit input/output contract, ownership of retries and failures, privacy and retention behavior, and operational configuration. Update the architecture and data-lifecycle pages when the running service boundaries change.</p>
 </div>
 </div>
 </div>
