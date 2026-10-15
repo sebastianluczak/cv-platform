@@ -1,0 +1,13 @@
+= offermatcher
+
+When we have skills extracted deterministically from the resume, we may want to know, how much in percent our candidate matches the offer itself.
+
+This is where offermatcher comes into play
+
+== Input and output
+
+Offer Matcher receives:
+
+. Plain text offer info, as a string (for now, later as URL to offer and the extration will happen here)
+. uses skillmatcher to match the offer deterministacally against offer
+. stores the offer skills inside gcs
