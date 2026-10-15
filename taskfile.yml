@@ -14,6 +14,8 @@ tasks:
       - cd services/piistripper && gofmt -l -e -w .
       - cd services/skillmatcher && gofmt -l -e -w .
       - cd services/uploader && gofmt -l -e -w .
+      - cd service/offermatcher && gofmt -l -e -w .
+      - cd services/common && gofmt -l -e -w .
   security:scan:
     dir: services
     desc: Perform gosec scan on all projects
@@ -24,6 +26,7 @@ tasks:
       - cd piistripper && gosec ./... || true
       - cd skillmatcher && gosec ./... || true
       - cd uploader && gosec ./... || true
+      - cd offermatcher && gosec ./... || true
       - cd common && gosec ./... || true
   ui:install:
     dir: ui
@@ -62,6 +65,10 @@ tasks:
     desc: Start the AI weighter service
     cmds:
       - go -C services/aiweighter run .
+  services:offermatcher:start:
+    desc: Start the offer matcher service
+    cmds:
+      - go -C services/offermatcher run .
   docs:build-docs:
     dir: docs
     desc: Build the documentation
@@ -95,6 +102,12 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o skillmatcher .
       - docker build -t skillmatcher .
+  services:offermatcher:build:
+    dir: services/offermatcher
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o offermatcher .
+      - docker build -t offermatcher .
 
   
   # AI CODE REVIEW #

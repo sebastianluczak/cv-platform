@@ -45,13 +45,16 @@
       exec = "sleep 3 && task services:uploader:start";
     };
     extractor = {
-      exec = "sleep 2 && task services:extractor:start";
+      exec = "sleep 3 && task services:extractor:start";
     };
     piistripper = {
-      exec = "sleep 4 && task services:piistripper:start";
+      exec = "sleep 3 && task services:piistripper:start";
     };
     skillmatcher = {
-      exec = "sleep 5 && task services:skillmatcher:start";
+      exec = "sleep 3 && task services:skillmatcher:start";
+    };
+    offermatcher = {
+      exec = "sleep 3 && task services:offermatcher:start";
     };
     frontend = {
       exec = "task ui:install && task ui:start";
