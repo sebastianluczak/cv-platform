@@ -125,7 +125,7 @@ def retry_delay(headers, attempt: int) -> float:
             reset_time = int(reset_at)
         delay = reset_time - time.time()
         if delay > 0:
-            return min(delay, MAX_RETRY_DELAY_SECONDS)
+            return delay
 
     # Exponential backoff
     delay = 2 ** attempt
