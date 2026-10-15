@@ -33,11 +33,21 @@ type OfferMatch = {
   missing_skills?: string[]
 }
 
+type AIWeigh = {
+  weigh_id: string
+  match_id: string
+  resume_job_id: string
+  status: 'queued' | 'processing' | 'completed' | 'failed'
+  message: string
+  markdown?: string
+}
+
 function App() {
   const fileInput = useRef<HTMLInputElement>(null)
   const eventSource = useRef<EventSource | null>(null)
   const activeJobID = useRef('')
   const requestGeneration = useRef(0)
+  const aiRequestGeneration = useRef(0)
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -52,9 +62,21 @@ function App() {
   const [offerMatch, setOfferMatch] = useState<OfferMatch | null>(null)
   const [offerMatching, setOfferMatching] = useState(false)
   const [offerError, setOfferError] = useState('')
+  const [aiWeigh, setAIWeigh] = useState<AIWeigh | null>(null)
+  const [aiGenerating, setAIGenerating] = useState(false)
+  const [aiError, setAIError] = useState('')
+  const [aiConsent, setAIConsent] = useState(false)
   const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | null>(null)
 
   useEffect(() => () => eventSource.current?.close(), [])
+
+  function clearAIWeight() {
+    aiRequestGeneration.current += 1
+    setAIWeigh(null)
+    setAIGenerating(false)
+    setAIError('')
+    setAIConsent(false)
+  }
 
   function chooseFile(nextFile?: File) {
     requestGeneration.current += 1
@@ -72,6 +94,7 @@ function App() {
     setOfferMatch(null)
     setOfferMatching(false)
     setOfferError('')
+    clearAIWeight()
     setConnection(null)
     if (!nextFile) return
     if (nextFile.size > 10 * 1024 * 1024) {
@@ -163,6 +186,7 @@ function App() {
     setOfferMatching(true)
     setOfferError('')
     setOfferMatch(null)
+    clearAIWeight()
     try {
       const endpoint = new URL(import.meta.env.VITE_OFFER_MATCHER_ENDPOINT || '/offer-api', window.location.href)
       const matchesPath = `${endpoint.pathname.replace(/\/+$/, '')}/matches`
@@ -194,6 +218,59 @@ function App() {
     } finally {
       if (generation === requestGeneration.current) setOfferMatching(false)
     }
+  }
+
+  async function generateResume() {
+    if (!offerMatch || offerMatch.status !== 'completed' || !aiConsent) return
+    const matchID = offerMatch.match_id
+    const generation = ++aiRequestGeneration.current
+    setAIGenerating(true)
+    setAIError('')
+    setAIWeigh(null)
+    try {
+      const endpoint = new URL(import.meta.env.VITE_AIWEIGHTER_ENDPOINT || '/ai-api', window.location.href)
+      const weightsPath = `${endpoint.pathname.replace(/\/+$/, '')}/weights`
+      const response = await fetch(new URL(weightsPath, endpoint.origin), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ match_id: matchID, consent: true }),
+      })
+      if (!response.ok) throw new Error('Could not start AI resume generation. Try again.')
+      const accepted = await response.json() as { weigh_id?: string }
+      if (!accepted.weigh_id) throw new Error('AIweighter did not return a request ID.')
+
+      for (let attempt = 0; attempt < 150; attempt++) {
+        if (generation !== aiRequestGeneration.current) return
+        const statusEndpoint = new URL(`${weightsPath}/${encodeURIComponent(accepted.weigh_id)}`, endpoint.origin)
+        const statusResponse = await fetch(statusEndpoint)
+        if (!statusResponse.ok) throw new Error('Could not load AI resume status.')
+        const result = await statusResponse.json() as AIWeigh
+        if (result.weigh_id !== accepted.weigh_id || result.match_id !== matchID) {
+          throw new Error('Received an invalid AI resume result.')
+        }
+        setAIWeigh(result)
+        if (result.status === 'completed' || result.status === 'failed') return
+        await new Promise((resolve) => window.setTimeout(resolve, 2000))
+      }
+      setAIError('Resume generation is taking longer than expected. You can wait and try again.')
+    } catch (error) {
+      if (generation === aiRequestGeneration.current) {
+        setAIError(error instanceof Error ? error.message : 'AI resume generation failed. Try again.')
+      }
+    } finally {
+      if (generation === aiRequestGeneration.current) setAIGenerating(false)
+    }
+  }
+
+  function downloadResumeMarkdown() {
+    if (!aiWeigh?.markdown) return
+    const blob = new Blob([aiWeigh.markdown], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `tailored-resume-${aiWeigh.weigh_id}.md`
+    link.click()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
   }
 
   return (
@@ -297,8 +374,8 @@ function App() {
                   <span>Using your completed resume</span>
                 </div>
                 <div className="offer-input-tabs" role="group" aria-label="Offer input type">
-                  <button type="button" aria-pressed={offerInputMode === 'url'} disabled={offerMatching} onClick={() => { setOfferInputMode('url'); setOfferMatch(null); setOfferError('') }}>Offer URL</button>
-                  <button type="button" aria-pressed={offerInputMode === 'text'} disabled={offerMatching} onClick={() => { setOfferInputMode('text'); setOfferMatch(null); setOfferError('') }}>Paste text</button>
+                  <button type="button" aria-pressed={offerInputMode === 'url'} disabled={offerMatching || aiGenerating} onClick={() => { setOfferInputMode('url'); setOfferMatch(null); setOfferError(''); clearAIWeight() }}>Offer URL</button>
+                  <button type="button" aria-pressed={offerInputMode === 'text'} disabled={offerMatching || aiGenerating} onClick={() => { setOfferInputMode('text'); setOfferMatch(null); setOfferError(''); clearAIWeight() }}>Paste text</button>
                 </div>
                 {offerInputMode === 'url' ? (
                   <label className="offer-input-label">
@@ -306,8 +383,8 @@ function App() {
                     <input
                       type="url"
                       value={offerURL}
-                      disabled={offerMatching}
-                      onChange={(event) => { setOfferURL(event.target.value); setOfferMatch(null); setOfferError('') }}
+                      disabled={offerMatching || aiGenerating}
+                      onChange={(event) => { setOfferURL(event.target.value); setOfferMatch(null); setOfferError(''); clearAIWeight() }}
                       placeholder="https://company.example/jobs/role"
                     />
                   </label>
@@ -316,15 +393,16 @@ function App() {
                     Job offer text
                     <textarea
                       value={offerText}
-                      disabled={offerMatching}
-                      onChange={(event) => { setOfferText(event.target.value); setOfferMatch(null); setOfferError('') }}
+                      disabled={offerMatching || aiGenerating}
+                      onChange={(event) => { setOfferText(event.target.value); setOfferMatch(null); setOfferError(''); clearAIWeight() }}
                       rows={5}
                       maxLength={100 * 1024}
                       placeholder="Paste the job description here"
                     />
                   </label>
                 )}
-                <button className="upload-button" type="button" disabled={offerMatching} onClick={() => void compareOffer()}>
+                <small className="offer-retention-note">The job description is retained with this private match result. It is sent to an external AI service only if you separately request resume generation and consent.</small>
+                <button className="upload-button" type="button" disabled={offerMatching || aiGenerating} onClick={() => void compareOffer()}>
                   {offerMatching ? 'Comparing…' : 'Compare required skills'}
                   {!offerMatching && <span aria-hidden="true">↗</span>}
                 </button>
@@ -345,6 +423,38 @@ function App() {
                           <dd>{offerMatch.missing_skills?.length ? offerMatch.missing_skills.join(', ') : 'None'}</dd>
                         </dl>
                         <small>Deterministic keyword coverage from curated skill patterns; it is not an assessment of ability or suitability.</small>
+                        <div className="ai-resume-panel">
+                          <strong>Prepare a tailored resume</strong>
+                          <p>Your redacted resume, detected skill evidence, and this job description will be sent to OpenRouter, an external AI service. Redaction is best-effort. Generated text should use only supported facts; review it carefully before use.</p>
+                          <label className="ai-consent">
+                            <input
+                              type="checkbox"
+                              checked={aiConsent}
+                              disabled={aiGenerating}
+                              onChange={(event) => setAIConsent(event.target.checked)}
+                            />
+                            I agree to send this information to the external AI service.
+                          </label>
+                          <button className="upload-button" type="button" disabled={!aiConsent || aiGenerating} onClick={() => void generateResume()}>
+                            {aiGenerating ? 'Preparing resume…' : 'Generate tailored resume'}
+                            {!aiGenerating && <span aria-hidden="true">↗</span>}
+                          </button>
+                          {aiError && <p className="result-error" role="alert">{aiError}</p>}
+                          {aiWeigh && (
+                            <div className="ai-resume-result" aria-live="polite">
+                              <p className={`offer-match-status${aiWeigh.status === 'failed' ? ' is-error' : ''}`}>
+                                {aiWeigh.message}
+                                {(aiWeigh.status === 'queued' || aiWeigh.status === 'processing') && ' · Working'}
+                              </p>
+                              {aiWeigh.status === 'completed' && aiWeigh.markdown && (
+                                <>
+                                  <button className="download-markdown" type="button" onClick={downloadResumeMarkdown}>Download Markdown</button>
+                                  <pre>{aiWeigh.markdown}</pre>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </>
                     )}
                   </div>

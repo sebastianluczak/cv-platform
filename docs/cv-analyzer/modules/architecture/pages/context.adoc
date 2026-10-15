@@ -22,14 +22,24 @@ component Uploader
 queue RabbitMQ
 
 component Extractor
+component OfferMatcher
+component AIweighter
 
 database "S3-compatible Storage" as Storage
 
 Browser --> Uploader : POST /upload
 Browser --> Uploader : GET /events?job_id=...
+Browser --> OfferMatcher : POST /matches\nGET /matches/<match-id>
+Browser --> AIweighter : POST /weights after opt-in\nGET /weights/<weigh-id>
 
 Uploader --> Storage : Upload file\nuploads/<job-id>
 Uploader --> RabbitMQ : Publish extraction job
+OfferMatcher --> RabbitMQ : Publish offer matching job
+RabbitMQ --> OfferMatcher : Consume offer matching job
+OfferMatcher --> Storage : Read skills\nWrite offer result
+AIweighter --> RabbitMQ : Publish AI resume job
+RabbitMQ --> AIweighter : Consume AI resume job
+AIweighter --> Storage : Read redacted resume,\nskills and retained offer text\nWrite Markdown result
 
 RabbitMQ --> Extractor : Consume extraction job
 Extractor --> Storage : Download upload
@@ -44,9 +54,10 @@ end note
 @enduml
 ----
 
-The UI is a separate React application. 
+The UI is a separate React application.
 
 . uses `/api/upload` and `/api/events`, so a deployment must route those browser paths to the uploader's `/upload` and `/events` handlers. 
+. uses `/offer-api` and `/ai-api` for offer matching and AI resume generation in local development; production gateways must route those paths to the corresponding service APIs.
 
 This repository does not define that reverse-proxy or gateway configuration yet, it is hardcoded and proxied.
 
@@ -64,6 +75,9 @@ This repository does not define that reverse-proxy or gateway configuration yet,
 
 |Extractor
 |Consumes jobs, downloads the referenced upload, extracts PDF or image text, stores the result, and acknowledges or routes the job according to its outcome.
+
+|AIweighter
+|After explicit user consent, sends the redacted resume, skill evidence, and retained offer text to the configured external model and stores a Markdown resume result.
 
 |RabbitMQ
 |Carries extraction jobs, status events, and terminal failed jobs in durable queues.

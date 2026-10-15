@@ -1,43 +1,45 @@
 = Configuration
 
-The uploader, extractor, piistripper, skill matcher, and offer matcher must point to the same RabbitMQ queue and S3-compatible storage namespace.
+The uploader, extractor, piistripper, skill matcher, offer matcher, and
+AIweighter must point to the same RabbitMQ queue and S3-compatible storage
+namespace.
 
 [cols="1,1,2,2"]
 |===
 |Variable |Required by |Default |Purpose
 
 |`RABBITMQ_URL`
-|Uploader, extractor, piistripper, skill matcher, offer matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |None
 |AMQP connection URL. Required at startup.
 
 |`QUEUE_NAME`
-|Uploader, extractor, piistripper, skill matcher, offer matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |None
-|Durable extraction queue name. Redaction, status, skill matching, offer matching, and failed queue names append `.pii`, `.events`, `.skills`, `.offers`, `.failed`, `.pii.failed`, `.skills.failed`, and `.offers.failed`.
+|Durable extraction queue name. Redaction, status, skill matching, offer matching, AIweighter, and failed queue names append `.pii`, `.events`, `.skills`, `.offers`, `.aiweight`, `.failed`, `.pii.failed`, `.skills.failed`, `.offers.failed`, and `.aiweight.failed`.
 
 |`RUSTFS_ENDPOINT_URL`
-|Uploader, extractor, piistripper, skill matcher, offer matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |`http://localhost:9000`
 |S3-compatible endpoint.
 
 |`RUSTFS_BUCKET`
-|Uploader, extractor, piistripper, skill matcher, offer matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |`cv-platform-uploads`
-|Shared bucket for original uploads, extracted text, redacted results, resume scores, and offer-match results.
+|Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, and AI resume results.
 
 |`RUSTFS_REGION`
-|Uploader, extractor, piistripper, skill matcher, offer matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |`us-east-1`
 |S3 signing region.
 
 |`RUSTFS_ACCESS_KEY_ID`
-|Uploader, extractor, piistripper, skill matcher, offer matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |`rustfsadmin`
 |Object-storage access key.
 
 |`RUSTFS_SECRET_ACCESS_KEY`
-|Uploader, extractor, piistripper, skill matcher, offer matcher
+|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
 |`rustfsadmin`
 |Object-storage secret key.
 
@@ -51,10 +53,30 @@ The uploader, extractor, piistripper, skill matcher, and offer matcher must poin
 |`8081`
 |HTTP API listen port.
 
+|`AIWEIGHTER_PORT`
+|AIweighter
+|`8082`
+|HTTP API listen port.
+
 |`OPENROUTER_API_KEY`
-|`aiweighter` prototype only
+|AIweighter
 |None
-|API key required if the standalone `SendToWeighter` helper is called.
+|API key for the explicitly consented external model request.
+
+|`OPENROUTER_MODEL`
+|AIweighter
+|`nvidia/nemotron-3-super-120b-a12b:free`
+|OpenRouter chat-completion model slug.
 |===
 
-Use the same `RUSTFS_*` values in all five services. In particular, `RUSTFS_BUCKET` must match or a worker rejects the job reference. Piistripper consumes `<QUEUE_NAME>.pii` and writes a separate redacted result; the skill matcher consumes `<QUEUE_NAME>.skills` and writes category scores; the offer matcher consumes `<QUEUE_NAME>.offers` and writes offer-comparison results. The offer matcher API has no authentication or account ownership checks and must not be exposed directly to untrusted networks.
+Use the same `RUSTFS_*` values in all six services. In particular,
+`RUSTFS_BUCKET` must match across producers and consumers. Piistripper writes a
+separate redacted result; the skill matcher writes category scores; the offer
+matcher retains bounded normalized offer text with its private result artifact;
+AIweighter consumes `QUEUE_NAME.aiweight` and stores generated Markdown.
+
+The offer matcher and AIweighter APIs have no authentication or account
+ownership checks and must not be exposed directly to untrusted networks.
+AIweighter sends the redacted resume, skill evidence, and retained offer text
+to OpenRouter only after explicit user consent. Consent is not authentication
+or authorization.

@@ -1,0 +1,53 @@
+= AIweighter Service
+
+AIweighter prepares an optional Markdown resume tailored to a completed resume
+and offer match. The UI requests generation only after an explicit user action
+and discloses that the redacted resume, skill evidence, and offer text will be
+sent to an external OpenRouter model. Generated content is limited to
+source-supported facts; the model is instructed to omit unsupported claims.
+Users should review the result before using it.
+
+== API and data flow
+
+The UI submits `POST /weights` with the completed offer-match ID and
+`consent: true`. The service verifies the referenced offer-match artifact is
+complete, writes a queued state to `results/<weigh-id>.ai.json`, and publishes
+an ID-only persistent job to `QUEUE_NAME.aiweight` with publisher
+confirmation. It returns `202 Accepted` with the new `weigh_id`.
+The stored request artifact records the consent affirmation and timestamp.
+
+Poll `GET /weights/<weigh-id>` for `queued`, `processing`, `completed`, or
+`failed`. Completed results include a Markdown field. The UI displays it as
+plain text and offers a `.md` download rather than rendering model output as
+HTML.
+
+The worker reads `results/<resume-job-id>.redacted.txt`,
+`results/<resume-job-id>.skills.json`, and the bounded normalized offer text
+stored in `results/<offer-match-id>.offer.json`. Offer text is excluded from
+the public offer-match status response. Original resume uploads and unredacted
+extraction text are not sent to the model.
+
+== Provider, queue, and privacy
+
+`OPENROUTER_API_KEY` is required. `OPENROUTER_MODEL` selects the model and
+defaults to `nvidia/nemotron-3-super-120b-a12b:free`. AIweighter uses the shared
+`RABBITMQ_URL`, `QUEUE_NAME`, and `RUSTFS_*` configuration; its HTTP port is
+`AIWEIGHTER_PORT` (default `8082`).
+
+The consumer uses manual acknowledgements, prefetch one, publisher confirms,
+and up to three retries after the initial attempt. Malformed and exhausted jobs
+go to `QUEUE_NAME.aiweight.failed`. The workflow is at-least-once and uses a
+deterministic artifact key.
+
+The job queue carries only IDs, but the model request includes redacted resume
+text, skills, and offer text. Redaction is best-effort, and generated Markdown
+and retained offer text have no application-enforced retention schedule.
+Configure object-store lifecycle and access controls. AIweighter and
+offermatcher have no authentication or ownership model; keep both APIs behind
+an access-controlled boundary. Consent is not authorization.
+
+Run locally with `task services:aiweighter:start`; build with
+`task services:aiweighter:build`. See xref:configuration.adoc[configuration]
+and xref:operations.adoc[local operations]. The Vite development proxy uses
+`/ai-api`; production deployments must route the UI's
+`VITE_AIWEIGHTER_ENDPOINT` to the AIweighter HTTP API.

@@ -15,9 +15,9 @@ From the repository root:
 devenv up
 ----
 
-The `devenv` processes start the uploader, extractor, piistripper, skill matcher, offer matcher, frontend, and documentation builder.
+The `devenv` processes start the uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter, frontend, and documentation builder.
 
-The service Dockerfiles expect prebuilt binaries named `uploader`, `extractor`, `piistripper`, `skillmatcher`, and `offermatcher` in their respective service directories. `task services:uploader:build`, `task services:extractor:build`, `task services:piistripper:build`, `task services:skillmatcher:build`, and `task services:offermatcher:build` build the binaries and Docker images.
+The service Dockerfiles expect prebuilt binaries named `uploader`, `extractor`, `piistripper`, `skillmatcher`, `offermatcher`, and `aiweighter` in their respective service directories. `task services:uploader:build`, `task services:extractor:build`, `task services:piistripper:build`, `task services:skillmatcher:build`, `task services:offermatcher:build`, and `task services:aiweighter:build` build the binaries and Docker images.
 
 == Verification
 
@@ -37,6 +37,7 @@ Build the Antora site with `task docs:build-docs`.
 * **No redacted result appears:** confirm piistripper is running with the same `QUEUE_NAME` and `RUSTFS_*` settings; inspect its logs and the durable `<QUEUE_NAME>.pii.failed` queue.
 * **No role scores appear:** confirm piistripper and skillmatcher are running with matching RabbitMQ/storage settings; inspect the durable `<QUEUE_NAME>.skills.failed` queue and the skillmatcher logs.
 * **Offer comparison does not complete:** confirm the frontend can reach the offer matcher on `OFFERMATCHER_PORT`, that the service shares the resume's `RUSTFS_BUCKET`, and inspect `<QUEUE_NAME>.offers.failed`. Public offer pages only are supported; private-network destinations, non-HTML content, and SPA-rendered pages are rejected or unsupported.
+* **AI resume generation does not complete:** confirm the UI can reach AIweighter on `AIWEIGHTER_PORT`, `OPENROUTER_API_KEY` is configured, the model name is valid, the service shares the same bucket, and inspect `<QUEUE_NAME>.aiweight.failed`.
 * **Upload returns `503`:** inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.
 * **No SSE update appears:** confirm that the extractor can publish to `QUEUE_NAME.events` and that the uploader is consuming that queue. Status state is local to the uploader instance and does not survive its restart.
 * **A job repeatedly fails:** inspect the extractor logs and the durable `QUEUE_NAME.failed` queue.

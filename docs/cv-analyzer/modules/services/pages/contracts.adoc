@@ -69,6 +69,24 @@ The client polls `GET /matches/<match-id>`. The worker consumes `QUEUE_NAME.offe
 
 Required skills are the distinct curated skill patterns identified in an explicit required/must-have section; if none is found, all detected patterns in the offer are used. The percentage is rounded `100 * matched / required`; results include matched and missing patterns and their counts. If no requirement patterns are identified the result is `unscorable`, not 0%. This is heuristic keyword coverage, not an assessment of ability or suitability.
 
+== AI resume generation
+
+After a completed offer match, the UI submits an explicit consent affirmation:
+
+[source,json]
+----
+{"match_id":"<completed-offer-match-uuid>","consent":true}
+----
+
+`POST /weights` validates the completed match, stores a queued AI resume
+artifact, publishes an ID-only persistent job to `QUEUE_NAME.aiweight`, and
+returns `202 Accepted` with `weigh_id`. The worker reads the redacted resume,
+skill result, and retained normalized offer text from storage and stores its
+Markdown result in `results/<weigh-id>.ai.json`. The client polls
+`GET /weights/<weigh-id>` for `queued`, `processing`, `completed`, or `failed`.
+The result artifact and offer text remain subject to object-store lifecycle
+policy; the platform does not provide user ownership or authorization.
+
 == Status event
 
 The extractor and piistripper publish status messages to the durable `QUEUE_NAME.events` queue. The uploader consumes these messages and retains the latest one per job in memory.
@@ -122,12 +140,20 @@ IMPORTANT: Status updates are not a durable client-facing event log.
 |Offer matcher HTTP API
 |Offer matcher worker
 
+|`QUEUE_NAME.aiweight`
+|AIweighter HTTP API after explicit consent
+|AIweighter worker
+
 |`QUEUE_NAME.skills.failed`
 |Skill matcher
 |None
 
 |`QUEUE_NAME.offers.failed`
 |Offer matcher
+|None
+
+|`QUEUE_NAME.aiweight.failed`
+|AIweighter
 |None
 
 |`QUEUE_NAME.events`

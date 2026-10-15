@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -103,5 +104,26 @@ func TestNewUUIDReturnsRFC4122V4(t *testing.T) {
 	}
 	if !matchIDPattern.MatchString(id) || id[14] != '4' {
 		t.Fatalf("expected UUID v4; got %q", id)
+	}
+}
+
+func TestPublicMatchArtifactDoesNotExposeRetainedOfferText(t *testing.T) {
+	artifact := matchArtifact{
+		Version: 1, MatchID: testMatchID, ResumeJobID: testResumeID,
+		Status: "completed", OfferText: "private job description",
+	}
+	content, err := json.Marshal(publicMatchArtifact(artifact))
+	if err != nil {
+		t.Fatal(err)
+	}
+	storedContent, err := json.Marshal(artifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(storedContent), `"offer_text":"private job description"`) {
+		t.Fatalf("stored offer match artifact did not retain offer text: %s", storedContent)
+	}
+	if strings.Contains(string(content), "offer_text") || strings.Contains(string(content), "private job description") {
+		t.Fatalf("public offer match response exposed private offer text: %s", content)
 	}
 }

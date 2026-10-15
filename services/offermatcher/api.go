@@ -43,6 +43,7 @@ type matchArtifact struct {
 	ResumeJobID   string    `json:"resume_job_id"`
 	Status        string    `json:"status"`
 	OfferSource   string    `json:"offer_source"`
+	OfferText     string    `json:"offer_text,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	Message       string    `json:"message,omitempty"`
@@ -206,7 +207,12 @@ func getMatchHandler(w http.ResponseWriter, r *http.Request, storageClient *s3.C
 		writeAPIError(w, http.StatusBadGateway, "invalid offer match stored")
 		return
 	}
-	writeJSON(w, http.StatusOK, artifact)
+	writeJSON(w, http.StatusOK, publicMatchArtifact(artifact))
+}
+
+func publicMatchArtifact(artifact matchArtifact) matchArtifact {
+	artifact.OfferText = ""
+	return artifact
 }
 
 func writeAPIError(w http.ResponseWriter, status int, message string) {

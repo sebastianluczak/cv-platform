@@ -118,9 +118,6 @@ func processOfferJob(ctx context.Context, client *s3.Client, bucket string, job 
 	artifact.MatchedCount = 0
 	artifact.MatchedSkills = nil
 	artifact.MissingSkills = nil
-	if err := writeMatchArtifact(ctx, client, bucket, artifact); err != nil {
-		return err
-	}
 
 	offerText := job.OfferText
 	if job.OfferURL != "" {
@@ -132,6 +129,10 @@ func processOfferJob(ctx context.Context, client *s3.Client, bucket string, job 
 	offerText = strings.TrimSpace(offerText)
 	if offerText == "" || len(offerText) > maxOfferTextBytes || !utf8.ValidString(offerText) {
 		return fmt.Errorf("offer text is empty, invalid, or too large")
+	}
+	artifact.OfferText = offerText
+	if err := writeMatchArtifact(ctx, client, bucket, artifact); err != nil {
+		return err
 	}
 
 	required, _ := requiredSkills(offerText)

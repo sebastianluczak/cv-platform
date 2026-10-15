@@ -116,6 +116,12 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o offermatcher .
       - docker build -t offermatcher .
+  services:aiweighter:build:
+    dir: services/aiweighter
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o aiweighter .
+      - docker build -t aiweighter .
 
   
   # AI CODE REVIEW #
