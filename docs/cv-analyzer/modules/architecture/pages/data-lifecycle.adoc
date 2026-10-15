@@ -26,6 +26,11 @@
 |`results/<job-id>.skills.json`
 |Written by `skillmatcher` from redacted text; contains category scores and matched pattern evidence.
 
+|Offer comparison result
+|Configured S3-compatible bucket
+|`results/<offer-match-id>.offer.json`
+|Written by `offermatcher`; contains status, required-skill coverage, and matched/missing patterns. It references the resume job ID but does not copy the resume.
+
 |Extraction job
 |RabbitMQ work queue
 |`QUEUE_NAME`
@@ -40,6 +45,11 @@
 |RabbitMQ work queue
 |`QUEUE_NAME.skills`
 |Persistent message published by piistripper after storing the redacted result; manually acknowledged after scoring, retry republish, or failed-queue republish.
+
+|Offer matching job
+|RabbitMQ work queue
+|`QUEUE_NAME.offers`
+|Persistent message published by the offer matcher API; contains a resume job ID and either bounded offer text or an offer URL. The offer matcher manually acknowledges after writing a terminal result, retry republish, or failed-queue republish.
 
 |Failed job
 |RabbitMQ failed queue
@@ -56,6 +66,11 @@
 |`QUEUE_NAME.skills.failed`
 |Persistent message retained for inspection or operator-managed requeue.
 
+|Failed offer matching job
+|RabbitMQ failed queue
+|`QUEUE_NAME.offers.failed`
+|Persistent message retained for inspection or operator-managed requeue.
+
 |Processing status
 |RabbitMQ status queue, then uploader memory
 |`QUEUE_NAME.events`; in memory for at most 24 hours and up to 10,000 jobs per uploader process
@@ -69,5 +84,7 @@ The extractor downloads each input to a temporary file. For scanned PDFs it rend
 == Retention and privacy
 
 The services do not implement a retention schedule for uploaded resumes, extracted text, or redacted results. The redacted result is not guaranteed to be anonymous, and the original extracted text remains unchanged.
+
+The offer matcher does not persist fetched offer HTML. Pasted offer text is carried in its durable RabbitMQ message until processing; configure queue retention accordingly. The offer matcher API has no user authorization or ownership model, so deployments must keep it behind an access-controlled boundary.
 
 IMPORTANT: Storage administrators must configure lifecycle expiration and access controls appropriate to their data policy.

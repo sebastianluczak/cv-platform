@@ -24,6 +24,11 @@
 |Implemented; part of the running upload/review flow
 |xref:skillmatcher.adoc[Skill matcher]
 
+|`offermatcher`
+|Compares the active resume's saved skill evidence with a pasted or fetched job offer
+|Implemented; asynchronous offer comparison after resume matching
+|xref:offermatcher.adoc[Offer matcher]
+
 |`aiweighter`
 |Standalone OpenRouter chat-completion helper
 |Prototype package; not integrated into the upload/extraction pipeline

@@ -1,0 +1,53 @@
+= Offer Matcher Service
+
+The offer matcher compares the active resume's stored skill evidence with an
+offer supplied as text or as a public, server-rendered HTML page. It produces
+deterministic required-skill keyword coverage; it does not evaluate candidate
+ability or suitability.
+
+== Workflow and API
+
+The UI submits `POST /matches` after the resume's `results/<resume-job-id>.skills.json`
+artifact is available. The JSON body contains `resume_job_id` and exactly one
+of `offer_text` or `offer_url`. The service validates the request, publishes a
+persistent job to `QUEUE_NAME.offers` with publisher confirmation, and returns
+`202 Accepted` with a separate `match_id`.
+
+Poll `GET /matches/<match-id>` for `queued`, `processing`, `completed`,
+`unscorable`, or `failed` status. The completed artifact is stored at
+`results/<match-id>.offer.json`. It contains a rounded percentage, required
+and matched counts, and matched/missing patterns. No detected required
+patterns produces an `unscorable` status instead of a 0% score.
+
+== Matching behavior
+
+Offer and resume evidence use the shared curated pattern vocabulary also used
+by the skill matcher. The worker extracts patterns from an explicit
+required/must-have section when present; otherwise it uses patterns detected
+throughout the offer. Coverage is `round(100 * matched distinct patterns /
+required distinct patterns)`. This keyword heuristic can miss unsupported
+wording and may treat related aliases as different patterns.
+
+== URL and privacy boundaries
+
+URL fetches allow only HTTP(S) on default ports, enforce time, redirect, and
+response-size limits, reject credentials and private/reserved destinations,
+validate DNS addresses, and dial only validated public IP addresses. HTTPS
+redirects cannot downgrade to HTTP. Ordinary static HTML is supported;
+client-rendered pages are not. The service extracts HTML text in memory and
+does not store the fetched page.
+
+Pasted offer text remains in a durable RabbitMQ message until processed. The
+worker reads the existing resume skill artifact, not the original resume.
+Because the API has no authentication or account ownership checks, deployments
+must place it behind an access-controlled boundary.
+
+== Configuration and operations
+
+Set the shared `RABBITMQ_URL`, `QUEUE_NAME`, and `RUSTFS_*` configuration.
+`OFFERMATCHER_PORT` defaults to `8081`. The worker consumes
+`QUEUE_NAME.offers`, uses manual acknowledgements, prefetch one, publisher
+confirms, and up to three retries after the initial attempt. Exhausted or
+malformed jobs go to `QUEUE_NAME.offers.failed`. See
+xref:configuration.adoc[configuration] and xref:operations.adoc[local
+operations].

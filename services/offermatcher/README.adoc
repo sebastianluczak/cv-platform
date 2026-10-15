@@ -1,0 +1,84 @@
+= Offer Matcher
+
+Offer Matcher compares the completed, deterministic skill signals for a resume
+with the skill signals in a job offer. It reports the percentage of distinct
+required skill patterns found in the resume; this is keyword coverage, not an
+assessment of candidate ability or suitability.
+
+== HTTP API
+
+The service listens on `OFFERMATCHER_PORT` (default `8081`).
+
+`POST /matches` accepts a resume job ID and exactly one offer source:
+
+[source,json]
+----
+{
+  "resume_job_id": "<completed-resume-job-uuid>",
+  "offer_text": "Required skills: Go, Kubernetes"
+}
+----
+
+For a public, server-rendered offer page, use `offer_url` instead of
+`offer_text`. Requests are validated and published with RabbitMQ publisher
+confirmation before the service returns `202 Accepted`:
+
+[source,json]
+----
+{"match_id":"<offer-match-uuid>","status":"queued"}
+----
+
+Poll `GET /matches/<match-id>` for the result. Status is `queued`,
+`processing`, `completed`, `unscorable`, or `failed`. Completed results include
+the integer percentage, matched and missing skill patterns, and the matched /
+required counts. `unscorable` means no skill patterns could be identified;
+the service does not treat an empty requirement list as a 0% result.
+
+== Skill extraction and scoring
+
+The worker reuses the exact curated pattern vocabulary shared with
+`skillmatcher`. It looks for explicit required/must-have sections such as
+“Required qualifications” or “Must have”; when none is found, all detected
+patterns in the offer text are treated as required. The result is
+`round(100 * matched distinct patterns / required distinct patterns)`.
+
+Pattern-based matching is intentionally narrow and deterministic. It can miss
+skills expressed with unsupported wording and may treat related aliases as
+separate patterns. It is not a measure of experience depth or suitability.
+
+== URL fetching and data handling
+
+Only HTTP and HTTPS URLs on their default ports are accepted. URL fetching has
+strict time, redirect, response-size, and content-type limits. Credentials,
+private/reserved IPs, local hosts, unsafe redirects, and HTTPS-to-HTTP
+downgrades are rejected; DNS results are checked and the connection is made
+directly to the validated address. The parser supports ordinary HTML, not
+client-rendered SPA pages. Fetched HTML is parsed to text in memory and is not
+stored as an artifact.
+
+Pasted offer text travels in the durable RabbitMQ message until consumed.
+Offer-match state and results are stored as
+`results/<offer-match-id>.offer.json`; the worker reads the resume's existing
+`results/<resume-job-id>.skills.json` and does not read or copy the original
+resume. Configure storage retention and queue retention in line with the
+platform's data policy.
+
+The HTTP API has no authentication or account ownership checks. Do not expose
+it directly to untrusted networks; place it behind an access-controlled
+application boundary.
+
+== Queues and delivery
+
+The service consumes persistent JSON messages from `QUEUE_NAME.offers` and
+sends malformed or exhausted jobs to `QUEUE_NAME.offers.failed`. It uses
+manual acknowledgements, prefetch one, publisher confirms, and up to three
+retries after the initial attempt. Results use deterministic keys so repeated
+delivery safely overwrites the same artifact.
+
+== Configuration and operation
+
+`RABBITMQ_URL`, `QUEUE_NAME`, and the shared `RUSTFS_*` settings are required
+or defaulted in the same way as the other services. Set
+`OFFERMATCHER_PORT` to change the default HTTP port. Start locally with
+`task services:offermatcher:start`; build the binary and Docker image with
+`task services:offermatcher:build`.
