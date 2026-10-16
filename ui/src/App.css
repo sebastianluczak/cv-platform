@@ -1792,6 +1792,7 @@ article a:focus-visible {
 
 .panel-heading h2,
 .results-heading h2,
+.role-insights-panel h3,
 .data-retention-section h2,
 .privacy-section h2 {
   font-size: clamp(1.125rem, calc(1.05rem + 0.25vw), 1.375rem);
@@ -1868,6 +1869,23 @@ table code {
 
 .compare-button {
   min-height: 44px;
+  font-size: var(--type-secondary);
+}
+
+.role-insights-panel > p {
+  font-size: var(--type-body);
+}
+
+.role-insights-panel > .result-error {
+  font-size: var(--type-secondary);
+}
+
+.role-insights-panel .offer-match-status,
+.role-insight {
+  font-size: var(--type-body);
+}
+
+.role-insight h4 {
   font-size: var(--type-secondary);
 }
 
