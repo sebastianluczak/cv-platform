@@ -125,6 +125,9 @@
     <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -217,6 +220,9 @@ They persist the original file, extracted text, and a separate best-effort redac
 </li>
 <li>
 <p>The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.</p>
+</li>
+<li>
+<p><code>roleinsights</code> sends the redacted resume to OpenRouter only after explicit user opt-in. It is independent of technical skill scores and stores AI-generated role suggestions; redaction remains best-effort and the output may be inaccurate.</p>
 </li>
 <li>
 <p>Temporary extractor files are created on the service host during processing and removed when processing finishes.</p>
@@ -337,6 +343,12 @@ A redacted result is not guaranteed anonymization or GDPR compliance. Datacleane
 <ul>
 <li>
 <p><strong>Redaction is best-effort</strong>: Pattern matching and named-entity recognition can miss contextual, indirect, or domain-specific identifiers. A redacted result does not guarantee anonymization.</p>
+</li>
+<li>
+<p><strong>AI role insights require explicit opt-in</strong>: The external model receives the redacted resume text. Review provider terms, data processing arrangements, and the user-facing disclosure before deployment. The roleinsights API has no authentication or ownership checks and must remain behind an access-controlled boundary.</p>
+</li>
+<li>
+<p><strong>Role insight artifact retention is operator-managed</strong>: The datacleaner does not yet delete <code>results/*.insights.json</code>; configure a bucket lifecycle rule and verify it in deployment.</p>
 </li>
 <li>
 <p><strong>Original extracted text is automatically deleted</strong>: The datacleaner service deletes the original extracted text (<code>results/&lt;job-id&gt;.txt</code>) after the configured retention period expires. This reduces exposure time for personal data compared to indefinite retention.</p>

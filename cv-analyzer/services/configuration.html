@@ -125,6 +125,9 @@
     <a class="nav-link" href="aiweighter.html">AIweighter</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="contracts.html">Service contracts</a>
   </li>
   <li class="nav-item is-current-page" data-depth="1">
@@ -180,9 +183,9 @@
 <article class="doc">
 <h1 class="page">Configuration</h1>
 <div class="paragraph">
-<p>The uploader, extractor, piistripper, skill matcher, offer matcher, and
-AIweighter must point to the same RabbitMQ queue and S3-compatible storage
-namespace.</p>
+<p>The uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter,
+roleinsights, and datacleaner must point to the same RabbitMQ queue and
+S3-compatible storage namespace.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -202,7 +205,7 @@ namespace.</p>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use RabbitMQ</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
 </tr>
@@ -214,37 +217,37 @@ namespace.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use RabbitMQ</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, skill matching, offer matching, AIweighter, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.offers</code>, <code>.aiweight</code>, <code>.failed</code>, <code>.pii.failed</code>, <code>.skills.failed</code>, <code>.offers.failed</code>, and <code>.aiweight.failed</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name; status uses <code>.events</code>, stages append <code>.pii</code>, <code>.skills</code>, <code>.offers</code>, <code>.aiweight</code>, or <code>.roleinsights</code>, and failures append <code>.failed</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, and AI resume results.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, AI resumes, and role insights.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3 signing region.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage access key.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage secret key.</p></td>
 </tr>
@@ -267,25 +270,33 @@ namespace.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ROLEINSIGHTS_PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Role insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8083</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_API_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter, role insights</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API key for the explicitly consented external model request.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API key for explicitly consented external model requests.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_MODEL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter, role insights</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>nvidia/nemotron-3-super-120b-a12b:free</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">OpenRouter chat-completion model slug.</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>Use the same <code>RUSTFS_*</code> values in all six services. In particular,
+<p>Use the same <code>RUSTFS_*</code> values across all services that use shared storage, including datacleaner. In particular,
 <code>RUSTFS_BUCKET</code> must match across producers and consumers. Piistripper writes a
 separate redacted result; the skill matcher writes category scores; the offer
 matcher retains bounded normalized offer text with its private result artifact;
-AIweighter consumes <code>QUEUE_NAME.aiweight</code> and stores generated Markdown.</p>
+AIweighter consumes <code>QUEUE_NAME.aiweight</code> and stores generated Markdown.
+Role insights consumes <code>QUEUE_NAME.roleinsights</code> and stores role suggestions
+from the redacted resume without requiring or reading skill scores.</p>
 </div>
 <div class="paragraph">
 <p>For the JetStream evaluation, <code>devenv up</code> also starts a local NATS server with
@@ -294,11 +305,12 @@ additional pilot infrastructure only: RabbitMQ remains the active broker, and
 no service reads <code>NATS_URL</code> until a pilot client is added.</p>
 </div>
 <div class="paragraph">
-<p>The offer matcher and AIweighter APIs have no authentication or account
+<p>The offer matcher, AIweighter, and role insights APIs have no authentication or account
 ownership checks and must not be exposed directly to untrusted networks.
 AIweighter sends the redacted resume, skill evidence, and retained offer text
 to OpenRouter only after explicit user consent. Consent is not authentication
-or authorization.</p>
+or authorization. Role insights separately sends only the redacted resume to
+OpenRouter after the user&#8217;s explicit opt-in; redaction is best-effort.</p>
 </div>
 </article>
   </div>

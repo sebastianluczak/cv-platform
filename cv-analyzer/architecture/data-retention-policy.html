@@ -125,6 +125,9 @@
     <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -290,6 +293,12 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock">Deleted based on the underlying resume job&#8217;s redacted-text retention.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI role insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;insight-id&gt;.insights.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Operator-managed S3 lifecycle</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The current datacleaner does not delete role insight artifacts; configure lifecycle expiry for this prefix.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed jobs</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ <code>&lt;QUEUE_NAME&gt;.failed</code> (and other <code>.*.failed</code> queues)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
@@ -315,6 +324,9 @@
 </li>
 <li>
 <p>Offer text and AI-generated content are retained together with the underlying resume data they reference.</p>
+</li>
+<li>
+<p>Role insight artifacts can contain resume-derived personal information. The current datacleaner does not delete them; configure and verify an S3 lifecycle policy.</p>
 </li>
 <li>
 <p>Failed queue messages provide an inspection window for operators to review errors before automatic deletion.</p>

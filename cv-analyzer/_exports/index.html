@@ -617,6 +617,7 @@ queue RabbitMQ
 component Extractor
 component OfferMatcher
 component AIweighter
+component RoleInsights
 
 database "S3-compatible Storage" as Storage
 
@@ -624,6 +625,7 @@ Browser --&gt; Uploader : POST /upload
 Browser --&gt; Uploader : GET /events?job_id=...
 Browser --&gt; OfferMatcher : POST /matches\nGET /matches/&lt;match-id&gt;
 Browser --&gt; AIweighter : POST /weights after opt-in\nGET /weights/&lt;weigh-id&gt;
+Browser --&gt; RoleInsights : POST /insights after opt-in\nGET /insights/&lt;insight-id&gt;
 
 Uploader --&gt; Storage : Upload file\nuploads/&lt;job-id&gt;
 Uploader --&gt; RabbitMQ : Publish extraction job
@@ -633,6 +635,9 @@ OfferMatcher --&gt; Storage : Read skills\nWrite offer result
 AIweighter --&gt; RabbitMQ : Publish AI resume job
 RabbitMQ --&gt; AIweighter : Consume AI resume job
 AIweighter --&gt; Storage : Read redacted resume,\nskills and retained offer text\nWrite Markdown result
+RoleInsights --&gt; RabbitMQ : Publish role insights job
+RabbitMQ --&gt; RoleInsights : Consume role insights job
+RoleInsights --&gt; Storage : Read redacted resume\nWrite role suggestions
 
 RabbitMQ --&gt; Extractor : Consume extraction job
 Extractor --&gt; Storage : Download upload
@@ -641,6 +646,7 @@ Extractor --&gt; Storage : Write results/&lt;job-id&gt;.txt
 note right of RabbitMQ
   Queues:
   - extraction jobs
+  - &lt;queue&gt;.roleinsights
   - &lt;queue&gt;.events
 end note
 
@@ -656,7 +662,7 @@ end note
 <p>uses <code>/api/upload</code> and <code>/api/events</code>, so a deployment must route those browser paths to the uploader&#8217;s <code>/upload</code> and <code>/events</code> handlers.</p>
 </li>
 <li>
-<p>uses <code>/offer-api</code> and <code>/ai-api</code> for offer matching and AI resume generation in local development; production gateways must route those paths to the corresponding service APIs.</p>
+<p>uses <code>/offer-api</code>, <code>/ai-api</code>, and <code>/insights-api</code> for offer matching and optional AI features in local development; production gateways must route those paths to the corresponding service APIs.</p>
 </li>
 </ol>
 </div>
@@ -691,6 +697,10 @@ end note
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">After explicit user consent, sends the redacted resume, skill evidence, and retained offer text to the configured external model and stores a Markdown resume result.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RoleInsights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">After separate explicit user consent, sends only the redacted resume to the configured external model and stores occupation suggestions independent of technical scores.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ</p></td>
@@ -737,6 +747,26 @@ end note
 </li>
 <li>
 <p>After completion, the UI retrieves the persisted score artifact from <code>GET /results?job_id=&lt;job-id&gt;</code>.</p>
+</li>
+</ol>
+</div>
+<h4 id="architecture:workflow:::_optional_ai_role_insights" class="discrete">Optional AI role insights</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>From the completed resume results page, the user separately opts in to send the redacted resume text to the configured external AI provider.</p>
+</li>
+<li>
+<p>The UI submits <code>POST /insights</code> to <code>roleinsights</code> with the resume job ID and consent affirmation. The service validates that the redacted resume exists, stores a queued request, and publishes an ID-only persistent job to <code>QUEUE_NAME.roleinsights</code> with publisher confirmation.</p>
+</li>
+<li>
+<p>The worker reads only <code>results/&lt;job-id&gt;.redacted.txt</code>. It does not read the skill scores, so technical scores do not constrain suggestions and a zero IT score does not prevent insights.</p>
+</li>
+<li>
+<p>The worker asks the configured model for up to five evidence-grounded occupation suggestions, each with a role name, fit explanation, and typical responsibilities. It writes the versioned result to <code>results/&lt;insight-id&gt;.insights.json</code>.</p>
+</li>
+<li>
+<p>The UI polls <code>GET /insights/&lt;insight-id&gt;</code> and displays the advisory suggestions as text. These are role ideas, not job openings, an objective suitability assessment, or a guarantee of employment.</p>
 </li>
 </ol>
 </div>
@@ -791,7 +821,8 @@ The initial attempt plus up to three retries means a job may be attempted four t
 <div class="paragraph">
 <p>A job still failing extraction is published to <code>QUEUE_NAME.failed</code>; a job still failing redaction is published to <code>QUEUE_NAME.pii.failed</code>; a job still failing skill matching is published to <code>QUEUE_NAME.skills.failed</code>.
 A job still failing offer matching is published to <code>QUEUE_NAME.offers.failed</code>.
-A job still failing AI resume generation is published to <code>QUEUE_NAME.aiweight.failed</code>.</p>
+A job still failing AI resume generation is published to <code>QUEUE_NAME.aiweight.failed</code>.
+A job still failing role insight generation is published to <code>QUEUE_NAME.roleinsights.failed</code>.</p>
 </div>
 <div class="paragraph">
 <p>Malformed job JSON is also sent directly to the failed queue.</p>
@@ -804,7 +835,7 @@ A job still failing AI resume generation is published to <code>QUEUE_NAME.aiweig
 <p>If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job.</p>
 </div>
 <div class="paragraph">
-<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, <code>results/&lt;job-id&gt;.skills.json</code>, and <code>results/&lt;offer-match-id&gt;.offer.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
+<p>Result writes use deterministic keys (<code>results/&lt;job-id&gt;.txt</code>, <code>results/&lt;job-id&gt;.redacted.txt</code>, <code>results/&lt;job-id&gt;.skills.json</code>, <code>results/&lt;insight-id&gt;.insights.json</code>, and <code>results/&lt;offer-match-id&gt;.offer.json</code>), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.</p>
 </div>
 <div class="paragraph">
 <p>There is no separate deduplication store, operation is idempotent.</p>
@@ -895,6 +926,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>aiweighter</code>; contains status, Markdown output, and references to the offer-match and resume job IDs.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI role insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configured S3-compatible bucket</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>results/&lt;insight-id&gt;.insights.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Written by <code>roleinsights</code> after explicit user consent; contains status, consent time, and role suggestions. It is generated from redacted resume text, not technical scores.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extraction job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
@@ -925,6 +962,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent ID-only job published after explicit user consent. The worker loads the redacted resume, skill evidence, and offer text from storage.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI role insights job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ work queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.roleinsights</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent ID-only job published after explicit user consent. The worker loads the redacted resume and does not depend on the skill result.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.failed</code></p></td>
@@ -952,6 +995,12 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed AI resume job</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed role insights job</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ failed queue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.roleinsights.failed</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Persistent message retained for inspection or operator-managed requeue.</p></td>
 </tr>
 <tr>
@@ -1014,6 +1063,11 @@ This is serious and needs proper addressing.
 <td class="tableblock halign-left valign-top"><p class="tableblock">AI resume result (<code>results/&lt;weigh-id&gt;.ai.json</code>)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Not cleaned by datacleaner</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Manual operator lifecycle or S3 bucket policy; remains indefinitely unless configured</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI role insights (<code>results/&lt;insight-id&gt;.insights.json</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not cleaned by datacleaner</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configure an S3 lifecycle policy or other operator-managed deletion; the current datacleaner does not expire these artifacts.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed messages (<code>&lt;QUEUE_NAME&gt;.&lt;stage&gt;.failed</code>)</p></td>
@@ -1273,6 +1327,9 @@ export RETENTION_FAILED_QUEUE_DAYS=7
 <div class="paragraph">
 <p>After a user opts in, normalized offer text and generated Markdown persist as result artifacts, and the redacted resume and skill result are sent to the configured external OpenRouter model. Redaction is best-effort and does not guarantee anonymity. AIweighter and offermatcher do not implement authentication or ownership checks; keep both APIs behind an access-controlled boundary. Configure object-store lifecycle and access controls for all resume, offer, and AI output artifacts.</p>
 </div>
+<div class="paragraph">
+<p>Role insights also require explicit opt-in and send the redacted resume text to OpenRouter; redaction remains best-effort. The roleinsights API has no authentication or ownership checks. Protect it behind an access-controlled boundary and configure lifecycle deletion for <code>results/*.insights.json</code>.</p>
+</div>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -1389,6 +1446,12 @@ Storage administrators must configure lifecycle expiration and access controls a
 <td class="tableblock halign-left valign-top"><p class="tableblock">Deleted based on the underlying resume job&#8217;s redacted-text retention.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI role insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;insight-id&gt;.insights.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Operator-managed S3 lifecycle</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The current datacleaner does not delete role insight artifacts; configure lifecycle expiry for this prefix.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Failed jobs</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ <code>&lt;QUEUE_NAME&gt;.failed</code> (and other <code>.*.failed</code> queues)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
@@ -1413,6 +1476,9 @@ Storage administrators must configure lifecycle expiration and access controls a
 </li>
 <li>
 <p>Offer text and AI-generated content are retained together with the underlying resume data they reference.</p>
+</li>
+<li>
+<p>Role insight artifacts can contain resume-derived personal information. The current datacleaner does not delete them; configure and verify an S3 lifecycle policy.</p>
 </li>
 <li>
 <p>Failed queue messages provide an inspection window for operators to review errors before automatic deletion.</p>
@@ -2323,6 +2389,12 @@ Always maintain backups and test restore procedures before deploying the datacle
 <td class="tableblock halign-left valign-top"><p class="tableblock">Implemented; optional asynchronous AI resume generation</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:aiweighter">AIweighter</a></p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>roleinsights</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Suggests evidence-grounded occupations from a redacted resume after explicit user consent; independent of technical scores</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implemented; optional asynchronous role insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#services:roleinsights">Role insights</a></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -2715,6 +2787,56 @@ and <a href="#services:operations">local operations</a>. The Vite development pr
 </div>
 </div>
 <div class="sect2">
+<h3 id="services:roleinsights"><a class="anchor" href="#services:roleinsights"></a>Role insights</h3>
+<div class="paragraph">
+<p><code>roleinsights</code> suggests possible occupations from a resume, including non-technical roles. Suggestions are advisory role ideas, not job openings or an assessment of candidate ability or suitability. The service does not use the skill match score.</p>
+</div>
+<h4 id="services:roleinsights:::_http_api" class="discrete">HTTP API</h4>
+<div class="paragraph">
+<p>The service listens on <code>ROLEINSIGHTS_PORT</code> (default <code>8083</code>).</p>
+</div>
+<div class="paragraph">
+<p><code>POST /insights</code> requires an explicit consent affirmation and a resume job ID:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"resume_job_id":"&lt;resume-job-uuid&gt;","consent":true}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The service verifies that the redacted resume exists, stores a queued request, and publishes the job with RabbitMQ publisher confirmation before returning <code>202 Accepted</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"insight_id":"&lt;insight-uuid&gt;","status":"queued"}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Poll <code>GET /insights/&lt;insight-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>, or <code>failed</code>. A completed response contains up to five role suggestions. Each suggestion has a role title, a fit explanation, and typical responsibilities.</p>
+</div>
+<h4 id="services:roleinsights:::_inputs_and_output" class="discrete">Inputs and output</h4>
+<div class="paragraph">
+<p>The worker reads only <code>results/&lt;resume-job-id&gt;.redacted.txt</code>. It does not read the original upload, unredacted extraction, technical score artifact, offer text, or offer match. Therefore, IT-oriented score patterns do not constrain suggested occupations.</p>
+</div>
+<div class="paragraph">
+<p>The worker asks the configured OpenRouter model for a structured JSON result, validates the number and shape of suggestions, and stores it at <code>results/&lt;insight-id&gt;.insights.json</code>. Resume content is untrusted input, not instructions. The model is directed to use only resume-supported facts; generated role ideas can still be inaccurate and should be reviewed.</p>
+</div>
+<h4 id="services:roleinsights:::_consent_and_privacy" class="discrete">Consent and privacy</h4>
+<div class="paragraph">
+<p>The UI presents a separate opt-in and external-provider disclosure. Only after the user agrees does it submit the resume job ID to <code>POST /insights</code>; the worker sends the redacted resume text to OpenRouter. PII redaction is best-effort and does not guarantee anonymity. API consent is not authentication or ownership verification.</p>
+</div>
+<div class="paragraph">
+<p>The API has no authentication or account ownership checks. Keep it behind an access-controlled boundary. The result artifact may contain personal information and is not currently removed by <code>datacleaner</code>; configure an S3 lifecycle policy or other deletion process for <code>results/*.insights.json</code>.</p>
+</div>
+<h4 id="services:roleinsights:::_queues_and_delivery" class="discrete">Queues and delivery</h4>
+<div class="paragraph">
+<p>The service consumes persistent ID-only JSON jobs from <code>QUEUE_NAME.roleinsights</code>. Malformed or exhausted jobs go to <code>QUEUE_NAME.roleinsights.failed</code>. It uses manual acknowledgements, prefetch one, publisher confirms, deterministic artifact keys, and up to three retries after the initial attempt. Processing is at-least-once.</p>
+</div>
+<div class="paragraph">
+<p><code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and shared <code>RUSTFS_*</code> settings must match the other services. <code>OPENROUTER_API_KEY</code> is required; <code>OPENROUTER_MODEL</code> selects the model. Start locally with <code>task services:roleinsights:start</code>; build with <code>task services:roleinsights:build</code>.</p>
+</div>
+</div>
+<div class="sect2">
 <h3 id="services:contracts"><a class="anchor" href="#services:contracts"></a>Service contracts</h3>
 <h4 id="services:contracts:::_extraction_job" class="discrete">Extraction job</h4>
 <div class="paragraph">
@@ -2931,9 +3053,9 @@ Status updates are not a durable client-facing event log.
 <div class="sect2">
 <h3 id="services:configuration"><a class="anchor" href="#services:configuration"></a>Configuration</h3>
 <div class="paragraph">
-<p>The uploader, extractor, piistripper, skill matcher, offer matcher, and
-AIweighter must point to the same RabbitMQ queue and S3-compatible storage
-namespace.</p>
+<p>The uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter,
+roleinsights, and datacleaner must point to the same RabbitMQ queue and
+S3-compatible storage namespace.</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -2953,7 +3075,7 @@ namespace.</p>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use RabbitMQ</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AMQP connection URL. Required at startup.</p></td>
 </tr>
@@ -2965,37 +3087,37 @@ namespace.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use RabbitMQ</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name. Redaction, status, skill matching, offer matching, AIweighter, and failed queue names append <code>.pii</code>, <code>.events</code>, <code>.skills</code>, <code>.offers</code>, <code>.aiweight</code>, <code>.failed</code>, <code>.pii.failed</code>, <code>.skills.failed</code>, <code>.offers.failed</code>, and <code>.aiweight.failed</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Durable extraction queue name; status uses <code>.events</code>, stages append <code>.pii</code>, <code>.skills</code>, <code>.offers</code>, <code>.aiweight</code>, or <code>.roleinsights</code>, and failures append <code>.failed</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ENDPOINT_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_BUCKET</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cv-platform-uploads</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, and AI resume results.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, AI resumes, and role insights.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_REGION</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>us-east-1</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">S3 signing region.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_ACCESS_KEY_ID</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage access key.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RUSTFS_SECRET_ACCESS_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All runtime services that use shared storage</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rustfsadmin</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Object-storage secret key.</p></td>
 </tr>
@@ -3018,25 +3140,33 @@ namespace.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ROLEINSIGHTS_PORT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Role insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8083</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP API listen port.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_API_KEY</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter, role insights</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API key for the explicitly consented external model request.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API key for explicitly consented external model requests.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>OPENROUTER_MODEL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter, role insights</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>nvidia/nemotron-3-super-120b-a12b:free</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">OpenRouter chat-completion model slug.</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>Use the same <code>RUSTFS_*</code> values in all six services. In particular,
+<p>Use the same <code>RUSTFS_*</code> values across all services that use shared storage, including datacleaner. In particular,
 <code>RUSTFS_BUCKET</code> must match across producers and consumers. Piistripper writes a
 separate redacted result; the skill matcher writes category scores; the offer
 matcher retains bounded normalized offer text with its private result artifact;
-AIweighter consumes <code>QUEUE_NAME.aiweight</code> and stores generated Markdown.</p>
+AIweighter consumes <code>QUEUE_NAME.aiweight</code> and stores generated Markdown.
+Role insights consumes <code>QUEUE_NAME.roleinsights</code> and stores role suggestions
+from the redacted resume without requiring or reading skill scores.</p>
 </div>
 <div class="paragraph">
 <p>For the JetStream evaluation, <code>devenv up</code> also starts a local NATS server with
@@ -3045,11 +3175,12 @@ additional pilot infrastructure only: RabbitMQ remains the active broker, and
 no service reads <code>NATS_URL</code> until a pilot client is added.</p>
 </div>
 <div class="paragraph">
-<p>The offer matcher and AIweighter APIs have no authentication or account
+<p>The offer matcher, AIweighter, and role insights APIs have no authentication or account
 ownership checks and must not be exposed directly to untrusted networks.
 AIweighter sends the redacted resume, skill evidence, and retained offer text
 to OpenRouter only after explicit user consent. Consent is not authentication
-or authorization.</p>
+or authorization. Role insights separately sends only the redacted resume to
+OpenRouter after the user&#8217;s explicit opt-in; redaction is best-effort.</p>
 </div>
 </div>
 <div class="sect2">
@@ -3071,10 +3202,10 @@ or authorization.</p>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter, frontend, and documentation builder.</p>
+<p>The <code>devenv</code> processes start the uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter, role insights, frontend, and documentation builder.</p>
 </div>
 <div class="paragraph">
-<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, <code>skillmatcher</code>, <code>offermatcher</code>, and <code>aiweighter</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, <code>task services:skillmatcher:build</code>, <code>task services:offermatcher:build</code>, and <code>task services:aiweighter:build</code> build the binaries and Docker images.</p>
+<p>The service Dockerfiles expect prebuilt binaries named <code>uploader</code>, <code>extractor</code>, <code>piistripper</code>, <code>skillmatcher</code>, <code>offermatcher</code>, <code>aiweighter</code>, and <code>roleinsights</code> in their respective service directories. <code>task services:uploader:build</code>, <code>task services:extractor:build</code>, <code>task services:piistripper:build</code>, <code>task services:skillmatcher:build</code>, <code>task services:offermatcher:build</code>, <code>task services:aiweighter:build</code>, and <code>task services:roleinsights:build</code> build the binaries and Docker images.</p>
 </div>
 <h4 id="services:operations:::_verification" class="discrete">Verification</h4>
 <div class="paragraph">
@@ -3108,6 +3239,9 @@ or authorization.</p>
 </li>
 <li>
 <p><strong>AI resume generation does not complete:</strong> confirm the UI can reach AIweighter on <code>AIWEIGHTER_PORT</code>, <code>OPENROUTER_API_KEY</code> is configured, the model name is valid, the service shares the same bucket, and inspect <code>&lt;QUEUE_NAME&gt;.aiweight.failed</code>.</p>
+</li>
+<li>
+<p><strong>Role insights do not complete:</strong> confirm the UI can reach roleinsights on <code>ROLEINSIGHTS_PORT</code>, <code>OPENROUTER_API_KEY</code> is configured, the redacted resume exists, the service shares the same bucket, and inspect <code>&lt;QUEUE_NAME&gt;.roleinsights.failed</code>.</p>
 </li>
 <li>
 <p><strong>Upload returns <code>503</code>:</strong> inspect uploader logs and RabbitMQ availability; a message publish confirmation did not arrive.</p>
@@ -3160,6 +3294,9 @@ They persist the original file, extracted text, and a separate best-effort redac
 </li>
 <li>
 <p>The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.</p>
+</li>
+<li>
+<p><code>roleinsights</code> sends the redacted resume to OpenRouter only after explicit user opt-in. It is independent of technical skill scores and stores AI-generated role suggestions; redaction remains best-effort and the output may be inaccurate.</p>
 </li>
 <li>
 <p>Temporary extractor files are created on the service host during processing and removed when processing finishes.</p>
@@ -3268,6 +3405,12 @@ A redacted result is not guaranteed anonymization or GDPR compliance. Datacleane
 <ul>
 <li>
 <p><strong>Redaction is best-effort</strong>: Pattern matching and named-entity recognition can miss contextual, indirect, or domain-specific identifiers. A redacted result does not guarantee anonymization.</p>
+</li>
+<li>
+<p><strong>AI role insights require explicit opt-in</strong>: The external model receives the redacted resume text. Review provider terms, data processing arrangements, and the user-facing disclosure before deployment. The roleinsights API has no authentication or ownership checks and must remain behind an access-controlled boundary.</p>
+</li>
+<li>
+<p><strong>Role insight artifact retention is operator-managed</strong>: The datacleaner does not yet delete <code>results/*.insights.json</code>; configure a bucket lifecycle rule and verify it in deployment.</p>
 </li>
 <li>
 <p><strong>Original extracted text is automatically deleted</strong>: The datacleaner service deletes the original extracted text (<code>results/&lt;job-id&gt;.txt</code>) after the configured retention period expires. This reduces exposure time for personal data compared to indefinite retention.</p>

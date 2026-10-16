@@ -125,6 +125,9 @@
     <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../services/contracts.html">Service contracts</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -212,6 +215,7 @@ queue RabbitMQ
 component Extractor
 component OfferMatcher
 component AIweighter
+component RoleInsights
 
 database "S3-compatible Storage" as Storage
 
@@ -219,6 +223,7 @@ Browser --&gt; Uploader : POST /upload
 Browser --&gt; Uploader : GET /events?job_id=...
 Browser --&gt; OfferMatcher : POST /matches\nGET /matches/&lt;match-id&gt;
 Browser --&gt; AIweighter : POST /weights after opt-in\nGET /weights/&lt;weigh-id&gt;
+Browser --&gt; RoleInsights : POST /insights after opt-in\nGET /insights/&lt;insight-id&gt;
 
 Uploader --&gt; Storage : Upload file\nuploads/&lt;job-id&gt;
 Uploader --&gt; RabbitMQ : Publish extraction job
@@ -228,6 +233,9 @@ OfferMatcher --&gt; Storage : Read skills\nWrite offer result
 AIweighter --&gt; RabbitMQ : Publish AI resume job
 RabbitMQ --&gt; AIweighter : Consume AI resume job
 AIweighter --&gt; Storage : Read redacted resume,\nskills and retained offer text\nWrite Markdown result
+RoleInsights --&gt; RabbitMQ : Publish role insights job
+RabbitMQ --&gt; RoleInsights : Consume role insights job
+RoleInsights --&gt; Storage : Read redacted resume\nWrite role suggestions
 
 RabbitMQ --&gt; Extractor : Consume extraction job
 Extractor --&gt; Storage : Download upload
@@ -236,6 +244,7 @@ Extractor --&gt; Storage : Write results/&lt;job-id&gt;.txt
 note right of RabbitMQ
   Queues:
   - extraction jobs
+  - &lt;queue&gt;.roleinsights
   - &lt;queue&gt;.events
 end note
 
@@ -251,7 +260,7 @@ end note
 <p>uses <code>/api/upload</code> and <code>/api/events</code>, so a deployment must route those browser paths to the uploader&#8217;s <code>/upload</code> and <code>/events</code> handlers.</p>
 </li>
 <li>
-<p>uses <code>/offer-api</code> and <code>/ai-api</code> for offer matching and AI resume generation in local development; production gateways must route those paths to the corresponding service APIs.</p>
+<p>uses <code>/offer-api</code>, <code>/ai-api</code>, and <code>/insights-api</code> for offer matching and optional AI features in local development; production gateways must route those paths to the corresponding service APIs.</p>
 </li>
 </ol>
 </div>
@@ -290,6 +299,10 @@ end note
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">After explicit user consent, sends the redacted resume, skill evidence, and retained offer text to the configured external model and stores a Markdown resume result.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RoleInsights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">After separate explicit user consent, sends only the redacted resume to the configured external model and stores occupation suggestions independent of technical scores.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ</p></td>

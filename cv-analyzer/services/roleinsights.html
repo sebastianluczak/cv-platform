@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Role Insights :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0007.html">ADR-0007: Stateless Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0008.html">ADR-0008: Pillars of Observability</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Services</li>
+    <li><a href="roleinsights.html">Role insights</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/main/docs/cv-analyzer/modules/services/pages/roleinsights.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Role Insights</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>roleinsights</code> suggests possible occupations from a resume, including non-technical roles. Suggestions are advisory role ideas, not job openings or an assessment of candidate ability or suitability. The service does not use the skill match score.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_http_api"><a class="anchor" href="#_http_api"></a>HTTP API</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The service listens on <code>ROLEINSIGHTS_PORT</code> (default <code>8083</code>).</p>
+</div>
+<div class="paragraph">
+<p><code>POST /insights</code> requires an explicit consent affirmation and a resume job ID:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"resume_job_id":"&lt;resume-job-uuid&gt;","consent":true}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The service verifies that the redacted resume exists, stores a queued request, and publishes the job with RabbitMQ publisher confirmation before returning <code>202 Accepted</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"insight_id":"&lt;insight-uuid&gt;","status":"queued"}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Poll <code>GET /insights/&lt;insight-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>, or <code>failed</code>. A completed response contains up to five role suggestions. Each suggestion has a role title, a fit explanation, and typical responsibilities.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs_and_output"><a class="anchor" href="#_inputs_and_output"></a>Inputs and output</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The worker reads only <code>results/&lt;resume-job-id&gt;.redacted.txt</code>. It does not read the original upload, unredacted extraction, technical score artifact, offer text, or offer match. Therefore, IT-oriented score patterns do not constrain suggested occupations.</p>
+</div>
+<div class="paragraph">
+<p>The worker asks the configured OpenRouter model for a structured JSON result, validates the number and shape of suggestions, and stores it at <code>results/&lt;insight-id&gt;.insights.json</code>. Resume content is untrusted input, not instructions. The model is directed to use only resume-supported facts; generated role ideas can still be inaccurate and should be reviewed.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_consent_and_privacy"><a class="anchor" href="#_consent_and_privacy"></a>Consent and privacy</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The UI presents a separate opt-in and external-provider disclosure. Only after the user agrees does it submit the resume job ID to <code>POST /insights</code>; the worker sends the redacted resume text to OpenRouter. PII redaction is best-effort and does not guarantee anonymity. API consent is not authentication or ownership verification.</p>
+</div>
+<div class="paragraph">
+<p>The API has no authentication or account ownership checks. Keep it behind an access-controlled boundary. The result artifact may contain personal information and is not currently removed by <code>datacleaner</code>; configure an S3 lifecycle policy or other deletion process for <code>results/*.insights.json</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_queues_and_delivery"><a class="anchor" href="#_queues_and_delivery"></a>Queues and delivery</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The service consumes persistent ID-only JSON jobs from <code>QUEUE_NAME.roleinsights</code>. Malformed or exhausted jobs go to <code>QUEUE_NAME.roleinsights.failed</code>. It uses manual acknowledgements, prefetch one, publisher confirms, deterministic artifact keys, and up to three retries after the initial attempt. Processing is at-least-once.</p>
+</div>
+<div class="paragraph">
+<p><code>RABBITMQ_URL</code>, <code>QUEUE_NAME</code>, and shared <code>RUSTFS_*</code> settings must match the other services. <code>OPENROUTER_API_KEY</code> is required; <code>OPENROUTER_MODEL</code> selects the model. Start locally with <code>task services:roleinsights:start</code>; build with <code>task services:roleinsights:build</code>.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
