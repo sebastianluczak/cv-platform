@@ -464,9 +464,15 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li>
 <p>system makes processing updates available to the browser.</p>
 </li>
+<li>
+<p>user is notified of the processing status.</p>
+</li>
 </ol>
 </div>
 <h3 id="index:::_north_star" class="discrete">North Star</h3>
+<div class="paragraph">
+<p>A system where user puts in Resume, pastes link to the job description, and receives a processed output highlighting key information and matching criteria with optional AI-enhanced insights.</p>
+</div>
 <div class="paragraph">
 <p>It is a personal project solely driven by this pure soul:</p>
 </div>
@@ -475,6 +481,16 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <img src="../_images/freya.png" alt="freya">
 </div>
 <div class="title">Figure 1. Coder, Processor, Architect, Contractor, Reason</div>
+</div>
+<div class="paragraph">
+<p>Jokes aside - this project aims to provide a robust and efficient resume-processing platform as well as a playground for experimenting with new ideas and technologies.</p>
+</div>
+<div class="videoblock">
+<div class="content">
+<video src="https://github.com/sebastianluczak/cv-platform/raw/refs/heads/main/output.mp4" controls>
+Your browser does not support the video tag.
+</video>
+</div>
 </div>
 <h3 id="index:::_documentation_map" class="discrete">Documentation map</h3>
 <div class="ulist">
@@ -2155,6 +2171,97 @@ Always maintain backups and test restore procedures before deploying the datacle
 <p><a href="#architecture:workflow">Processing workflow</a></p>
 </li>
 </ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="adrs:adr0007"><a class="anchor" href="#adrs:adr0007"></a>ADR-0007: Stateless Architecture</h3>
+<h4 id="adrs:adr0007:::_context" class="discrete">Context</h4>
+<div class="paragraph">
+<p>In order to scale the CV Analyzer service efficiently and handle varying loads, it is essential to adopt a stateless architecture.</p>
+</div>
+<div class="paragraph">
+<p>This approach ensures that each instance of the service can operate independently without relying on local state, facilitating horizontal scaling and improving fault tolerance.</p>
+</div>
+<h4 id="adrs:adr0007:::_decision" class="discrete">Decision</h4>
+<div class="paragraph">
+<p>We will design the CV Analyzer service to be stateless.</p>
+</div>
+<div class="paragraph">
+<p>All stateful information, such as uploaded files, processing results, and job statuses, will be stored in external systems like object storage (S3) and message queues (RabbitMQ).</p>
+</div>
+<div class="paragraph">
+<p>The service instances will not retain any local state between requests.</p>
+</div>
+<h4 id="adrs:adr0007:::_consequences" class="discrete">Consequences</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>Service instances can be scaled horizontally without concern for local state.</p>
+</li>
+<li>
+<p>Failures of individual instances do not result in loss of critical data.</p>
+</li>
+<li>
+<p>External systems must be highly available and reliable to ensure overall system robustness.</p>
+</li>
+<li>
+<p>Deployment and orchestration are simplified, as instances can be replaced or updated without complex state migration.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="adrs:adr0008"><a class="anchor" href="#adrs:adr0008"></a>ADR-0008: Pillars of Observability</h3>
+<h4 id="adrs:adr0008:::_context" class="discrete">Context</h4>
+<div class="paragraph">
+<p>To effectively monitor and maintain the CV Analyzer service, it is crucial to implement comprehensive observability practices.</p>
+</div>
+<div class="paragraph">
+<p>Observability allows us to understand the internal state of the system based on the data it produces, enabling proactive issue detection, performance optimization, and informed decision-making.</p>
+</div>
+<h4 id="adrs:adr0008:::_decision" class="discrete">Decision</h4>
+<div class="paragraph">
+<p>We will adopt the pillars of observability for the CV Analyzer service: metrics, logs, traces, and events. Each pillar provides unique insights into the system&#8217;s behavior and collectively ensures a holistic understanding of its state.</p>
+</div>
+<h5 id="adrs:adr0008:::_metrics" class="discrete">Metrics</h5>
+<div class="paragraph">
+<p>Metrics are numerical representations of system performance and resource utilization. We will collect and monitor key metrics such as request rates, error rates, latency, CPU and memory usage, and custom application-specific metrics.</p>
+</div>
+<h5 id="adrs:adr0008:::_logs" class="discrete">Logs</h5>
+<div class="paragraph">
+<p>Logs provide detailed, timestamped records of system events and application behavior. We will implement structured logging to capture relevant context and facilitate efficient searching, filtering, and analysis.</p>
+</div>
+<h5 id="adrs:adr0008:::_traces" class="discrete">Traces</h5>
+<div class="paragraph">
+<p>Traces track the flow of requests through the system, helping to identify bottlenecks and performance issues. We will use distributed tracing to visualize request paths and measure latency across service components.</p>
+</div>
+<h5 id="adrs:adr0008:::_events" class="discrete">Events</h5>
+<div class="paragraph">
+<p>Events represent significant occurrences within the system, such as configuration changes, deployments, or alerts. We will capture and correlate events to understand their impact on system behavior and performance.</p>
+</div>
+<h4 id="adrs:adr0008:::_consequences" class="discrete">Consequences</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>Improved ability to detect and diagnose issues in the CV Analyzer service.</p>
+</li>
+<li>
+<p>Enhanced performance monitoring and optimization capabilities.</p>
+</li>
+<li>
+<p>Better understanding of system behavior and user interactions.</p>
+</li>
+<li>
+<p>Facilitates proactive maintenance and informed decision-making.</p>
+</li>
+</ul>
+</div>
+<h4 id="adrs:adr0008:::_technical_implication" class="discrete">Technical implication</h4>
+<div class="paragraph">
+<p>Not all of these can be successfully implemented during PoC stage using <code>devenv</code> local environment. This ADR is rather focused on establishing the observability framework and guiding principles, which will be fully realized in later stages of development and deployment, if this project progresses as planned.</p>
+</div>
+<div class="paragraph">
+<p>The core idea is to establish a solid observability foundation like Google SRE (Site Reliability Engineering) recommends, focusing on the collection and correlation of metrics, logs, traces, and events to gain comprehensive insights into system behavior and performance.</p>
 </div>
 </div>
 </div>
