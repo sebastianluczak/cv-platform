@@ -145,6 +145,34 @@ class PathPolicyTests(unittest.TestCase):
             "Implemented the requested change.\n",
         )
 
+    def test_agent_runs_without_repository_guidance(self):
+        (self.root / ".github/copilot-instructions.md").unlink()
+        with (
+            patch.object(issue_agent, "ROOT", self.root),
+            patch.dict(
+                "os.environ",
+                {
+                    "OPENROUTER_API_KEY": "test-key",
+                    "OPENROUTER_MODEL": "provider/model",
+                    "ISSUE_TITLE": "Implement a small change",
+                    "ISSUE_BODY": "Update the module.",
+                },
+                clear=True,
+            ),
+            patch.object(
+                issue_agent,
+                "openrouter_request",
+                return_value={"content": "No changes needed."},
+            ) as request,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            issue_agent.run_agent()
+
+        user_message = request.call_args.args[2][1]["content"]
+        self.assertIn(
+            "(No repository-specific guidance file is available.)", user_message
+        )
+
     def test_agent_retries_empty_length_truncation_with_larger_budget(self):
         responses = [
             {
