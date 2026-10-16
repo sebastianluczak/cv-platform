@@ -16,7 +16,7 @@ export default function PrivacyPolicy() {
           <header className="privacy-header">
             <h1>Privacy Policy</h1>
             <p className="privacy-intro">
-              This Privacy Policy explains how the CV Platform collects, uses, and protects your data. Our platform is designed to process your resume data locally and securely.
+              This Privacy Policy explains how the CV Platform collects, uses, and protects your data. Core resume processing runs on the platform; optional AI role insights require a separate opt-in and use an external provider.
             </p>
           </header>
 
@@ -44,6 +44,9 @@ export default function PrivacyPolicy() {
                 <strong>Skill matching results:</strong> Category scores and detected skill patterns from your resume, stored as structured data including confidence scores and matched evidence.
               </li>
               <li>
+                <strong>Optional AI role insights:</strong> If you separately opt in, suggestions based on your redacted resume, including role names, fit explanations, and typical responsibilities.
+              </li>
+              <li>
                 <strong>Processing metadata:</strong> Job identifiers, processing timestamps, and stage information to track your submission through our pipeline.
               </li>
             </ul>
@@ -63,11 +66,14 @@ export default function PrivacyPolicy() {
                 <strong>Skill matching:</strong> Analyzing your extracted resume text to identify skills and match them against job descriptions you provide, generating compatibility scores.
               </li>
               <li>
+                <strong>Optional role suggestions:</strong> After your separate opt-in, sending the best-effort redacted resume text to OpenRouter to suggest possible occupations. These are advisory role ideas, not job openings or an assessment of suitability.
+              </li>
+              <li>
                 <strong>Service improvement:</strong> Monitoring system performance and error rates to maintain reliability (no individual analysis of resume content).
               </li>
             </ul>
             <p>
-              We do not use your data for marketing, advertising, or any purpose outside these stated uses. Your resume content is never shared with third parties for analysis or training purposes.
+              We do not use your data for marketing or advertising. Without the optional role-insights request, the platform does not send resume content to an external AI provider. If you opt in, only the redacted resume text is sent to the configured OpenRouter model; redaction may miss personal information.
             </p>
           </section>
 
@@ -76,7 +82,7 @@ export default function PrivacyPolicy() {
             <p>We implement the following security measures:</p>
             <ul className="privacy-list">
               <li>
-                <strong>Local processing:</strong> All text extraction, named-entity redaction, and skill matching are performed locally on our servers. Your resume data is never sent to external APIs or cloud services.
+                <strong>Local and optional external processing:</strong> Text extraction, named-entity redaction, and skill matching are performed on our servers. Role insights are optional; if requested, the redacted resume is sent to OpenRouter after a separate opt-in.
               </li>
               <li>
                 <strong>S3-compatible storage:</strong> Your uploaded files and processing results are stored in S3-compatible object storage. Access is controlled using operator-managed credentials configured in the deployment environment.
@@ -89,7 +95,7 @@ export default function PrivacyPolicy() {
               </li>
             </ul>
             <p className="privacy-note">
-              <strong>Important:</strong> Redaction is a best-effort process using pattern matching and language models. It is not guaranteed to identify and remove all personal information. The original extracted text remains stored and must continue to be protected as personal data.
+              <strong>Important:</strong> Redaction is best-effort and does not guarantee removal of all personal information. Treat the redacted resume and AI-generated role insights as potentially sensitive personal data.
             </p>
           </section>
 

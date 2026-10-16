@@ -36,6 +36,11 @@
 |`results/<weigh-id>.ai.json`
 |Written by `aiweighter`; contains status, Markdown output, and references to the offer-match and resume job IDs.
 
+|AI role insights
+|Configured S3-compatible bucket
+|`results/<insight-id>.insights.json`
+|Written by `roleinsights` after explicit user consent; contains status, consent time, and role suggestions. It is generated from redacted resume text, not technical scores.
+
 |Extraction job
 |RabbitMQ work queue
 |`QUEUE_NAME`
@@ -61,6 +66,11 @@
 |`QUEUE_NAME.aiweight`
 |Persistent ID-only job published after explicit user consent. The worker loads the redacted resume, skill evidence, and offer text from storage.
 
+|AI role insights job
+|RabbitMQ work queue
+|`QUEUE_NAME.roleinsights`
+|Persistent ID-only job published after explicit user consent. The worker loads the redacted resume and does not depend on the skill result.
+
 |Failed job
 |RabbitMQ failed queue
 |`QUEUE_NAME.failed`
@@ -84,6 +94,11 @@
 |Failed AI resume job
 |RabbitMQ failed queue
 |`QUEUE_NAME.aiweight.failed`
+|Persistent message retained for inspection or operator-managed requeue.
+
+|Failed role insights job
+|RabbitMQ failed queue
+|`QUEUE_NAME.roleinsights.failed`
 |Persistent message retained for inspection or operator-managed requeue.
 
 |Processing status
@@ -129,6 +144,10 @@ The `datacleaner` service automates cleanup of aged objects and messages accordi
 |AI resume result (`results/<weigh-id>.ai.json`)
 |Not cleaned by datacleaner
 |Manual operator lifecycle or S3 bucket policy; remains indefinitely unless configured
+
+|AI role insights (`results/<insight-id>.insights.json`)
+|Not cleaned by datacleaner
+|Configure an S3 lifecycle policy or other operator-managed deletion; the current datacleaner does not expire these artifacts.
 
 |Failed messages (`<QUEUE_NAME>.<stage>.failed`)
 |7 days
@@ -292,5 +311,7 @@ Dry-run mode logs what would be deleted without modifying S3 or RabbitMQ. Verify
 The offer matcher does not persist fetched offer HTML. Pasted offer text is carried in its durable RabbitMQ message until processing; configure queue retention accordingly. The offer matcher API has no user authorization or ownership model, so deployments must keep it behind an access-controlled boundary.
 
 After a user opts in, normalized offer text and generated Markdown persist as result artifacts, and the redacted resume and skill result are sent to the configured external OpenRouter model. Redaction is best-effort and does not guarantee anonymity. AIweighter and offermatcher do not implement authentication or ownership checks; keep both APIs behind an access-controlled boundary. Configure object-store lifecycle and access controls for all resume, offer, and AI output artifacts.
+
+Role insights also require explicit opt-in and send the redacted resume text to OpenRouter; redaction remains best-effort. The roleinsights API has no authentication or ownership checks. Protect it behind an access-controlled boundary and configure lifecycle deletion for `results/*.insights.json`.
 
 IMPORTANT: Storage administrators must configure lifecycle expiration and access controls appropriate to their data policy. Review xref:security:data-security.adoc[] for additional security and privacy considerations.

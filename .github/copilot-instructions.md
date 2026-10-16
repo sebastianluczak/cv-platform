@@ -10,10 +10,11 @@ This repository is a small monorepo for a CV-processing platform:
   - `extractor`: consumes jobs, extracts text from PDFs/images, writes `results/<job-id>.txt`, and publishes the next stage.
   - `piistripper`: redacts the extraction result and publishes the skill-matching job.
   - `skillmatcher`: reads the redacted text, scores the resume, and writes `results/<job-id>.skills.json`.
+  - `roleinsights`: after explicit user consent, reads the redacted resume and suggests evidence-grounded roles across occupations.
 - `docs/` contains the Antora documentation site for the architecture and operational design.
 - `reviewer/` contains a Python helper for AI-assisted code review, not the main runtime.
 
-The runtime architecture is asynchronous and queue-driven: browser UI -> uploader HTTP endpoint -> RabbitMQ queue -> extractor -> piistripper -> skillmatcher -> shared S3-compatible bucket. The uploader exposes `/events?job_id=<id>` as SSE and `/results?job_id=<id>` for completion data.
+The runtime architecture is asynchronous and queue-driven: browser UI -> uploader HTTP endpoint -> RabbitMQ queue -> extractor -> piistripper -> skillmatcher -> shared S3-compatible bucket. Optional role insights run independently from the redacted resume and do not depend on skill scores. The uploader exposes `/events?job_id=<id>` as SSE and `/results?job_id=<id>` for completion data.
 
 ## Build, test, and lint commands
 
@@ -122,7 +123,7 @@ This matters when making changes: if you alter the queue contract, object keys, 
 
 ## Key conventions and repo-specific patterns
 
-- Keep `RABBITMQ_URL`, `QUEUE_NAME`, and `RUSTFS_*` settings aligned across uploader/extractor/piistripper/skillmatcher; they are expected to be shared.
+- Keep `RABBITMQ_URL`, `QUEUE_NAME`, and `RUSTFS_*` settings aligned across uploader/extractor/piistripper/skillmatcher/roleinsights; they are expected to be shared.
 - Prefer deterministic object keys and UUID job IDs; the pipeline treats repeated writes as safe due to key determinism.
 - Do not assume a single-process runtime. The uploader keeps SSE state in memory, so a restart clears that in-memory status; the repo explicitly notes this design limitation.
 - Use `gofmt` and the repo's `task prep:lint` target for Go changes rather than ad hoc formatting.

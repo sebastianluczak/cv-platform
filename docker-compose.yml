@@ -134,6 +134,33 @@ services:
       - cv-platform
     restart: on-failure
 
+  # Optional AI role suggestions from an explicitly consented redacted resume
+  roleinsights:
+    build:
+      context: .
+      dockerfile: services/roleinsights/Dockerfile
+    image: cv-platform-roleinsights:latest
+    container_name: roleinsights
+    ports:
+      - "8083:8083"
+    environment:
+      - RUSTFS_REGION=us-east-1
+      - RUSTFS_ACCESS_KEY_ID=rustfsadmin
+      - RUSTFS_SECRET_ACCESS_KEY=rustfsadmin
+      - RUSTFS_ENDPOINT_URL=http://s3:9000
+      - RUSTFS_BUCKET=cv-platform-uploads
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - QUEUE_NAME=cv-platform-queue
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-nvidia/nemotron-3-super-120b-a12b:free}
+      - ROLEINSIGHTS_PORT=8083
+    depends_on:
+      - s3
+      - rabbitmq
+    networks:
+      - cv-platform
+    restart: on-failure
+
   # Data cleanup service
   datacleaner:
     build:

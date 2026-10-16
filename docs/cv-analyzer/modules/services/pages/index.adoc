@@ -33,4 +33,9 @@
 |Creates a tailored Markdown resume from a completed offer match after explicit user consent
 |Implemented; optional asynchronous AI resume generation
 |xref:aiweighter.adoc[AIweighter]
+
+|`roleinsights`
+|Suggests evidence-grounded occupations from a redacted resume after explicit user consent; independent of technical scores
+|Implemented; optional asynchronous role insights
+|xref:roleinsights.adoc[Role insights]
 |===

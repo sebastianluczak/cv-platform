@@ -791,6 +791,68 @@
   outline-offset: 3px;
 }
 
+.role-insights-panel {
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid #dce8e3;
+  border-radius: 5px;
+  background: #f8fbf9;
+}
+
+.role-insights-panel h3 {
+  margin: 4px 0 0;
+  color: #293a3d;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.role-insights-panel > p {
+  margin: 7px 0 10px;
+  color: #5d6a6b;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.role-insights-result {
+  margin-top: 10px;
+}
+
+.role-insight {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #e1e9e5;
+  border-radius: 4px;
+  background: #fff;
+  color: #52616a;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.role-insight h4 {
+  margin: 0;
+  color: #293a3d;
+  font-size: 11px;
+}
+
+.role-insight p {
+  margin: 5px 0 8px;
+}
+
+.role-insight strong {
+  color: #344348;
+  font-weight: 650;
+}
+
+.role-insight ul {
+  margin: 4px 0 0;
+  padding-left: 17px;
+}
+
+.role-insight li + li {
+  margin-top: 3px;
+}
+
 .proof-line {
   margin-top: 20px;
   display: flex;

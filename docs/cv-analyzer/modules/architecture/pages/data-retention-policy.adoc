@@ -59,6 +59,11 @@ The datacleaner service exists to:
 |7 days
 |Deleted based on the underlying resume job's redacted-text retention.
 
+|AI role insights
+|S3 `results/<insight-id>.insights.json`
+|Operator-managed S3 lifecycle
+|The current datacleaner does not delete role insight artifacts; configure lifecycle expiry for this prefix.
+
 |Failed jobs
 |RabbitMQ `<QUEUE_NAME>.failed` (and other `.*.failed` queues)
 |7 days
@@ -75,6 +80,7 @@ The datacleaner service exists to:
 * Redaction is *best-effort only* and is not guaranteed to produce anonymized data. Original extracted text and redacted versions should both be treated as personal data.
 * Original uploaded files are deleted after the retention period regardless of processing success. If extraction or redaction failed, the resume cannot be reprocessed from the object store; the client must re-upload.
 * Offer text and AI-generated content are retained together with the underlying resume data they reference.
+* Role insight artifacts can contain resume-derived personal information. The current datacleaner does not delete them; configure and verify an S3 lifecycle policy.
 * Failed queue messages provide an inspection window for operators to review errors before automatic deletion.
 
 == Deployment Checklist

@@ -4,3 +4,8 @@ The UI posts uploads to `/api/upload`, listens for Server-Sent Events at
 to the uploader on `http://localhost:8080`. Set `VITE_UPLOAD_ENDPOINT` and
 `VITE_EVENTS_ENDPOINT` when the UI needs to use different API URLs. Set
 `VITE_RESULTS_ENDPOINT` to override the role-match results URL.
+
+Optional AI role insights use `/insights-api` in development (proxied to
+`http://localhost:8083`). Set `VITE_ROLEINSIGHTS_ENDPOINT` to override it.
+The UI requires a separate explicit opt-in before sending the redacted resume
+to the external AI provider.

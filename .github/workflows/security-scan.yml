@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [uploader, extractor, piistripper, skillmatcher, offermatcher, aiweighter, common]
+        service: [uploader, extractor, piistripper, skillmatcher, offermatcher, aiweighter, roleinsights, common]
     steps:
       - name: Check out source
         uses: actions/checkout@v5

@@ -1,15 +1,15 @@
 = Configuration
 
-The uploader, extractor, piistripper, skill matcher, offer matcher, and
-AIweighter must point to the same RabbitMQ queue and S3-compatible storage
-namespace.
+The uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter,
+roleinsights, and datacleaner must point to the same RabbitMQ queue and
+S3-compatible storage namespace.
 
 [cols="1,1,2,2"]
 |===
 |Variable |Required by |Default |Purpose
 
 |`RABBITMQ_URL`
-|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
+|All runtime services that use RabbitMQ
 |None
 |AMQP connection URL. Required at startup.
 
@@ -19,32 +19,32 @@ namespace.
 |Local NATS server URL. The development environment starts NATS with JetStream enabled, but the current services continue to use RabbitMQ until a JetStream pilot is implemented and explicitly selected.
 
 |`QUEUE_NAME`
-|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
+|All runtime services that use RabbitMQ
 |None
-|Durable extraction queue name. Redaction, status, skill matching, offer matching, AIweighter, and failed queue names append `.pii`, `.events`, `.skills`, `.offers`, `.aiweight`, `.failed`, `.pii.failed`, `.skills.failed`, `.offers.failed`, and `.aiweight.failed`.
+|Durable extraction queue name; status uses `.events`, stages append `.pii`, `.skills`, `.offers`, `.aiweight`, or `.roleinsights`, and failures append `.failed`.
 
 |`RUSTFS_ENDPOINT_URL`
-|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
+|All runtime services that use shared storage
 |`http://localhost:9000`
 |S3-compatible endpoint.
 
 |`RUSTFS_BUCKET`
-|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
+|All runtime services that use shared storage
 |`cv-platform-uploads`
-|Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, and AI resume results.
+|Shared bucket for uploads, extracted text, redacted results, resume scores, offer matches, AI resumes, and role insights.
 
 |`RUSTFS_REGION`
-|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
+|All runtime services that use shared storage
 |`us-east-1`
 |S3 signing region.
 
 |`RUSTFS_ACCESS_KEY_ID`
-|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
+|All runtime services that use shared storage
 |`rustfsadmin`
 |Object-storage access key.
 
 |`RUSTFS_SECRET_ACCESS_KEY`
-|Uploader, extractor, piistripper, skill matcher, offer matcher, AIweighter
+|All runtime services that use shared storage
 |`rustfsadmin`
 |Object-storage secret key.
 
@@ -63,30 +63,38 @@ namespace.
 |`8082`
 |HTTP API listen port.
 
+|`ROLEINSIGHTS_PORT`
+|Role insights
+|`8083`
+|HTTP API listen port.
+
 |`OPENROUTER_API_KEY`
-|AIweighter
+|AIweighter, role insights
 |None
-|API key for the explicitly consented external model request.
+|API key for explicitly consented external model requests.
 
 |`OPENROUTER_MODEL`
-|AIweighter
+|AIweighter, role insights
 |`nvidia/nemotron-3-super-120b-a12b:free`
 |OpenRouter chat-completion model slug.
 |===
 
-Use the same `RUSTFS_*` values in all six services. In particular,
+Use the same `RUSTFS_*` values across all services that use shared storage, including datacleaner. In particular,
 `RUSTFS_BUCKET` must match across producers and consumers. Piistripper writes a
 separate redacted result; the skill matcher writes category scores; the offer
 matcher retains bounded normalized offer text with its private result artifact;
 AIweighter consumes `QUEUE_NAME.aiweight` and stores generated Markdown.
+Role insights consumes `QUEUE_NAME.roleinsights` and stores role suggestions
+from the redacted resume without requiring or reading skill scores.
 
 For the JetStream evaluation, `devenv up` also starts a local NATS server with
 JetStream enabled and file-backed state under `.devenv/state/nats`. This is
 additional pilot infrastructure only: RabbitMQ remains the active broker, and
 no service reads `NATS_URL` until a pilot client is added.
 
-The offer matcher and AIweighter APIs have no authentication or account
+The offer matcher, AIweighter, and role insights APIs have no authentication or account
 ownership checks and must not be exposed directly to untrusted networks.
 AIweighter sends the redacted resume, skill evidence, and retained offer text
 to OpenRouter only after explicit user consent. Consent is not authentication
-or authorization.
+or authorization. Role insights separately sends only the redacted resume to
+OpenRouter after the user's explicit opt-in; redaction is best-effort.
