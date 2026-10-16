@@ -1676,3 +1676,240 @@ article a:focus-visible {
     gap: 3px;
   }
 }
+
+.page-shell {
+  --type-body: clamp(0.9375rem, calc(0.9rem + 0.18vw), 1.0625rem);
+  --type-secondary: clamp(0.8125rem, calc(0.78rem + 0.12vw), 0.9375rem);
+  --type-compact: clamp(0.75rem, calc(0.73rem + 0.08vw), 0.8125rem);
+  height: auto;
+  min-height: 100svh;
+  overflow: visible;
+}
+
+.hero-section {
+  flex: 1 0 auto;
+  padding: clamp(24px, 3vw, 40px) 0;
+}
+
+.review-workspace {
+  flex: 0 0 auto;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.55fr);
+  gap: clamp(16px, 1.5vw, 24px);
+  align-items: stretch;
+}
+
+.workspace-panel {
+  padding: clamp(18px, 2vw, 28px);
+}
+
+.results-panel {
+  min-height: auto;
+  overflow: visible;
+}
+
+.privacy-policy-page,
+.data-retention-page {
+  min-height: auto;
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
+.brand {
+  font-size: 18px;
+}
+
+.brand-mark {
+  width: 34px;
+  font-size: 21px;
+}
+
+.hero-copy h1,
+.privacy-header h1 {
+  font-size: clamp(2rem, calc(1.5rem + 1.6vw), 3rem);
+}
+
+.panel-heading h2,
+.results-heading h2,
+.data-retention-section h2,
+.privacy-section h2 {
+  font-size: clamp(1.125rem, calc(1.05rem + 0.25vw), 1.375rem);
+}
+
+.intro,
+.dropzone-title,
+.consent-checkbox-label,
+.results-intro,
+.results-note,
+.upload-message,
+.progress-message,
+.privacy-intro,
+.privacy-section p,
+.privacy-list,
+.privacy-note,
+.privacy-contact p,
+.data-retention-section p,
+.offer-match-result,
+.ai-resume-panel > p,
+.ai-consent,
+.privacy-footer p,
+.footer-text {
+  font-size: var(--type-body);
+}
+
+.topbar-note,
+.page-footer,
+.eyebrow,
+.panel-kicker,
+.dropzone-caption,
+.progress-heading,
+.progress-steps li > span,
+.progress-steps li > small,
+.score-legend,
+.review-area strong,
+.review-area span,
+.match-category-name,
+.match-score,
+.match-score small,
+.category-detail > p,
+.offer-toggle strong,
+.offer-toggle small,
+.offer-input-tabs button,
+.offer-input-label,
+.offer-input-label input,
+.offer-input-label textarea,
+.result-error,
+.offer-match-result dl,
+.offer-match-result > small,
+.offer-retention-note,
+.ai-resume-panel h3,
+.ai-download-button,
+.footer-links,
+.footer-link,
+.footer-divider,
+.footer-meta,
+.privacy-footer p,
+table th,
+table td {
+  font-size: var(--type-secondary);
+}
+
+.privacy-note,
+.privacy-footer p,
+table code {
+  font-size: var(--type-compact);
+}
+
+.upload-button {
+  min-height: 48px;
+  font-size: var(--type-body);
+}
+
+.compare-button {
+  min-height: 44px;
+  font-size: var(--type-secondary);
+}
+
+.ai-download-button,
+.offer-input-tabs button {
+  min-height: 40px;
+}
+
+.offer-toggle {
+  min-height: 64px;
+}
+
+.dropzone {
+  min-height: 140px;
+  padding: 18px;
+}
+
+.offer-input-label input,
+.offer-input-label textarea {
+  min-height: 48px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.category-detail summary {
+  min-height: 52px;
+}
+
+.data-retention-section h2,
+.privacy-section h2 {
+  margin-bottom: 12px;
+}
+
+.privacy-header {
+  margin-bottom: clamp(24px, 3vw, 40px);
+}
+
+.privacy-section,
+.data-retention-section {
+  margin-bottom: clamp(20px, 2.5vw, 32px);
+}
+
+.app-footer {
+  padding: 20px 0;
+}
+
+.footer-links {
+  gap: 12px;
+}
+
+table th,
+table td {
+  padding: 12px;
+}
+
+@media (max-width: 960px) {
+  .review-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .upload-panel {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 540px) {
+  .page-shell {
+    padding: 0 18px;
+  }
+
+  .topbar {
+    min-height: 60px;
+  }
+
+  .hero-section {
+    padding: 24px 0;
+  }
+
+  .workspace-panel {
+    padding: 18px;
+  }
+
+  .upload-button {
+    min-height: 48px;
+  }
+
+  .dropzone {
+    min-height: 132px;
+  }
+
+  .page-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 0;
+  }
+
+  .privacy-policy-page,
+  .data-retention-page {
+    padding: 18px 0;
+  }
+
+  .privacy-header {
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+  }
+}

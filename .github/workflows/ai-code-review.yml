@@ -63,7 +63,7 @@ jobs:
             const findings = report.findings || [];
             const findingSections = findings.map((finding, index) => [
               `### ${index + 1}. ${finding.severity.toUpperCase()}: ${finding.title}`,
-              `\`${finding.file}:${finding.line}\` · Confidence: ${Math.round(finding.confidence * 100)}%`,
+              `\`${finding.file}:${finding.line}\` · Confidence: ${finding.confidence}%`,
               finding.explanation,
               `**Suggested fix:** ${finding.suggested_fix}`
             ].join('\n\n'));
