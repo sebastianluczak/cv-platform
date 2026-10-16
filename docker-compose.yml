@@ -149,7 +149,7 @@ services:
       - RUSTFS_SECRET_ACCESS_KEY=rustfsadmin
       - RUSTFS_ENDPOINT_URL=http://s3:9000
       - RUSTFS_BUCKET=cv-platform-uploads
-      - RABBITMQ_URL=******rabbitmq:5672/
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - QUEUE_NAME=cv-platform-queue
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-nvidia/nemotron-3-super-120b-a12b:free}
