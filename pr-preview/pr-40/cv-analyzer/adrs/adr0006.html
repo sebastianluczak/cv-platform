@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>ADR-0006: Cost-aware GitHub Actions without reducing assurance :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Architecture Decision Records</li>
+    <li><a href="adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/adrs/pages/adr0006.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">ADR-0006: Cost-aware GitHub Actions without reducing assurance</h1>
+<div class="sect1">
+<h2 id="_context"><a class="anchor" href="#_context"></a>Context</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The project reported spending 350 of its 2,000 free GitHub Actions minutes in one day. A review of the latest 24 hours of workflow runs found:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>CI ran 33 times: 27 pull request runs and 6 pushes to <code>main</code>.</p>
+</li>
+<li>
+<p>Documentation publication ran 33 times on the same events.</p>
+</li>
+<li>
+<p>AI review ran 12 times on pull request updates.</p>
+</li>
+<li>
+<p>The Go security scan ran 5 times. Each run started five matrix jobs, and each job spent approximately 42–66 seconds installing the same pinned <code>gosec</code> version.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The CI and documentation workflows both set up Nix and devenv. The documentation workflow builds a preview on every pull request, including changes that cannot affect the documentation. The CI workflow uses <code>devenv test</code>, which currently runs the four Go test suites in <code>test.sh</code>; it does not run UI tests, docs, or the <code>common</code> module.</p>
+</div>
+<div class="paragraph">
+<p>The GitHub run-usage endpoint returned zero billed milliseconds for sampled runs, so the timings above are runner step durations and run counts, not a precise reconstruction of billed minutes. Existing checks, review feedback, SARIF uploads, documentation previews, and production publication must remain available for relevant changes.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_decision"><a class="anchor" href="#_decision"></a>Decision</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Preserve the current CI and AI-review triggers and all existing check coverage. Reduce repeat work where the affected output is clear:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Keep the documentation workflow and its pull request job/check active, but run the expensive documentation build and preview only when documentation sources or their build configuration changed. Restrict <code>main</code> push runs to those same paths. Keep manual dispatch able to build documentation.</p>
+</li>
+<li>
+<p>Build the pinned <code>gosec</code> binary once per security workflow run and distribute it to the existing five-module matrix. Keep the per-module job names, scan scope, SARIF files, categories, and uploads. Cache each module&#8217;s Go dependencies using its <code>go.sum</code>.</p>
+</li>
+<li>
+<p>Continue running <code>devenv test</code> for all current CI triggers. Do not broaden or reduce its test coverage as part of this cost change.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Documentation-affecting paths are <code>docs/**</code>, <code>taskfile.yml</code>, <code>devenv.nix</code>, <code>devenv.yaml</code>, <code>devenv.lock</code>, and <code>.github/workflows/publish-antora.docs.yml</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_consequences"><a class="anchor" href="#_consequences"></a>Consequences</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Unrelated pull requests still produce a successful documentation workflow check, but skip Nix/devenv installation and documentation build steps. Changes to docs or build configuration continue to generate previews, and relevant pushes to <code>main</code> continue to publish the production site.</p>
+</div>
+<div class="paragraph">
+<p>The security workflow adds one setup job and artifact transfer, but avoids compiling the same security tool independently in five runners. The matrix remains parallel and keeps its existing check names; the setup job becomes a prerequisite.</p>
+</div>
+<div class="paragraph">
+<p>CI and AI review may continue to run for changes that do not affect their results. This is intentional until branch-protection requirements and broader code/test dependencies are verified; path-based CI skipping could otherwise remove a required status check or miss a dependency.</p>
+</div>
+<div class="paragraph">
+<p>Measure billed minutes and check results after adoption. If documented paths, outputs, required checks, or scan categories are missing, restore the prior behavior before pursuing further trigger narrowing.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_references"><a class="anchor" href="#_references"></a>References</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../architecture/workflow.html" class="xref page">Processing workflow</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
