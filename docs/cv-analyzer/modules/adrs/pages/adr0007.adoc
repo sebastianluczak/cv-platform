@@ -1,0 +1,23 @@
+= ADR-0007: Stateless Architecture
+:toc:
+
+== Context
+
+In order to scale the CV Analyzer service efficiently and handle varying loads, it is essential to adopt a stateless architecture. 
+
+This approach ensures that each instance of the service can operate independently without relying on local state, facilitating horizontal scaling and improving fault tolerance.
+
+== Decision
+
+We will design the CV Analyzer service to be stateless. 
+
+All stateful information, such as uploaded files, processing results, and job statuses, will be stored in external systems like object storage (S3) and message queues (RabbitMQ). 
+
+The service instances will not retain any local state between requests.
+
+== Consequences
+
+- Service instances can be scaled horizontally without concern for local state.
+- Failures of individual instances do not result in loss of critical data.
+- External systems must be highly available and reliable to ensure overall system robustness.
+- Deployment and orchestration are simplified, as instances can be replaced or updated without complex state migration.

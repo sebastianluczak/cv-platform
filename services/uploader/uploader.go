@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"brodaty.dev/cv-platform/common/prometheus"
 	"brodaty.dev/cv-platform/uploader/buckets"
 	"brodaty.dev/cv-platform/uploader/progress"
 	"brodaty.dev/cv-platform/uploader/queue"
@@ -206,6 +207,13 @@ func newJobID() (string, error) {
 }
 
 func main() {
+	go func() {
+		if err := prometheus.StartMetricsServer("METRICS_PORT_AIWEIGHTER"); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Metrics server failed: %v", err)
+		}
+	}()
+
 	storageClient, bucketConfig := buckets.NewClient()
 	if err := buckets.EnsureBucket(context.Background(), storageClient, bucketConfig.Bucket); err != nil {
 		log.Fatalf("Initialize object storage: %v", err)

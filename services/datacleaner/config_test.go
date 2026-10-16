@@ -22,10 +22,10 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		got      interface{}
-		want     interface{}
-		field    string
+		name  string
+		got   interface{}
+		want  interface{}
+		field string
 	}{
 		{"S3 Region", cfg.S3Region, "us-east-1", "S3Region"},
 		{"S3 Bucket", cfg.S3Bucket, "cv-platform-uploads", "S3Bucket"},
@@ -68,9 +68,9 @@ func TestLoadConfig_FromEnvironment(t *testing.T) {
 	}
 
 	tests := []struct {
-		name  string
-		got   interface{}
-		want  interface{}
+		name string
+		got  interface{}
+		want interface{}
 	}{
 		{"RabbitMQ URL", cfg.RabbitMQURL, "amqp://custom-host:5672"},
 		{"Queue Name", cfg.QueueName, "custom-queue"},
@@ -131,8 +131,8 @@ func TestLoadConfig_Validation(t *testing.T) {
 		{
 			name: "RetentionRedacted must be > 0",
 			envSetup: map[string]string{
-				"RABBITMQ_URL":             "amqp://test",
-				"QUEUE_NAME":               "test-queue",
+				"RABBITMQ_URL":            "amqp://test",
+				"QUEUE_NAME":              "test-queue",
 				"RETENTION_REDACTED_DAYS": "-1",
 			},
 			wantError: true,
@@ -141,8 +141,8 @@ func TestLoadConfig_Validation(t *testing.T) {
 		{
 			name: "RetentionFailed must be > 0",
 			envSetup: map[string]string{
-				"RABBITMQ_URL":                 "amqp://test",
-				"QUEUE_NAME":                   "test-queue",
+				"RABBITMQ_URL":                "amqp://test",
+				"QUEUE_NAME":                  "test-queue",
 				"RETENTION_FAILED_QUEUE_DAYS": "0",
 			},
 			wantError: true,

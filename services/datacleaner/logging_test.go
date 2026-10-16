@@ -62,18 +62,18 @@ func TestLogEntry_JSON(t *testing.T) {
 func TestLogStartup_Format(t *testing.T) {
 
 	cfg := Config{
-		QueueName:              "test-queue",
-		RetentionUploads:       7,
-		RetentionRedacted:      7,
-		RetentionFailed:        7,
-		CleanupInterval:        1,
-		DryRun:                 false,
-		S3Region:               "us-east-1",
-		S3Endpoint:             "http://localhost:9000",
-		S3Bucket:               "test-bucket",
-		S3AccessKeyID:          "test-key",
-		S3SecretAccessKey:      "test-secret",
-		RabbitMQURL:            "amqp://localhost",
+		QueueName:         "test-queue",
+		RetentionUploads:  7,
+		RetentionRedacted: 7,
+		RetentionFailed:   7,
+		CleanupInterval:   1,
+		DryRun:            false,
+		S3Region:          "us-east-1",
+		S3Endpoint:        "http://localhost:9000",
+		S3Bucket:          "test-bucket",
+		S3AccessKeyID:     "test-key",
+		S3SecretAccessKey: "test-secret",
+		RabbitMQURL:       "amqp://localhost",
 	}
 
 	output := captureStderr(func() {

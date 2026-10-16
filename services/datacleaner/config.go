@@ -109,7 +109,7 @@ func parseIntEnv(key string, defaultValue int) int {
 	}
 	intValue, err := strconv.Atoi(value)
 	if err != nil {
-		log.Printf("Invalid %s value %q, using default %d", key, value, defaultValue)
+		log.Printf("Invalid %s value, using default %d", key, defaultValue)
 		return defaultValue
 	}
 	return intValue
@@ -127,6 +127,6 @@ func parseBoolEnv(key string, defaultValue bool) bool {
 	if value == "true" || value == "1" || value == "yes" {
 		return true
 	}
-	log.Printf("Invalid %s value %q, using default %v", key, value, defaultValue)
+	log.Printf("Invalid %s value, using default %v", key, defaultValue)
 	return defaultValue
 }

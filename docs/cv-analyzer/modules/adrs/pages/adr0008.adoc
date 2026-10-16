@@ -1,0 +1,41 @@
+= ADR-0008: Pillars of Observability
+:toc:
+
+== Context
+
+To effectively monitor and maintain the CV Analyzer service, it is crucial to implement comprehensive observability practices.
+
+Observability allows us to understand the internal state of the system based on the data it produces, enabling proactive issue detection, performance optimization, and informed decision-making.
+
+== Decision
+
+We will adopt the pillars of observability for the CV Analyzer service: metrics, logs, traces, and events. Each pillar provides unique insights into the system's behavior and collectively ensures a holistic understanding of its state.
+
+=== Metrics
+
+Metrics are numerical representations of system performance and resource utilization. We will collect and monitor key metrics such as request rates, error rates, latency, CPU and memory usage, and custom application-specific metrics.
+
+=== Logs
+
+Logs provide detailed, timestamped records of system events and application behavior. We will implement structured logging to capture relevant context and facilitate efficient searching, filtering, and analysis.
+
+=== Traces
+
+Traces track the flow of requests through the system, helping to identify bottlenecks and performance issues. We will use distributed tracing to visualize request paths and measure latency across service components.
+
+=== Events
+
+Events represent significant occurrences within the system, such as configuration changes, deployments, or alerts. We will capture and correlate events to understand their impact on system behavior and performance.
+
+== Consequences
+
+- Improved ability to detect and diagnose issues in the CV Analyzer service.
+- Enhanced performance monitoring and optimization capabilities.
+- Better understanding of system behavior and user interactions.
+- Facilitates proactive maintenance and informed decision-making.
+
+== Technical implication
+
+Not all of these can be successfully implemented during PoC stage using `devenv` local environment. This ADR is rather focused on establishing the observability framework and guiding principles, which will be fully realized in later stages of development and deployment, if this project progresses as planned.
+
+The core idea is to establish a solid observability foundation like Google SRE (Site Reliability Engineering) recommends, focusing on the collection and correlation of metrics, logs, traces, and events to gain comprehensive insights into system behavior and performance.

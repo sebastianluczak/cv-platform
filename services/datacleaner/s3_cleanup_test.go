@@ -7,13 +7,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
-
 func TestListExpiredObjects_Empty(t *testing.T) {
 
 	// Test that empty object list is handled correctly
 	// Logic: no objects means no expired objects
 	var objects []interface{}
-	
+
 	if len(objects) != 0 {
 		t.Errorf("Expected empty slice for empty bucket")
 	}
@@ -54,7 +53,7 @@ func TestDeleteObject_Success(t *testing.T) {
 	// In actual implementation, deleteObject calls client.DeleteObject
 	// Here we verify the error handling logic
 	key := "test-key"
-	
+
 	// Verify key is not empty
 	if len(key) == 0 {
 		t.Errorf("Key should not be empty")
@@ -77,7 +76,7 @@ func TestDeleteObject_NotFound(t *testing.T) {
 	// The code specifically checks for "NoSuchKey" and returns nil
 	errorCode := "NoSuchKey"
 	shouldIgnore := errorCode == "NoSuchKey"
-	
+
 	if !shouldIgnore {
 		t.Errorf("NoSuchKey should be ignored")
 	}
@@ -88,9 +87,9 @@ func TestObjectAge(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name           string
-		lastModified   *time.Time
-		maxAgeDuration time.Duration
+		name            string
+		lastModified    *time.Time
+		maxAgeDuration  time.Duration
 		shouldBeExpired bool
 	}{
 		{
@@ -122,7 +121,7 @@ func TestObjectAge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			age := objectAge(tt.lastModified)
-			
+
 			if tt.lastModified == nil {
 				if age != 0 {
 					t.Errorf("objectAge for nil should return 0, got %v", age)
@@ -142,7 +141,7 @@ func TestDeleteObjectBatch_Success(t *testing.T) {
 
 	// Test batch deletion logic
 	keys := []string{"key1", "key2", "key3"}
-	
+
 	if len(keys) != 3 {
 		t.Errorf("Expected 3 keys")
 	}
@@ -152,7 +151,7 @@ func TestDeleteObjectBatch_Empty(t *testing.T) {
 
 	// Test empty batch handling
 	keys := []string{}
-	
+
 	if len(keys) != 0 {
 		t.Errorf("Expected empty list to have 0 keys")
 	}
@@ -163,7 +162,7 @@ func TestDeleteObjectBatch_DryRun(t *testing.T) {
 	// Test dry-run batch deletion
 	keys := []string{"key1", "key2"}
 	dryRun := true
-	
+
 	if dryRun {
 		// In dry-run mode, no actual deletion
 		t.Logf("Dry-run batch: %d objects would be deleted", len(keys))

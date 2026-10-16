@@ -6,13 +6,20 @@ CV Platform (also presented as Draftline in the UI) is an early-stage resume-pro
 . the backend stores the original, 
 . backend queues an extraction job, 
 . system makes processing updates available to the browser.
+. user is notified of the processing status.
 
 == North Star
+
+A system where user puts in Resume, pastes link to the job description, and receives a processed output highlighting key information and matching criteria with optional AI-enhanced insights.
 
 It is a personal project solely driven by this pure soul:
 
 .Coder, Processor, Architect, Contractor, Reason
 image::freya.png[]
+
+Jokes aside - this project aims to provide a robust and efficient resume-processing platform as well as a playground for experimenting with new ideas and technologies.
+
+video::https://github.com/sebastianluczak/cv-platform/raw/refs/heads/main/output.mp4[]
 
 == Documentation map
 

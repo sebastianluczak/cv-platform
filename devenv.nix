@@ -23,6 +23,7 @@
     pkgs.tesseract4
     pkgs.vips
     pkgs.nats-server
+    pkgs.grafana
   ];
   dotenv.enable = true;
   languages.go.enable = true;
@@ -40,6 +41,69 @@
   } // lib.optionalAttrs (!config.devenv.isTesting) {
     enable = true;
     managementPlugin.enable = true;
+  };
+  services.prometheus = {
+    enable = false;
+  } // lib.optionalAttrs (!config.devenv.isTesting) {
+    enable = true;
+    scrapeConfigs = [
+      {
+        job_name = "aiweighter";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8051" ];
+          }
+        ];
+      }
+      {
+        job_name = "datacleaner";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8052" ];
+          }
+        ];
+      }
+      {
+        job_name = "extractor";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8053" ];
+          }
+        ];
+      }
+      {
+        job_name = "offermatcher";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8054" ];
+          }
+        ];
+      }
+      {
+        job_name = "piistripper";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8055" ];
+          }
+        ];
+      }
+      {
+        job_name = "skillmatcher";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8056" ];
+          }
+        ];
+      }
+      {
+        job_name = "uploader";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8057" ];
+          }
+        ];
+      }
+    ];
   };
   processes = { } // lib.optionalAttrs (!config.devenv.isTesting) {
     nats-jetstream = {
