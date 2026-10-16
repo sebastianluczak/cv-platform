@@ -10,6 +10,27 @@ from reviewer import issue_agent
 from reviewer import run_issue_checks
 
 
+class OpenRouterRequestTests(unittest.TestCase):
+    def test_request_uses_token_budget_and_preserves_finish_reason(self):
+        payload = {
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {"content": None, "tool_calls": None},
+                }
+            ]
+        }
+        response = io.BytesIO(json.dumps(payload).encode("utf-8"))
+        with patch.object(
+            issue_agent.urllib.request, "urlopen", return_value=response
+        ) as urlopen:
+            result = issue_agent.openrouter_request("test-key", "provider/model", [])
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(json.loads(request.data)["max_tokens"], 4_096)
+        self.assertEqual(result["_finish_reason"], "length")
+
+
 class PathPolicyTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -122,6 +143,92 @@ class PathPolicyTests(unittest.TestCase):
         self.assertEqual(
             (self.root / "summary.md").read_text(encoding="utf-8"),
             "Implemented the requested change.\n",
+        )
+
+    def test_agent_retries_empty_length_truncation_with_larger_budget(self):
+        responses = [
+            {
+                "content": None,
+                "_finish_reason": "length",
+                "_diagnostics": "first response truncated",
+            },
+            {
+                "tool_calls": [
+                    {
+                        "id": "write-1",
+                        "function": {
+                            "name": "write_file",
+                            "arguments": json.dumps(
+                                {
+                                    "path": "services/uploader/main.go",
+                                    "content": "package main\n",
+                                }
+                            ),
+                        },
+                    }
+                ]
+            },
+            {"content": "Recovered and implemented the requested change."},
+        ]
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "OPENROUTER_API_KEY": "test-key",
+                    "OPENROUTER_MODEL": "provider/model",
+                    "ISSUE_TITLE": "Implement a small change",
+                    "ISSUE_BODY": "Update the module.",
+                },
+                clear=True,
+            ),
+            patch.object(
+                issue_agent, "openrouter_request", side_effect=responses
+            ) as request,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            issue_agent.run_agent()
+
+        self.assertEqual(request.call_count, 3)
+        self.assertEqual(
+            request.call_args_list[1].kwargs["max_tokens"],
+            issue_agent.RETRY_COMPLETION_TOKENS,
+        )
+        self.assertEqual(
+            (self.root / "services/uploader/main.go").read_text(encoding="utf-8"),
+            "package main\n",
+        )
+
+    def test_agent_reports_persistent_length_truncation(self):
+        truncated = {
+            "content": None,
+            "_finish_reason": "length",
+            "_diagnostics": "response exhausted output budget",
+        }
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "OPENROUTER_API_KEY": "test-key",
+                    "OPENROUTER_MODEL": "provider/model",
+                    "ISSUE_TITLE": "Implement a small change",
+                    "ISSUE_BODY": "Update the module.",
+                },
+                clear=True,
+            ),
+            patch.object(
+                issue_agent, "openrouter_request", side_effect=[truncated, truncated]
+            ) as request,
+        ):
+            with self.assertRaisesRegex(
+                issue_agent.AgentError,
+                "finish_reason=length, max_tokens=8192",
+            ):
+                issue_agent.run_agent()
+
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(
+            request.call_args_list[1].kwargs["max_tokens"],
+            issue_agent.RETRY_COMPLETION_TOKENS,
         )
 
 

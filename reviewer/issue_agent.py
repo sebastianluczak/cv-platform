@@ -15,6 +15,8 @@ MAX_FILE_CHARS = 80_000
 MAX_RESPONSE_CHARS = 12_000
 MAX_TOOL_CALLS = 100
 MAX_DIFF_CHARS = 250_000
+MAX_COMPLETION_TOKENS = 4_096
+RETRY_COMPLETION_TOKENS = 8_192
 
 READ_ONLY_PATHS = {".github/copilot-instructions.md"}
 WRITABLE_ROOTS = {"services", "ui", "docs", "reviewer"}
@@ -284,7 +286,12 @@ TOOL_FUNCTIONS = {
 }
 
 
-def openrouter_request(api_key: str, model: str, messages: list[dict]) -> dict:
+def openrouter_request(
+    api_key: str,
+    model: str,
+    messages: list[dict],
+    max_tokens: int = MAX_COMPLETION_TOKENS,
+) -> dict:
     body = json.dumps(
         {
             "model": model,
@@ -292,7 +299,7 @@ def openrouter_request(api_key: str, model: str, messages: list[dict]) -> dict:
             "tools": TOOLS,
             "tool_choice": "auto",
             "temperature": 0.1,
-            "max_tokens": 4096,
+            "max_tokens": max_tokens,
         }
     ).encode("utf-8")
     request = urllib.request.Request(
@@ -331,12 +338,17 @@ def openrouter_request(api_key: str, model: str, messages: list[dict]) -> dict:
     choices = payload.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
         raise AgentError(f"OpenRouter returned no completion choices: {describe_payload(payload)}")
-    message = choices[0].get("message")
+    choice = choices[0]
+    message = choice.get("message")
     if not isinstance(message, dict):
         raise AgentError(
             f"OpenRouter returned a malformed completion message: {describe_payload(payload)}"
         )
-    return {**message, "_diagnostics": describe_payload(payload)}
+    return {
+        **message,
+        "_finish_reason": choice.get("finish_reason"),
+        "_diagnostics": describe_payload(payload),
+    }
 
 
 def describe_payload(payload: object, limit: int = 3000) -> str:
@@ -403,15 +415,33 @@ def run_agent() -> None:
 
     tool_call_count = 0
     while True:
+        max_tokens = MAX_COMPLETION_TOKENS
         message = openrouter_request(api_key, model, messages)
         tool_calls = message.get("tool_calls") or []
-        if not tool_calls:
+        final = message.get("content")
+        if (
+            not tool_calls
+            and (not isinstance(final, str) or not final.strip())
+            and message.get("_finish_reason") == "length"
+        ):
+            max_tokens = RETRY_COMPLETION_TOKENS
+            message = openrouter_request(
+                api_key,
+                model,
+                messages,
+                max_tokens=max_tokens,
+            )
+            tool_calls = message.get("tool_calls") or []
             final = message.get("content")
+
+        if not tool_calls:
             if not isinstance(final, str) or not final.strip():
                 raise AgentError(
                     "Model returned neither tool calls nor a final response "
                     f"(model={model}, tool_calls_so_far={tool_call_count}, "
-                    f"messages={len(messages)}, content_type={type(final).__name__}). "
+                    f"messages={len(messages)}, content_type={type(final).__name__}, "
+                    f"finish_reason={message.get('_finish_reason')}, "
+                    f"max_tokens={max_tokens}). "
                     f"Raw response: {message.get('_diagnostics', '<unavailable>')}"
                 )
             summary = final[:MAX_RESPONSE_CHARS]
