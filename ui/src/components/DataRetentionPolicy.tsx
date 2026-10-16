@@ -20,14 +20,14 @@ export default function DataRetentionPolicy() {
             </p>
             <h1>Data Retention Policy</h1>
             <p className="privacy-intro">
-              All resume data processed by the CV Platform is automatically deleted after a retention period. This page explains exactly what data is kept and for how long.
+              Retention depends on the data type and the platform operator's storage configuration. This page summarizes the current defaults and identifies data that requires operator-managed lifecycle rules.
             </p>
           </header>
 
           <section className="privacy-section">
             <h2>Overview</h2>
             <p>
-              The CV Platform processes resume files through multiple stages: upload, text extraction, PII redaction, and skill matching. At each stage, intermediate data is retained only as long as necessary to support the processing pipeline and provide results to users. After a defined retention period, all data is automatically deleted from the platform. No backups are retained.
+              The CV Platform processes resume files through upload, text extraction, redaction, and skill matching. Some data is expired by the datacleaner; other results, including optional AI role insights, remain in object storage unless the operator configures lifecycle deletion. Ask the operator which retention policy applies to this deployment.
             </p>
           </section>
 
@@ -130,6 +130,20 @@ export default function DataRetentionPolicy() {
                   </tr>
                   <tr style={{ borderBottom: '1px solid #dce4e6', backgroundColor: '#fff' }}>
                     <td style={{ padding: '12px', color: '#18232b', fontWeight: 600 }}>
+                      Optional AI role insights
+                    </td>
+                    <td style={{ padding: '12px', color: '#52616a' }}>
+                      S3 storage (<code style={{ backgroundColor: '#f4f7f6', padding: '2px 4px', borderRadius: '3px' }}>results/&lt;insight-id&gt;.insights.json</code>)
+                    </td>
+                    <td style={{ padding: '12px', color: '#18232b', fontWeight: 600 }}>
+                      Operator-managed
+                    </td>
+                    <td style={{ padding: '12px', color: '#52616a' }}>
+                      The current datacleaner does not delete these artifacts; an S3 lifecycle rule or other deletion process is required
+                    </td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #dce4e6', backgroundColor: '#fff' }}>
+                    <td style={{ padding: '12px', color: '#18232b', fontWeight: 600 }}>
                       Failed processing jobs
                     </td>
                     <td style={{ padding: '12px', color: '#52616a' }}>
@@ -151,7 +165,7 @@ export default function DataRetentionPolicy() {
             <h2>What Happens After Retention Expires</h2>
             <ul className="privacy-list">
               <li>
-                <strong>Objects are automatically deleted from storage.</strong> When the retention period expires, the platform performs an automatic cleanup and removes all associated objects from the S3 bucket and RabbitMQ queues.
+                <strong>Configured expirations are applied.</strong> The datacleaner deletes only data covered by its implemented policies; operators must configure object-storage lifecycle rules for other artifacts, including AI role insights.
               </li>
               <li>
                 <strong>No recovery is possible.</strong> Once deleted, data cannot be recovered from the platform. Plan accordingly if you need to retain results beyond the retention window.

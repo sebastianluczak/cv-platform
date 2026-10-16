@@ -1,0 +1,41 @@
+= Role Insights
+
+`roleinsights` suggests possible occupations from a resume, including non-technical roles. Suggestions are advisory role ideas, not job openings or an assessment of candidate ability or suitability. The service does not use the skill match score.
+
+== HTTP API
+
+The service listens on `ROLEINSIGHTS_PORT` (default `8083`).
+
+`POST /insights` requires an explicit consent affirmation and a resume job ID:
+
+[source,json]
+----
+{"resume_job_id":"<resume-job-uuid>","consent":true}
+----
+
+The service verifies that the redacted resume exists, stores a queued request, and publishes the job with RabbitMQ publisher confirmation before returning `202 Accepted`:
+
+[source,json]
+----
+{"insight_id":"<insight-uuid>","status":"queued"}
+----
+
+Poll `GET /insights/<insight-id>` for `queued`, `processing`, `completed`, or `failed`. A completed response contains up to five role suggestions. Each suggestion has a role title, a fit explanation, and typical responsibilities.
+
+== Inputs and output
+
+The worker reads only `results/<resume-job-id>.redacted.txt`. It does not read the original upload, unredacted extraction, technical score artifact, offer text, or offer match. Therefore, IT-oriented score patterns do not constrain suggested occupations.
+
+The worker asks the configured OpenRouter model for a structured JSON result, validates the number and shape of suggestions, and stores it at `results/<insight-id>.insights.json`. Resume content is untrusted input, not instructions. The model is directed to use only resume-supported facts; generated role ideas can still be inaccurate and should be reviewed.
+
+== Consent and privacy
+
+The UI presents a separate opt-in and external-provider disclosure. Only after the user agrees does it submit the resume job ID to `POST /insights`; the worker sends the redacted resume text to OpenRouter. PII redaction is best-effort and does not guarantee anonymity. API consent is not authentication or ownership verification.
+
+The API has no authentication or account ownership checks. Keep it behind an access-controlled boundary. The result artifact may contain personal information and is not currently removed by `datacleaner`; configure an S3 lifecycle policy or other deletion process for `results/*.insights.json`.
+
+== Queues and delivery
+
+The service consumes persistent ID-only JSON jobs from `QUEUE_NAME.roleinsights`. Malformed or exhausted jobs go to `QUEUE_NAME.roleinsights.failed`. It uses manual acknowledgements, prefetch one, publisher confirms, deterministic artifact keys, and up to three retries after the initial attempt. Processing is at-least-once.
+
+`RABBITMQ_URL`, `QUEUE_NAME`, and shared `RUSTFS_*` settings must match the other services. `OPENROUTER_API_KEY` is required; `OPENROUTER_MODEL` selects the model. Start locally with `task services:roleinsights:start`; build with `task services:roleinsights:build`.

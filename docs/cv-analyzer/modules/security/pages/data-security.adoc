@@ -11,6 +11,7 @@ IMPORTANT: They persist the original file, extracted text, and a separate best-e
 * Piistripper writes `results/<job-id>.redacted.txt` without modifying or deleting the extracted source.
 * Piistripper performs local pattern matching and English named-entity recognition; it does not call a hosted model/API. Detection can miss direct, contextual, or indirect identifiers and can produce false positives.
 * The skill matcher reads only the separately stored redacted text and applies local deterministic patterns; it does not send resume content to a hosted model/API. Its result stores category scores and matched pattern evidence, and redaction is not guaranteed anonymization.
+* `roleinsights` sends the redacted resume to OpenRouter only after explicit user opt-in. It is independent of technical skill scores and stores AI-generated role suggestions; redaction remains best-effort and the output may be inaccurate.
 * Temporary extractor files are created on the service host during processing and removed when processing finishes.
 * The uploader's HTTP endpoints do not implement authentication or authorization.
 * The datacleaner service implements automated data lifecycle management with configurable retention periods and dry-run mode for testing.
@@ -49,6 +50,8 @@ Operators must ensure the datacleaner's S3 credentials have the `DeleteObject` p
 == Security considerations
 
 * *Redaction is best-effort*: Pattern matching and named-entity recognition can miss contextual, indirect, or domain-specific identifiers. A redacted result does not guarantee anonymization.
+* *AI role insights require explicit opt-in*: The external model receives the redacted resume text. Review provider terms, data processing arrangements, and the user-facing disclosure before deployment. The roleinsights API has no authentication or ownership checks and must remain behind an access-controlled boundary.
+* *Role insight artifact retention is operator-managed*: The datacleaner does not yet delete `results/*.insights.json`; configure a bucket lifecycle rule and verify it in deployment.
 * *Original extracted text is automatically deleted*: The datacleaner service deletes the original extracted text (`results/<job-id>.txt`) after the configured retention period expires. This reduces exposure time for personal data compared to indefinite retention.
 * *Failed messages are auto-purged*: Operator-configured retention policy on failed queues prevents indefinite storage of job messages containing job IDs and metadata. This applies to `QUEUE_NAME.failed` and all stage-specific failed queues (e.g., `QUEUE_NAME.pii.failed`, `QUEUE_NAME.skills.failed`).
 * *Dry-run mode recommended*: Operators should test the datacleaner service in dry-run mode to verify that the retention policy matches compliance requirements before enabling production deletion.

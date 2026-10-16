@@ -96,6 +96,14 @@
         ];
       }
       {
+        job_name = "roleinsights";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8058" ];
+          }
+        ];
+      }
+      {
         job_name = "uploader";
         static_configs = [
           {
@@ -126,6 +134,9 @@
     };
     aiweighter = {
       exec = "sleep 3 && task services:aiweighter:start";
+    };
+    roleinsights = {
+      exec = "sleep 3 && task services:roleinsights:start";
     };
     datacleaner = {
       exec = "sleep 8 && task services:datacleaner:start";

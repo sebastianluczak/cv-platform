@@ -46,6 +46,18 @@ type AIWeigh = {
   markdown?: string
 }
 
+type RoleInsights = {
+  insight_id: string
+  resume_job_id: string
+  status: 'queued' | 'processing' | 'completed' | 'failed'
+  message: string
+  roles?: {
+    title: string
+    fit_summary: string
+    responsibilities: string[]
+  }[]
+}
+
 const reviewStages = [
   { label: 'Queued', stage: 0 },
   { label: 'Text extraction', stage: 1 },
@@ -79,6 +91,7 @@ function App() {
   const activeJobID = useRef('')
   const requestGeneration = useRef(0)
   const aiRequestGeneration = useRef(0)
+  const roleInsightsRequestGeneration = useRef(0)
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -97,6 +110,10 @@ function App() {
   const [aiGenerating, setAIGenerating] = useState(false)
   const [aiError, setAIError] = useState('')
   const [aiConsent, setAIConsent] = useState(false)
+  const [roleInsights, setRoleInsights] = useState<RoleInsights | null>(null)
+  const [roleInsightsGenerating, setRoleInsightsGenerating] = useState(false)
+  const [roleInsightsError, setRoleInsightsError] = useState('')
+  const [roleInsightsConsent, setRoleInsightsConsent] = useState(false)
   const [offerPanelOpen, setOfferPanelOpen] = useState(false)
   const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | null>(null)
   const [consentGiven, setConsentGiven] = useState(false)
@@ -122,6 +139,14 @@ function App() {
     setAIGenerating(false)
     setAIError('')
     setAIConsent(false)
+  }
+
+  function clearRoleInsights() {
+    roleInsightsRequestGeneration.current += 1
+    setRoleInsights(null)
+    setRoleInsightsGenerating(false)
+    setRoleInsightsError('')
+    setRoleInsightsConsent(false)
   }
 
   function trackCursorTint(event: React.PointerEvent<HTMLElement>) {
@@ -154,6 +179,7 @@ function App() {
     setOfferMatching(false)
     setOfferError('')
     clearAIWeight()
+    clearRoleInsights()
     setOfferPanelOpen(false)
     setConnection(null)
     if (!nextFile) return
@@ -322,6 +348,48 @@ function App() {
     }
   }
 
+  async function generateRoleInsights() {
+    const resumeJobID = activeJobID.current
+    if (!resumeJobID || !matchResult || !roleInsightsConsent) return
+    const generation = ++roleInsightsRequestGeneration.current
+    setRoleInsightsGenerating(true)
+    setRoleInsightsError('')
+    setRoleInsights(null)
+    try {
+      const endpoint = new URL(import.meta.env.VITE_ROLEINSIGHTS_ENDPOINT || '/insights-api', window.location.href)
+      const insightsPath = `${endpoint.pathname.replace(/\/+$/, '')}/insights`
+      const response = await fetch(new URL(insightsPath, endpoint.origin), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume_job_id: resumeJobID, consent: true }),
+      })
+      if (!response.ok) throw new Error('Could not start role insights. Try again.')
+      const accepted = await response.json() as { insight_id?: string }
+      if (!accepted.insight_id) throw new Error('Role insights service did not return a request ID.')
+
+      for (let attempt = 0; attempt < 150; attempt++) {
+        if (generation !== roleInsightsRequestGeneration.current || activeJobID.current !== resumeJobID) return
+        const statusEndpoint = new URL(`${insightsPath}/${encodeURIComponent(accepted.insight_id)}`, endpoint.origin)
+        const statusResponse = await fetch(statusEndpoint)
+        if (!statusResponse.ok) throw new Error('Could not load role insights status.')
+        const result = await statusResponse.json() as RoleInsights
+        if (result.insight_id !== accepted.insight_id || result.resume_job_id !== resumeJobID) {
+          throw new Error('Received an invalid role insights result.')
+        }
+        setRoleInsights(result)
+        if (result.status === 'completed' || result.status === 'failed') return
+        await new Promise((resolve) => window.setTimeout(resolve, 2000))
+      }
+      setRoleInsightsError('Role insights are taking longer than expected. You can wait and try again.')
+    } catch (error) {
+      if (generation === roleInsightsRequestGeneration.current) {
+        setRoleInsightsError(error instanceof Error ? error.message : 'Role insights failed. Try again.')
+      }
+    } finally {
+      if (generation === roleInsightsRequestGeneration.current) setRoleInsightsGenerating(false)
+    }
+  }
+
   function downloadResumeMarkdown() {
     if (!aiWeigh?.markdown) return
     const blob = new Blob([aiWeigh.markdown], { type: 'text/markdown;charset=utf-8' })
@@ -359,7 +427,7 @@ function App() {
               <p className="eyebrow"><span /> A TECHNICAL CV REVIEW</p>
               <h1>Make your experience <em>work in context.</em></h1>
               <p className="intro">
-                See how your CV maps to technical domains and role profiles. Compare it with a job description when you are ready.
+                Review technical signals, explore broader roles suggested from your CV, and compare with a job description when you are ready.
               </p>
             </div>
 
@@ -443,7 +511,7 @@ function App() {
             </p>
           </section>
 
-          <section className="workspace-panel results-panel" aria-label="Technical role review">
+          <section className="workspace-panel results-panel" aria-label="Resume role insights and technical signals">
             {matchResult ? (
               <>
                 <div className="results-heading">
@@ -467,6 +535,66 @@ function App() {
                   ))}
                 </ul>
                 <p className="results-note">Scores reflect matching terms in the CV, not demonstrated proficiency or role suitability. Select a domain to see detected terms.</p>
+
+                <section className="role-insights-panel" aria-label="Explore roles suggested from your resume">
+                  <span className="panel-kicker">OPTIONAL / AI-ASSISTED</span>
+                  <h3>Explore roles beyond technical scores</h3>
+                  <p id="role-insights-disclosure">
+                    Get role ideas across different kinds of work, based on your redacted CV rather than your technical scores.
+                    Your redacted CV will be sent to OpenRouter, an external AI service. Redaction is best-effort; suggestions
+                    are advisory and should be reviewed.
+                  </p>
+                  {!roleInsights && (
+                    <>
+                      <label className="ai-consent">
+                        <input
+                          type="checkbox"
+                          checked={roleInsightsConsent}
+                          disabled={roleInsightsGenerating}
+                          aria-describedby="role-insights-disclosure"
+                          onChange={(event) => setRoleInsightsConsent(event.target.checked)}
+                        />
+                        <span>I agree to send my redacted CV to the external AI service for role suggestions.</span>
+                      </label>
+                      <button
+                        className="compare-button ai-generate-button"
+                        type="button"
+                        disabled={!roleInsightsConsent || roleInsightsGenerating}
+                        onClick={() => void generateRoleInsights()}
+                      >
+                        {roleInsightsGenerating ? 'Finding role ideas…' : 'Suggest roles for my CV'}
+                      </button>
+                    </>
+                  )}
+                  {roleInsightsError && <p className="result-error" role="alert">{roleInsightsError}</p>}
+                  {roleInsights && (
+                    <div className="role-insights-result" aria-live="polite">
+                      <p className={`offer-match-status${roleInsights.status === 'failed' ? ' is-error' : ''}`}>
+                        {roleInsights.message}
+                        {(roleInsights.status === 'queued' || roleInsights.status === 'processing') && ' · Working'}
+                      </p>
+                      {roleInsights.status === 'completed' && roleInsights.roles?.map((role) => (
+                        <article className="role-insight" key={role.title}>
+                          <h4>{role.title}</h4>
+                          <p>{role.fit_summary}</p>
+                          <strong>Typical responsibilities</strong>
+                          <ul>
+                            {role.responsibilities.map((responsibility) => <li key={responsibility}>{responsibility}</li>)}
+                          </ul>
+                        </article>
+                      ))}
+                      {(roleInsights.status === 'failed' || roleInsightsError) && (
+                        <button
+                          className="ai-download-button"
+                          type="button"
+                          onClick={clearRoleInsights}
+                        >
+                          Try again
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </section>
 
                 <section className={`offer-panel${offerPanelOpen ? ' is-open' : ''}`} aria-label="Compare with a job description">
                   <button

@@ -13,6 +13,14 @@
 . The client connects to `GET /events?job_id=<job-id>`. SSE sends the current snapshot first, then subsequent updates, with a 20-second keep-alive comment.
 . After completion, the UI retrieves the persisted score artifact from `GET /results?job_id=<job-id>`.
 
+== Optional AI role insights
+
+. From the completed resume results page, the user separately opts in to send the redacted resume text to the configured external AI provider.
+. The UI submits `POST /insights` to `roleinsights` with the resume job ID and consent affirmation. The service validates that the redacted resume exists, stores a queued request, and publishes an ID-only persistent job to `QUEUE_NAME.roleinsights` with publisher confirmation.
+. The worker reads only `results/<job-id>.redacted.txt`. It does not read the skill scores, so technical scores do not constrain suggestions and a zero IT score does not prevent insights.
+. The worker asks the configured model for up to five evidence-grounded occupation suggestions, each with a role name, fit explanation, and typical responsibilities. It writes the versioned result to `results/<insight-id>.insights.json`.
+. The UI polls `GET /insights/<insight-id>` and displays the advisory suggestions as text. These are role ideas, not job openings, an objective suitability assessment, or a guarantee of employment.
+
 == Offer comparison
 
 . After a resume score is loaded, the UI submits `POST /matches` to the offer matcher with the completed resume job ID and either pasted offer text or a public offer URL.
@@ -38,6 +46,7 @@ The initial attempt plus up to three retries means a job may be attempted four t
 A job still failing extraction is published to `QUEUE_NAME.failed`; a job still failing redaction is published to `QUEUE_NAME.pii.failed`; a job still failing skill matching is published to `QUEUE_NAME.skills.failed`.
 A job still failing offer matching is published to `QUEUE_NAME.offers.failed`.
 A job still failing AI resume generation is published to `QUEUE_NAME.aiweight.failed`.
+A job still failing role insight generation is published to `QUEUE_NAME.roleinsights.failed`.
 
 Malformed job JSON is also sent directly to the failed queue. 
 
@@ -47,7 +56,7 @@ The workflow is **at-least-once**, not exactly-once.
 
 If a service stops between a side effect and acknowledgement, RabbitMQ can redeliver a job. 
 
-Result writes use deterministic keys (`results/<job-id>.txt`, `results/<job-id>.redacted.txt`, `results/<job-id>.skills.json`, and `results/<offer-match-id>.offer.json`), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.
+Result writes use deterministic keys (`results/<job-id>.txt`, `results/<job-id>.redacted.txt`, `results/<job-id>.skills.json`, `results/<insight-id>.insights.json`, and `results/<offer-match-id>.offer.json`), so repeated successful processing overwrites the corresponding object. The redacted copy does not replace the original extracted text.
 
 There is no separate deduplication store, operation is idempotent.
 
