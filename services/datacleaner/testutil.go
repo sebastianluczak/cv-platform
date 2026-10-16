@@ -6,14 +6,14 @@ import (
 
 // TestTimeFixtures provides consistent time values for testing age filtering
 type TestTimeFixtures struct {
-	Now                 time.Time
-	OneHourAgo          time.Time
-	OneDayAgo           time.Time
-	ThreeDaysAgo        time.Time
-	SevenDaysAgo        time.Time
-	EightDaysAgo        time.Time
-	ThirtyDaysAgo       time.Time
-	SixtyDaysAgo        time.Time
+	Now           time.Time
+	OneHourAgo    time.Time
+	OneDayAgo     time.Time
+	ThreeDaysAgo  time.Time
+	SevenDaysAgo  time.Time
+	EightDaysAgo  time.Time
+	ThirtyDaysAgo time.Time
+	SixtyDaysAgo  time.Time
 }
 
 // NewTestTimeFixtures creates a fresh set of time fixtures for testing
@@ -40,18 +40,18 @@ type ConfigBuilder struct {
 func NewConfigBuilder() *ConfigBuilder {
 	return &ConfigBuilder{
 		cfg: Config{
-			RabbitMQURL:        "amqp://localhost:5672",
-			QueueName:          "test-queue",
-			S3Region:           "us-east-1",
-			S3AccessKeyID:      "testkey",
-			S3SecretAccessKey:  "testsecret",
-			S3Endpoint:         "http://localhost:9000",
-			S3Bucket:           "test-bucket",
-			RetentionUploads:   7,
-			RetentionRedacted:  7,
-			RetentionFailed:    7,
-			CleanupInterval:    1,
-			DryRun:             false,
+			RabbitMQURL:       "amqp://localhost:5672",
+			QueueName:         "test-queue",
+			S3Region:          "us-east-1",
+			S3AccessKeyID:     "testkey",
+			S3SecretAccessKey: "testsecret",
+			S3Endpoint:        "http://localhost:9000",
+			S3Bucket:          "test-bucket",
+			RetentionUploads:  7,
+			RetentionRedacted: 7,
+			RetentionFailed:   7,
+			CleanupInterval:   1,
+			DryRun:            false,
 		},
 	}
 }

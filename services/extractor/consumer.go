@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"brodaty.dev/cv-platform/common/objectstore"
+	"brodaty.dev/cv-platform/common/prometheus"
 	"brodaty.dev/cv-platform/common/rabbitmq"
 	"brodaty.dev/cv-platform/extractor/storage"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -36,6 +39,13 @@ type redactionJob struct {
 }
 
 func main() {
+	go func() {
+		if err := prometheus.StartMetricsServer("METRICS_PORT_AIWEIGHTER"); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Metrics server failed: %v", err)
+		}
+	}()
+
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}

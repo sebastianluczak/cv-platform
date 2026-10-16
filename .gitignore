@@ -14,3 +14,6 @@ devenv.local.yaml
 
 # docs build site
 docs/build
+
+# grafana is ignored as it's created on the fly, when requested
+grafana

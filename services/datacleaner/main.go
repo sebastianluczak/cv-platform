@@ -2,19 +2,29 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"brodaty.dev/cv-platform/common/objectstore"
+	"brodaty.dev/cv-platform/common/prometheus"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/streadway/amqp"
 )
 
 func main() {
+	go func() {
+		if err := prometheus.StartMetricsServer("METRICS_PORT_AIWEIGHTER"); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Metrics server failed: %v", err)
+		}
+	}()
+
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}

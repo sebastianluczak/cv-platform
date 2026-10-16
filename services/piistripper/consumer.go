@@ -81,7 +81,7 @@ func run() error {
 
 	for delivery := range deliveries {
 		if err := handleDelivery(
-			consumerChannel, publisherChannel, confirmations, delivery,
+			publisherChannel, confirmations, delivery,
 			workQueue, failedQueue, skillQueue, statusQueue, storageClient, config.Bucket,
 		); err != nil {
 			log.Printf("Handle redaction delivery: %v", err)
@@ -91,7 +91,7 @@ func run() error {
 }
 
 func handleDelivery(
-	consumerChannel, publisherChannel *amqp.Channel,
+	publisherChannel *amqp.Channel,
 	confirmations <-chan amqp.Confirmation,
 	delivery amqp.Delivery,
 	workQueue, failedQueue, skillQueue, statusQueue string,
@@ -100,11 +100,11 @@ func handleDelivery(
 ) error {
 	var job redactionJob
 	if err := json.Unmarshal(delivery.Body, &job); err != nil {
-		return moveToFailedQueue(consumerChannel, publisherChannel, confirmations, delivery, failedQueue, statusQueue, "", 0, err)
+		return moveToFailedQueue(publisherChannel, confirmations, delivery, failedQueue, statusQueue, "", 0, err)
 	}
 	if !validJob(job, bucket) {
 		return moveToFailedQueue(
-			consumerChannel, publisherChannel, confirmations, delivery, failedQueue, statusQueue,
+			publisherChannel, confirmations, delivery, failedQueue, statusQueue,
 			job.ID, rabbitmq.RetryCount(delivery.Headers, maxRetries)+1, fmt.Errorf("invalid redaction job reference"),
 		)
 	}
@@ -158,7 +158,7 @@ func handleDelivery(
 	}
 
 	return moveToFailedQueue(
-		consumerChannel, publisherChannel, confirmations, delivery, failedQueue, statusQueue,
+		publisherChannel, confirmations, delivery, failedQueue, statusQueue,
 		job.ID, attempt, err,
 	)
 }
@@ -189,7 +189,7 @@ func validJob(job redactionJob, bucket string) bool {
 }
 
 func moveToFailedQueue(
-	consumerChannel, publisherChannel *amqp.Channel,
+	publisherChannel *amqp.Channel,
 	confirmations <-chan amqp.Confirmation,
 	delivery amqp.Delivery,
 	failedQueue, statusQueue, jobID string, attempt int,

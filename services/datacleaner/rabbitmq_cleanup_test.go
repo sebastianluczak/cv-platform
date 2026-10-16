@@ -222,11 +222,11 @@ func TestParseMessageTimestamp_MissingTimestampHandling(t *testing.T) {
 
 	// Test various missing/invalid timestamp scenarios
 	tests := []struct {
-		name                  string
-		timestamp             time.Time
-		headers               amqp.Table
-		body                  []byte
-		expectValidTimestamp  bool
+		name                 string
+		timestamp            time.Time
+		headers              amqp.Table
+		body                 []byte
+		expectValidTimestamp bool
 	}{
 		{"Zero timestamp, no headers, empty body", time.Time{}, nil, []byte{}, false},
 		{"Valid timestamp", time.Now(), nil, []byte{}, true},
