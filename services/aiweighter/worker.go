@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	maxRetries = 3
-	jobTimeout = 2 * time.Minute
+	maxRetries      = 3
+	maxFailedRetries = 3
+	jobTimeout      = 2 * time.Minute
 )
 
 func consumeWeights(
@@ -170,11 +171,36 @@ func moveWeightToFailed(
 	cause error,
 ) error {
 	headers := rabbitmq.CopyHeaders(delivery.Headers)
+	// Determine how many times we've attempted to move to the failed queue
+	attempt := 0
+	if v, ok := headers["x-failed-queue-attempt"]; ok {
+		switch value := v.(type) {
+		case int:
+			attempt = int(value)
+		case int32:
+			attempt = int(value)
+		case int64:
+			attempt = int(value)
+		case float64:
+			attempt = int(value)
+		}
+	}
+	// If we've exceeded the maximum attempts, discard the message
+	if attempt >= maxFailedRetries {
+		if err := delivery.Nack(false, false); err != nil {
+			return fmt.Errorf("acknowledge failed AI resume job after max attempts: %w", err)
+		}
+		// #nosec G706 -- Dynamic fields are CR/LF-sanitized by safeLogField.
+		log.Printf("AI resume job discarded after %d failed-queue attempts: %s", attempt, safeLogField(cause.Error()))
+		return nil
+	}
+	// Increment the attempt counter and record the last error
+	headers["x-failed-queue-attempt"] = attempt + 1
 	headers["x-last-error"] = safeLogField(cause.Error())
 	if err := rabbitmq.PublishAndConfirm(
 		publisherChannel, confirmations, failedQueue, delivery.Body, headers, rabbitmq.ConfirmTimeout,
 	); err != nil {
-		_ = delivery.Nack(false, true)
+		_ = delivery.Nack(false, true) // requeue to retry later
 		return fmt.Errorf("move AI resume job to %q: %w", failedQueue, err)
 	}
 	if idPattern.MatchString(job.WeighID) {
