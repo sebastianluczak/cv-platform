@@ -18,6 +18,24 @@ reviewer/.venv/bin/python  -m unittest reviewer.test_issue_agent
 reviewer/.venv/bin/python  -m unittest reviewer.test_check_limits
 reviewer/.venv/bin/python  -m unittest reviewer.test_reviewer
 
+
+function poll_for_devenv_up_status {
+  local max_attempts=10
+  local attempt=1
+  while [ $attempt -le $max_attempts ]; do
+      if devenv processes list >/dev/null 2>&1; then
+          echo "Devenv is up and running."
+          return 0
+      else
+          echo "Waiting for devenv to be up... attempt $attempt/$max_attempts"
+          sleep 5
+          attempt=$((attempt + 1))
+      fi
+  done
+  echo "Devenv did not start within the expected time."
+  return 1
+}
+
 # Crazy idea - start e2e tests here...
 if ! devenv version >/dev/null 2>&1; then
     echo "Devenv is not installed or not working properly in this environment."
@@ -31,10 +49,10 @@ DEVENV_RUNNING=false
 if ! devenv processes list >/dev/null 2>&1; then
     DEVENV_RUNNING=true
     echo "Devenv is not running, starting it in the background..."
-    devenv up -d >/dev/null 2>&1 &
+    devenv up -d &
     # Give it some time to start
     echo "Devenv is starting right now... waiting 20 seconds for it to be ready."
-    sleep 20
+    poll_for_devenv_up_status
 fi
 
 function check_metric {
