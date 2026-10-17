@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Service Contracts :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../architecture/review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0007.html">ADR-0007: Stateless Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0008.html">ADR-0008: Pillars of Observability</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Services</li>
+    <li><a href="contracts.html">Service contracts</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/services/pages/contracts.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Service Contracts</h1>
+<div class="sect1">
+<h2 id="_extraction_job"><a class="anchor" href="#_extraction_job"></a>Extraction job</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The uploader publishes a persistent JSON message to <code>QUEUE_NAME</code> after storing the upload and confirming the publish:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "id": "&lt;job-id&gt;",
+  "bucket": "cv-platform-uploads",
+  "object_key": "uploads/&lt;job-id&gt;",
+  "content_type": "application/pdf"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>id</code> is a generated UUID. The extractor requires the bucket to match its configured <code>RUSTFS_BUCKET</code> and requires <code>object_key</code> to equal <code>uploads/&lt;id&gt;</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_redaction_job"><a class="anchor" href="#_redaction_job"></a>Redaction job</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After storing <code>results/&lt;id&gt;.txt</code>, the extractor publishes a persistent job to <code>QUEUE_NAME.pii</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "id": "&lt;job-id&gt;",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/&lt;job-id&gt;.txt"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Piistripper requires a UUID <code>id</code>, the configured bucket, and the exact result key derived from that ID. On success it writes the redacted copy to <code>results/&lt;id&gt;.redacted.txt</code>; the source result is retained. Exhausted and malformed redaction jobs are sent to <code>QUEUE_NAME.pii.failed</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_skill_matching_job_and_result"><a class="anchor" href="#_skill_matching_job_and_result"></a>Skill matching job and result</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After writing the redacted result, piistripper publishes a persistent job to <code>QUEUE_NAME.skills</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "id": "&lt;job-id&gt;",
+  "bucket": "cv-platform-uploads",
+  "object_key": "results/&lt;job-id&gt;.redacted.txt"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The skill matcher validates the UUID, configured bucket, and exact redacted-result key. It writes a versioned JSON object to <code>results/&lt;job-id&gt;.skills.json</code>. The result includes <code>version</code>, <code>job_id</code>, <code>scored_at</code>, and <code>categories</code>; each category has a name, a 1–5 heuristic score, and the matched patterns used as evidence. Categories are returned in descending score order, with profile order preserved for ties. Exhausted and malformed jobs are sent to <code>QUEUE_NAME.skills.failed</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_offer_matching"><a class="anchor" href="#_offer_matching"></a>Offer matching</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After a resume&#8217;s skill result is ready, the client submits an offer comparison:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "resume_job_id": "&lt;completed-resume-job-uuid&gt;",
+  "offer_url": "https://example.com/jobs/role"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>POST /matches</code> accepts exactly one of <code>offer_url</code> or <code>offer_text</code> and returns <code>202 Accepted</code> after the persistent job publish is confirmed:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"match_id":"&lt;offer-match-uuid&gt;","status":"queued"}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The client polls <code>GET /matches/&lt;match-id&gt;</code>. The worker consumes <code>QUEUE_NAME.offers</code>, reads <code>results/&lt;resume-job-id&gt;.skills.json</code>, and stores the state/result at <code>results/&lt;offer-match-id&gt;.offer.json</code>. Queue jobs contain the match ID, resume job ID, and either offer text or URL. Text is size-limited; fetched pages must be public HTTP(S), use the default port, and pass SSRF-safe resolution/connection checks. The fetcher supports ordinary static HTML, not client-rendered pages. Raw fetched HTML is not persisted.</p>
+</div>
+<div class="paragraph">
+<p>Required skills are the distinct curated skill patterns identified in an explicit required/must-have section; if none is found, all detected patterns in the offer are used. The percentage is rounded <code>100 * matched / required</code>; results include matched and missing patterns and their counts. If no requirement patterns are identified the result is <code>unscorable</code>, not 0%. This is heuristic keyword coverage, not an assessment of ability or suitability.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ai_resume_generation"><a class="anchor" href="#_ai_resume_generation"></a>AI resume generation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After a completed offer match, the UI submits an explicit consent affirmation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"match_id":"&lt;completed-offer-match-uuid&gt;","consent":true}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>POST /weights</code> validates the completed match, stores a queued AI resume
+artifact, publishes an ID-only persistent job to <code>QUEUE_NAME.aiweight</code>, and
+returns <code>202 Accepted</code> with <code>weigh_id</code>. The worker reads the redacted resume,
+skill result, and retained normalized offer text from storage and stores its
+Markdown result in <code>results/&lt;weigh-id&gt;.ai.json</code>. The client polls
+<code>GET /weights/&lt;weigh-id&gt;</code> for <code>queued</code>, <code>processing</code>, <code>completed</code>, or <code>failed</code>.
+The result artifact and offer text remain subject to object-store lifecycle
+policy; the platform does not provide user ownership or authorization.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_status_event"><a class="anchor" href="#_status_event"></a>Status event</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The extractor and piistripper publish status messages to the durable <code>QUEUE_NAME.events</code> queue. The uploader consumes these messages and retains the latest one per job in memory.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "job_id": "&lt;job-id&gt;",
+  "stage": "processing",
+  "message": "We're reading your resume.",
+  "attempt": 1,
+  "updated_at": "2026-10-14T04:26:44Z"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Stages are <code>queued</code>, <code>processing</code>, <code>retrying</code>, <code>redacting</code>, <code>matching</code>, <code>completed</code>, and <code>failed</code>. The extractor reports extraction activity, piistripper reports redaction and matching start, and the skill matcher publishes terminal completion/failure. <code>updated_at</code> is UTC. <code>attempt</code> is the attempt number represented by the status; <code>queued</code> is first recorded by the uploader after job publish confirmation.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_upload_response"><a class="anchor" href="#_upload_response"></a>Upload response</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "job_id": "&lt;job-id&gt;",
+  "status": "queued"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The browser subscribes to <code>/events?job_id=&lt;job-id&gt;</code> and receives status event objects as SSE data frames.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Status updates are not a durable client-facing event log.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_queue_names_and_delivery"><a class="anchor" href="#_queue_names_and_delivery"></a>Queue names and delivery</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Queue</th>
+<th class="tableblock halign-left valign-top">Publisher</th>
+<th class="tableblock halign-left valign-top">Consumer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extractor</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.pii</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extractor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Piistripper</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher HTTP API</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher worker</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter HTTP API after explicit consent</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter worker</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.skills.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.offers.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer matcher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.aiweight.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.events</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extractor, piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extractor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME.pii.failed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Piistripper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Queues are durable and jobs/status/failure messages are published as persistent messages.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

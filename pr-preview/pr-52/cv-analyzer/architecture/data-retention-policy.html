@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Data Retention Policy and Datacleaner Operational Guide :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0007.html">ADR-0007: Stateless Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0008.html">ADR-0008: Pillars of Observability</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Architecture</li>
+    <li><a href="data-retention-policy.html">Data retention policy</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/architecture/pages/data-retention-policy.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Data Retention Policy and Datacleaner Operational Guide</h1>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The datacleaner service implements automatic deletion of personal data according to configured retention policies. This guide is intended for operators, deployment engineers, and compliance teams responsible for running and maintaining the CV platform.</p>
+</div>
+<div class="paragraph">
+<p>The datacleaner service runs on a configurable interval (default 1 minute) to clean up expired data from the object store and message queues. It supports dry-run mode for testing and verification without making permanent deletions.</p>
+</div>
+<div class="sect2">
+<h3 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h3>
+<div class="paragraph">
+<p>The datacleaner service exists to:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Automatically delete personal data (resumes, extracted text, and results) after their retention period expires</p>
+</li>
+<li>
+<p>Minimize unnecessary storage of personally identifiable information (PII)</p>
+</li>
+<li>
+<p>Provide compliance support for privacy regulations (GDPR, CCPA, and similar)</p>
+</li>
+<li>
+<p>Offer operators an inspection window for failed jobs before automatic purge</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_key_characteristics"><a class="anchor" href="#_key_characteristics"></a>Key characteristics</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Runs independently on a configurable interval</p>
+</li>
+<li>
+<p>Operates on S3-compatible object stores and RabbitMQ message queues</p>
+</li>
+<li>
+<p>Supports dry-run mode for safe testing before production deployment</p>
+</li>
+<li>
+<p>Logs all deletion operations for audit trails</p>
+</li>
+<li>
+<p>Deletes data after retention periods expire; does not reprocess incomplete jobs</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_retention_timelines"><a class="anchor" href="#_retention_timelines"></a>Retention Timelines</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 12.5%;">
+<col style="width: 25%;">
+<col style="width: 37.5%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Data Type</th>
+<th class="tableblock halign-left valign-top">Location</th>
+<th class="tableblock halign-left valign-top">Retention Period</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Original resume file</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>uploads/&lt;job-id&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configurable via <code>RETENTION_UPLOADS_DAYS</code>. Deleted after this period regardless of processing status.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extracted text (unredacted)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;job-id&gt;.txt</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Immediately after redaction completes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deleted as soon as piistripper publishes the redacted version. Minimizes PII duplication and storage waste.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Redacted text</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;job-id&gt;.redacted.txt</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configurable via <code>RETENTION_REDACTED_DAYS</code>. Best-effort redaction only; not guaranteed anonymization.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill match results</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;job-id&gt;.skills.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deleted together with redacted text. Contains pattern matches and score evidence.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Offer comparison results</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;offer-match-id&gt;.offer.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deleted based on the underlying resume job&#8217;s redacted-text retention.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI-generated resume</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;weigh-id&gt;.ai.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deleted based on the underlying resume job&#8217;s redacted-text retention.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AI role insights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 <code>results/&lt;insight-id&gt;.insights.json</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Operator-managed S3 lifecycle</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The current datacleaner does not delete role insight artifacts; configure lifecycle expiry for this prefix.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Failed jobs</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ <code>&lt;QUEUE_NAME&gt;.failed</code> (and other <code>.*.failed</code> queues)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Configurable via <code>RETENTION_FAILED_QUEUE_DAYS</code>. Provides an inspection window for operator review before purge.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Processing status events</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ <code>&lt;QUEUE_NAME&gt;.events</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">24 hours (uploader memory only)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Status snapshots are kept in uploader memory and lost on process restart. The datacleaner does not manage this queue.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="sect2">
+<h3 id="_important_notes_on_retention"><a class="anchor" href="#_important_notes_on_retention"></a>Important notes on retention</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Redaction is <strong>best-effort only</strong> and is not guaranteed to produce anonymized data. Original extracted text and redacted versions should both be treated as personal data.</p>
+</li>
+<li>
+<p>Original uploaded files are deleted after the retention period regardless of processing success. If extraction or redaction failed, the resume cannot be reprocessed from the object store; the client must re-upload.</p>
+</li>
+<li>
+<p>Offer text and AI-generated content are retained together with the underlying resume data they reference.</p>
+</li>
+<li>
+<p>Role insight artifacts can contain resume-derived personal information. The current datacleaner does not delete them; configure and verify an S3 lifecycle policy.</p>
+</li>
+<li>
+<p>Failed queue messages provide an inspection window for operators to review errors before automatic deletion.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deployment_checklist"><a class="anchor" href="#_deployment_checklist"></a>Deployment Checklist</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before deploying datacleaner to production, ensure the following steps are completed:</p>
+</div>
+<div class="sect2">
+<h3 id="_pre_deployment_verification"><a class="anchor" href="#_pre_deployment_verification"></a>Pre-deployment verification</h3>
+<div class="ulist checklist">
+<ul class="checklist">
+<li>
+<p><i class="fa fa-square-o"></i> Review data retention policy with legal and compliance teams</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Confirm retention timelines align with organizational privacy requirements (GDPR, CCPA, etc.)</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Document any exceptions or custom retention periods in your deployment guide</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_infrastructure_and_access_control"><a class="anchor" href="#_infrastructure_and_access_control"></a>Infrastructure and access control</h3>
+<div class="ulist checklist">
+<ul class="checklist">
+<li>
+<p><i class="fa fa-square-o"></i> Configure S3 credentials with <code>DeleteObject</code> and <code>ListBucket</code> permissions</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Verify S3 bucket exists and is accessible from the datacleaner host</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Verify RabbitMQ URL and credentials are correct</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Test S3 and RabbitMQ connectivity before deployment</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Ensure sufficient IAM/authorization scopes to purge failed queues (if applicable)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_environment_and_configuration"><a class="anchor" href="#_environment_and_configuration"></a>Environment and configuration</h3>
+<div class="ulist checklist">
+<ul class="checklist">
+<li>
+<p><i class="fa fa-square-o"></i> Set retention period environment variables (see <a href="#_configuration_reference">Configuration Reference</a>)</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Set cleanup interval (default 1 minute may be too aggressive; consider 10-60 minutes in production)</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Configure S3 credentials (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>S3_ENDPOINT</code>, <code>S3_BUCKET</code>)</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Configure RabbitMQ URL and queue names</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Enable logging to an appropriate level (debug for initial deployment, info for production)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_testing_and_validation"><a class="anchor" href="#_testing_and_validation"></a>Testing and validation</h3>
+<div class="ulist checklist">
+<ul class="checklist">
+<li>
+<p><i class="fa fa-square-o"></i> Test in dry-run mode first (<code>DRY_RUN=true</code>) to verify configuration and see what would be deleted</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Review dry-run logs to ensure retention logic is working as expected</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Perform a small manual test (upload a resume, wait for processing, verify in dry-run mode)</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Monitor logs for successful cleanup operations in dry-run mode</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Verify that S3 objects and RabbitMQ messages are NOT actually deleted during dry-run</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_production_deployment"><a class="anchor" href="#_production_deployment"></a>Production deployment</h3>
+<div class="ulist checklist">
+<ul class="checklist">
+<li>
+<p><i class="fa fa-square-o"></i> Disable dry-run mode (<code>DRY_RUN=false</code>)</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Deploy datacleaner service</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Monitor logs for at least the first 24 hours</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Verify that old data is being deleted as expected</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Set up alerting for datacleaner errors or failures</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Plan for audit logging of all deletions (optional but recommended)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_ongoing_operations"><a class="anchor" href="#_ongoing_operations"></a>Ongoing operations</h3>
+<div class="ulist checklist">
+<ul class="checklist">
+<li>
+<p><i class="fa fa-square-o"></i> Review and tune cleanup interval based on data volume and performance</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Monitor S3 and RabbitMQ performance impact</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Maintain audit logs of deletions for compliance</p>
+</li>
+<li>
+<p><i class="fa fa-square-o"></i> Verify failed queue messages are purged after retention expires</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_configuration_reference"><a class="anchor" href="#_configuration_reference"></a>Configuration Reference</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_environment_variables"><a class="anchor" href="#_environment_variables"></a>Environment variables</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Variable</th>
+<th class="tableblock halign-left valign-top">Default</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RETENTION_UPLOADS_DAYS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>7</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of days to retain original uploaded resume files in S3 <code>uploads/</code> before deletion.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RETENTION_REDACTED_DAYS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>7</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of days to retain redacted text and skill results in S3 <code>results/</code> before deletion.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RETENTION_FAILED_QUEUE_DAYS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>7</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of days to retain failed job messages in RabbitMQ <code>.failed</code> queues before deletion.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLEANUP_INTERVAL_MINUTES</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">How often (in minutes) the datacleaner runs the cleanup loop. Smaller values = more aggressive cleanup; larger values = less frequent cleanup and reduced query load on S3/RabbitMQ.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DRY_RUN</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">When <code>true</code>, log all deletion operations but do not actually delete any data. Use for testing and validation.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RABBITMQ_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ connection string (e.g., <code>amqp://user:pass@localhost:5672/</code>).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>QUEUE_NAME</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Base queue name prefix (e.g., <code>cv-platform-queue</code>). The datacleaner deletes messages from <code>&lt;QUEUE_NAME&gt;.failed</code>, <code>&lt;QUEUE_NAME&gt;.pii.failed</code>, <code>&lt;QUEUE_NAME&gt;.skills.failed</code>, etc.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>S3_ENDPOINT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible endpoint URL (e.g., <code><a href="http://localhost:9000" class="bare">http://localhost:9000</a></code> for local Minio).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>S3_BUCKET</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 bucket name where uploads, results, and artifacts are stored.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AWS_ACCESS_KEY_ID</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 access key for authentication.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AWS_SECRET_ACCESS_KEY</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 secret key for authentication.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>LOG_LEVEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>info</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logging level (<code>debug</code>, <code>info</code>, <code>warn</code>, <code>error</code>).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_example_configuration_development"><a class="anchor" href="#_example_configuration_development"></a>Example configuration (development)</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-env hljs" data-lang="env"># Retention periods (in days)
+RETENTION_UPLOADS_DAYS=7
+RETENTION_REDACTED_DAYS=7
+RETENTION_FAILED_QUEUE_DAYS=7
+
+# Cleanup interval
+CLEANUP_INTERVAL_MINUTES=1
+
+# Testing mode (set to false for production)
+DRY_RUN=true
+
+# RabbitMQ
+RABBITMQ_URL=amqp://guest:guest@localhost:5672/
+QUEUE_NAME=cv-platform-queue
+
+# S3 (local Minio)
+S3_ENDPOINT=http://localhost:9000
+S3_BUCKET=cv-platform
+AWS_ACCESS_KEY_ID=minioadmin
+AWS_SECRET_ACCESS_KEY=minioadmin
+LOG_LEVEL=debug</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_example_configuration_production"><a class="anchor" href="#_example_configuration_production"></a>Example configuration (production)</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-env hljs" data-lang="env"># Retention periods (longer cleanup interval)
+RETENTION_UPLOADS_DAYS=7
+RETENTION_REDACTED_DAYS=7
+RETENTION_FAILED_QUEUE_DAYS=7
+
+# Cleanup interval (reduce query load)
+CLEANUP_INTERVAL_MINUTES=60
+
+# Testing mode disabled
+DRY_RUN=false
+
+# RabbitMQ (production instance)
+RABBITMQ_URL=amqp://rabbitmq-user:${RABBITMQ_PASSWORD}@rabbitmq.prod.internal:5672/cv-platform
+QUEUE_NAME=cv-platform-queue
+
+# S3 (AWS S3)
+S3_ENDPOINT=https://s3.amazonaws.com
+S3_BUCKET=company-cv-platform-prod
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+LOG_LEVEL=info</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_operational_procedures"><a class="anchor" href="#_operational_procedures"></a>Operational Procedures</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_enable_dry_run_mode_for_testing"><a class="anchor" href="#_enable_dry_run_mode_for_testing"></a>Enable dry-run mode for testing</h3>
+<div class="paragraph">
+<p>To test the datacleaner without permanently deleting data:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Set dry-run mode
+export DRY_RUN=true
+
+# Start the datacleaner service
+./datacleaner
+
+# Monitor logs for deletion operations
+tail -f datacleaner.log | grep -E "would delete|DELETE|removing"
+
+# Review what would be deleted
+grep "would delete" datacleaner.log | wc -l</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_review_cleanup_logs"><a class="anchor" href="#_review_cleanup_logs"></a>Review cleanup logs</h3>
+<div class="paragraph">
+<p>Logs contain detailed information about what was deleted and why:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Show all deletion operations
+grep "DELETE\|removed" datacleaner.log
+
+# Show deletions by type
+grep "S3.*DELETE" datacleaner.log      # Object store deletions
+grep "RabbitMQ.*DELETE" datacleaner.log # Message queue purges
+
+# Count deletions by date
+grep "DELETE" datacleaner.log | cut -d' ' -f1 | sort | uniq -c</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_manually_delete_data_before_retention_expires"><a class="anchor" href="#_manually_delete_data_before_retention_expires"></a>Manually delete data before retention expires</h3>
+<div class="paragraph">
+<p>In cases where immediate deletion is required (e.g., user GDPR right-to-be-forgotten requests):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Set dry-run mode first to preview
+export DRY_RUN=true
+export FORCE_DELETE_JOB_ID=&lt;job-id&gt;
+
+./datacleaner
+
+# If the preview looks correct, disable dry-run
+export DRY_RUN=false
+./datacleaner</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Manual deletion should only be performed by authorized operators and should be logged and audited.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pause_or_resume_the_datacleaner_service"><a class="anchor" href="#_pause_or_resume_the_datacleaner_service"></a>Pause or resume the datacleaner service</h3>
+<div class="paragraph">
+<p>To temporarily stop automatic cleanup (e.g., during investigation):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Stop the datacleaner process
+sudo systemctl stop datacleaner
+
+# Verify it is stopped
+sudo systemctl status datacleaner
+
+# Resume cleanup
+sudo systemctl start datacleaner</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Data that would have been deleted during the pause period will be deleted on the next cleanup run.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_adjust_retention_periods_requires_service_restart"><a class="anchor" href="#_adjust_retention_periods_requires_service_restart"></a>Adjust retention periods (requires service restart)</h3>
+<div class="paragraph">
+<p>To change retention periods, update environment variables and restart:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Edit configuration
+sudo nano /etc/datacleaner/env  # or your config file
+
+# Update retention variables
+RETENTION_UPLOADS_DAYS=14
+RETENTION_REDACTED_DAYS=14
+RETENTION_FAILED_QUEUE_DAYS=30
+
+# Restart service
+sudo systemctl restart datacleaner
+
+# Verify changes took effect
+sudo systemctl status datacleaner
+journalctl -u datacleaner -n 50</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_compliance_considerations"><a class="anchor" href="#_compliance_considerations"></a>Compliance Considerations</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_privacy_and_data_protection"><a class="anchor" href="#_privacy_and_data_protection"></a>Privacy and data protection</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Redaction is best-effort, not guaranteed anonymization.</strong> The piistripper service removes obvious PII patterns but may miss context-dependent information. Both original and redacted text should be treated as personal data.</p>
+</li>
+<li>
+<p><strong>Original extracted text remains personal data.</strong> The unredacted <code>results/&lt;job-id&gt;.txt</code> file is deleted immediately after redaction, but during processing it contains potentially sensitive information. Treat extraction logs and intermediate states as sensitive.</p>
+</li>
+<li>
+<p><strong>Failed jobs provide inspection window.</strong> Failed queue messages are retained for a configurable period (default 7 days) to allow operators to investigate errors. Review and delete failed messages on schedule to minimize PII retention.</p>
+</li>
+<li>
+<p><strong>Deleted data cannot be recovered.</strong> Once the datacleaner removes an object or message, it is permanently gone. Maintain backups if recovery may be needed for compliance investigations.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_gdpr_ccpa_compliance"><a class="anchor" href="#_gdpr_ccpa_compliance"></a>GDPR / CCPA compliance</h3>
+<div class="paragraph">
+<p>Before deploying datacleaner, your organization should:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Review and document data processing.</strong> Confirm that automatic deletion aligns with your Data Processing Agreement and privacy policy.</p>
+</li>
+<li>
+<p><strong>Define retention periods.</strong> Work with legal and compliance teams to determine appropriate retention periods for your use case (not necessarily 7 days).</p>
+</li>
+<li>
+<p><strong>Implement subject access and deletion rights.</strong> The datacleaner automates expiration-based deletion, but you must also support user requests to delete their data on demand.</p>
+</li>
+<li>
+<p><strong>Maintain audit trails.</strong> Log all deletion operations for compliance investigations and audits. See <a href="#_setup_audit_logging">Setup audit logging</a>.</p>
+</li>
+<li>
+<p><strong>Notify users.</strong> Ensure privacy documentation and user-facing policies accurately describe how and when their data is deleted.</p>
+</li>
+<li>
+<p><strong>Handle failures gracefully.</strong> Failed jobs are retained to allow inspection; ensure your procedures delete them within the retention window.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_setup_audit_logging"><a class="anchor" href="#_setup_audit_logging"></a>Setup audit logging</h3>
+<div class="paragraph">
+<p>To maintain compliance audit trails, configure logging to a persistent storage system:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Example: write datacleaner logs to syslog and a file
+datacleaner 2&gt;&amp;1 | tee -a /var/log/datacleaner.log | logger -t datacleaner -p local0.info
+
+# Compress and archive older logs
+logrotate /etc/logrotate.d/datacleaner</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Include deletion logs in your compliance reports and backup them according to your record retention policy.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_cleanup_is_slow_or_not_keeping_up"><a class="anchor" href="#_cleanup_is_slow_or_not_keeping_up"></a>Cleanup is slow or not keeping up</h3>
+<div class="paragraph">
+<p><strong>Symptom:</strong> Storage usage continues to grow; old data is not being deleted fast enough.</p>
+</div>
+<div class="paragraph">
+<p><strong>Diagnosis:</strong>
+* Check cleanup interval: is <code>CLEANUP_INTERVAL_MINUTES</code> too large?
+* Check S3 performance: high latency or timeouts?
+* Check RabbitMQ queue depth: are there many old failed messages?</p>
+</div>
+<div class="paragraph">
+<p><strong>Resolution:</strong></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Reduce cleanup interval for more aggressive deletion
+CLEANUP_INTERVAL_MINUTES=5
+
+# Or increase performance
+# - Use S3 list pagination to reduce API calls
+# - Increase batch size for message deletions
+# - Check S3 and RabbitMQ connection limits
+
+# Monitor performance
+journalctl -u datacleaner -f | grep -E "duration|completed|DELETE"</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_permission_denied_errors"><a class="anchor" href="#_permission_denied_errors"></a>Permission denied errors</h3>
+<div class="paragraph">
+<p><strong>Symptom:</strong> Logs contain <code>AccessDenied</code> or <code>PermissionDenied</code> errors.</p>
+</div>
+<div class="paragraph">
+<p><strong>Diagnosis:</strong>
+* S3 credentials lack <code>DeleteObject</code> permission?
+* RabbitMQ user lacks purge or delete permissions?
+* S3 bucket policy blocks the datacleaner principal?</p>
+</div>
+<div class="paragraph">
+<p><strong>Resolution:</strong></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify S3 credentials
+aws s3 ls s3://&lt;bucket&gt;/uploads/ --endpoint-url &lt;S3_ENDPOINT&gt;
+
+# Test delete permission (use dry-run first)
+DRY_RUN=true ./datacleaner
+
+# Check RabbitMQ user permissions
+rabbitmqctl list_user_permissions &lt;user&gt;
+
+# Update IAM policy with DeleteObject permission (AWS S3):
+# {
+#   "Effect": "Allow",
+#   "Action": ["s3:GetObject", "s3:DeleteObject", "s3:ListBucket"],
+#   "Resource": ["arn:aws:s3:::bucket-name", "arn:aws:s3:::bucket-name/*"]
+# }</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_messages_not_purging_from_failed_queues"><a class="anchor" href="#_messages_not_purging_from_failed_queues"></a>Messages not purging from failed queues</h3>
+<div class="paragraph">
+<p><strong>Symptom:</strong> Messages accumulate in <code>&lt;QUEUE_NAME&gt;.failed</code> and are not deleted after retention expires.</p>
+</div>
+<div class="paragraph">
+<p><strong>Diagnosis:</strong>
+* RabbitMQ connection lost or queue name mismatch?
+* Retention period is set to 0 or disabled?
+* Failed queue has a message TTL that conflicts with datacleaner?</p>
+</div>
+<div class="paragraph">
+<p><strong>Resolution:</strong></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify RabbitMQ connectivity
+rabbitmq-diagnostics check_running
+rabbitmq-diagnostics check_alarms
+
+# Check failed queue configuration
+rabbitmqctl list_queues name durable arguments
+
+# Verify retention config is set
+echo $RETENTION_FAILED_QUEUE_DAYS
+
+# Manually purge a queue (if necessary)
+rabbitmqctl purge_queue &lt;QUEUE_NAME&gt;.failed</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_missing_data_or_unexpected_deletion"><a class="anchor" href="#_missing_data_or_unexpected_deletion"></a>Missing data or unexpected deletion</h3>
+<div class="paragraph">
+<p><strong>Symptom:</strong> Data that should have been retained was deleted early, or needed data is missing.</p>
+</div>
+<div class="paragraph">
+<p><strong>Diagnosis:</strong>
+* Was dry-run mode properly configured for testing?
+* Was manual deletion triggered by mistake?
+* Are there multiple datacleaner processes running?</p>
+</div>
+<div class="paragraph">
+<p><strong>Resolution:</strong></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Stop the datacleaner to prevent further deletions
+sudo systemctl stop datacleaner
+
+# Review logs to identify what was deleted
+grep -E "DELETE|removed" datacleaner.log | tail -100
+
+# Check backups
+aws s3 sync s3://&lt;bucket-backup&gt;/uploads/ . --dry-run
+
+# Restore from backups if necessary
+aws s3 sync &lt;local-backup&gt;/ s3://&lt;bucket&gt;/uploads/
+
+# Verify only one datacleaner is running
+ps aux | grep datacleaner
+
+# Resume after investigation
+sudo systemctl start datacleaner</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Always maintain backups and test restore procedures before deploying the datacleaner to production.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_see_also"><a class="anchor" href="#_see_also"></a>See also</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="data-lifecycle.html" class="xref page">Data and Persistence</a> — Technical details on stored data, lifetime, and current behavior</p>
+</li>
+<li>
+<p>Privacy Policy — User-facing privacy documentation (available in UI)</p>
+</li>
+<li>
+<p>Data Retention Policy — User-facing retention timeline (available in UI)</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>System Context and Runtime Architecture :: CV Platform</title>
+    <meta name="generator" content="Antora 3.2.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+  </head>
+  <body class="article">
+
+<header class="header" role="banner">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="#">
+        CV Platform
+      </a>
+    </div>
+
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">
+          Home
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cv-analyzer" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">CV Platform</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Overview</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="drivers.html">Architecture Drivers</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="context.html">System context</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="workflow.html">Processing workflow</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="data-lifecycle.html">Data and persistence</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="data-retention-policy.html">Data retention policy</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="review.html">Automatic AI review process</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Architecture Decision Records</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0000.html">ADR-0000: Language and framework choices</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0001.html">ADR-0001: Use Antora for documentation</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0002.html">ADR-0002: Use of GitHub Actions for CI/CD</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0003.html">ADR-0003: Use of RabbitMQ for asynchronous communication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0004.html">ADR-0004: Use of SSE for user-level notifications</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0005.html">ADR-0005: Usage of AI in cv-analyzer</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0006.html">ADR-0006: Cost-aware GitHub Actions without reducing assurance</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0007.html">ADR-0007: Stateless Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../adrs/adr0008.html">ADR-0008: Pillars of Observability</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Services</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/index.html">Service catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/uploader.html">Uploader</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/extractor.html">Extractor</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/piistripper.html">PII stripper</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/skillmatcher.html">Skill matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/offermatcher.html">Offer matcher</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/aiweighter.html">AIweighter</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/roleinsights.html">Role insights</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/contracts.html">Service contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/configuration.html">Configuration</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../services/operations.html">Operations</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Security</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../security/data-security.html">Data Security (PII)</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">CV Platform</span>
+    <span class="version"></span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">CV Platform</a></div>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">CV Platform</a></li>
+    <li>Architecture</li>
+    <li><a href="context.html">System context</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/sebastianluczak/cv-platform/edit/HEAD/docs/cv-analyzer/modules/architecture/pages/context.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">System Context and Runtime Architecture</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The current system is an asynchronous file-processing pipeline.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>browser interacts with the <code>uploader</code> microservice over HTTP protocol</p>
+</li>
+<li>
+<p>the <code>uploader</code> and <code>extractor</code> coordinate through RabbitMQ and share an S3-compatible bucket.</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="title">Documentation extraction architecture (DEA)</div>
+<div class="content">
+<pre>@startuml
+title DEA
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor Browser
+
+component Uploader
+queue RabbitMQ
+
+component Extractor
+component OfferMatcher
+component AIweighter
+component RoleInsights
+
+database "S3-compatible Storage" as Storage
+
+Browser --&gt; Uploader : POST /upload
+Browser --&gt; Uploader : GET /events?job_id=...
+Browser --&gt; OfferMatcher : POST /matches\nGET /matches/&lt;match-id&gt;
+Browser --&gt; AIweighter : POST /weights after opt-in\nGET /weights/&lt;weigh-id&gt;
+Browser --&gt; RoleInsights : POST /insights after opt-in\nGET /insights/&lt;insight-id&gt;
+
+Uploader --&gt; Storage : Upload file\nuploads/&lt;job-id&gt;
+Uploader --&gt; RabbitMQ : Publish extraction job
+OfferMatcher --&gt; RabbitMQ : Publish offer matching job
+RabbitMQ --&gt; OfferMatcher : Consume offer matching job
+OfferMatcher --&gt; Storage : Read skills\nWrite offer result
+AIweighter --&gt; RabbitMQ : Publish AI resume job
+RabbitMQ --&gt; AIweighter : Consume AI resume job
+AIweighter --&gt; Storage : Read redacted resume,\nskills and retained offer text\nWrite Markdown result
+RoleInsights --&gt; RabbitMQ : Publish role insights job
+RabbitMQ --&gt; RoleInsights : Consume role insights job
+RoleInsights --&gt; Storage : Read redacted resume\nWrite role suggestions
+
+RabbitMQ --&gt; Extractor : Consume extraction job
+Extractor --&gt; Storage : Download upload
+Extractor --&gt; Storage : Write results/&lt;job-id&gt;.txt
+
+note right of RabbitMQ
+  Queues:
+  - extraction jobs
+  - &lt;queue&gt;.roleinsights
+  - &lt;queue&gt;.events
+end note
+
+@enduml</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The UI is a separate React application.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>uses <code>/api/upload</code> and <code>/api/events</code>, so a deployment must route those browser paths to the uploader&#8217;s <code>/upload</code> and <code>/events</code> handlers.</p>
+</li>
+<li>
+<p>uses <code>/offer-api</code>, <code>/ai-api</code>, and <code>/insights-api</code> for offer matching and optional AI features in local development; production gateways must route those paths to the corresponding service APIs.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>This repository does not define that reverse-proxy or gateway configuration yet, it is hardcoded and proxied.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_component_responsibilities"><a class="anchor" href="#_component_responsibilities"></a>Component responsibilities</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Component</th>
+<th class="tableblock halign-left valign-top">Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Browser UI</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Selects an allowed file, posts it as multipart form data, then listens to status updates using <code>EventSource</code>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Uploader</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Validates and stores the uploaded file, publishes a persistent extraction job, and streams the latest in-memory status to clients using Server-Sent Events (SSE).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extractor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Consumes jobs, downloads the referenced upload, extracts PDF or image text, stores the result, and acknowledges or routes the job according to its outcome.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AIweighter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">After explicit user consent, sends the redacted resume, skill evidence, and retained offer text to the configured external model and stores a Markdown resume result.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RoleInsights</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">After separate explicit user consent, sends only the redacted resume to the configured external model and stores occupation suggestions independent of technical scores.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RabbitMQ</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Carries extraction jobs, status events, and terminal failed jobs in durable queues.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3-compatible storage</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Stores the original upload and extracted plain text. Both services must use the same bucket and endpoint configuration.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
