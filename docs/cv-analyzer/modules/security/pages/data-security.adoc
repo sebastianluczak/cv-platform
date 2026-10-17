@@ -15,6 +15,7 @@ IMPORTANT: They persist the original file, extracted text, and a separate best-e
 * Temporary extractor files are created on the service host during processing and removed when processing finishes.
 * The uploader's HTTP endpoints do not implement authentication or authorization.
 * The datacleaner service implements automated data lifecycle management with configurable retention periods and dry-run mode for testing.
+* `marketinsights` is separate from resume processing. It receives job-ad text only through its protected import API, does not retain titles or descriptions, and stores derived technology patterns with hashed source-record references. A hash is used for stable deduplication, not anonymization. Configure the strong import bearer token and storage lifecycle; obtain source authorization and confirm reuse and retention conditions before importing real advertisements.
 
 == Deployment responsibilities
 

@@ -161,6 +161,25 @@ services:
       - cv-platform
     restart: on-failure
 
+  # Aggregate Poland IT job-market observations; no resume data is processed
+  marketinsights:
+    build:
+      context: .
+      dockerfile: services/marketinsights/Dockerfile
+    image: cv-platform-marketinsights:latest
+    container_name: marketinsights
+    ports:
+      - "8084:8084"
+    environment:
+      - MARKETINSIGHTS_PORT=8084
+      - MARKET_DATA_FILE=/data/market.json
+      - MARKET_IMPORT_TOKEN=${MARKET_IMPORT_TOKEN:-}
+    volumes:
+      - market_data:/data
+    networks:
+      - cv-platform
+    restart: on-failure
+
   # Data cleanup service
   datacleaner:
     build:
@@ -195,3 +214,4 @@ networks:
 volumes:
   s3_data:
   rabbitmq_data:
+  market_data:

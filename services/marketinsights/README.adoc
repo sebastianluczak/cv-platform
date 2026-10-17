@@ -1,0 +1,103 @@
+= Market Insights
+
+Market Insights is a separate, aggregate-only service for Poland IT job-ad
+observations. It does not consume resumes, access resume artifacts, or join
+market records to user data. It exposes skill prevalence and equal-window
+comparisons through a read-only API and the React dashboard.
+
+== Source status
+
+The service currently accepts normalized batches; it does not call ePraca or
+another job board. The official ePraca integration guide describes a SOAP API
+whose partner name must be assigned by the ministry, restricts request
+frequency, and returns fields that can include employer contact information.
+Before connecting a live source, obtain authorized partner access and confirm
+the applicable reuse, display, attribution, privacy, and retention conditions.
+Do not infer permission to republish job-ad text from API availability.
+
+The dashboard intentionally shows an empty state until real authorized data is
+imported. No sample market figures are bundled or presented as observations.
+
+== Import contract
+
+`POST /admin/import` accepts one normalized JSON batch with a bearer token. The
+token is `MARKET_IMPORT_TOKEN`; if it is empty, imports are disabled.
+
+[source,json]
+----
+{
+  "source_id": "authorized-source",
+  "market": "PL-IT",
+  "offers": [
+    {
+      "external_id": "source-record-id",
+      "observed_at": "2026-10-17T06:00:00Z",
+      "title": "Backend Engineer",
+      "description": "Experience with Go and PostgreSQL",
+      "role_category": "backend"
+    }
+  ]
+}
+----
+
+The example is illustrative, not a real advertisement. The service runs the
+text through `services/common/skillpatterns`, then keeps only allowlisted
+technology signals and canonicalizes supported aliases (for example, Go and
+Golang become `go`). It persists only a SHA-256 reference derived from the
+source and record ID, source ID, UTC observation time, role category, matched
+skill IDs, and methodology version. Titles,
+descriptions, and source record IDs are not stored. Imports are capped at 5,000
+offers and 10 MiB per request. Re-importing the same source record on the same
+UTC date replaces that observation; a missing record in a later import is not
+interpreted as proof of closure.
+
+The local JSON store is atomically replaced and defaults to
+`data/market.json`. It is an MVP persistence choice, not a multi-replica or
+high-volume database. Record-level expiration is not implemented; operators
+must delete the store according to the source's retention conditions. Configure
+durable storage, backups, and access controls for deployment.
+
+== Read API
+
+* `GET /healthz`
+* `GET /api/market/roles`
+* `GET /api/market/trends?days=30&role=backend`
+
+`days` must be from 7 to 90. `role` is optional and must be one of `backend`,
+`frontend`, `mobile`, `platform`, `devops`, `data`, `security`, `qa`, or
+`architecture`. The trends response contains distinct-offer denominators,
+matching counts, prevalence, percentage-point changes, daily points, source
+coverage, last observation time, interpretation warnings, and the methodology
+version. Samples below 30 advertisements and changes in source coverage are
+flagged. Deduplication is within each source; cross-source duplicate detection
+and taxonomy equivalence are not implemented.
+
+== Local operation
+
+Start the service:
+
+[source,shell]
+----
+export MARKET_IMPORT_TOKEN="$(openssl rand -hex 32)"
+task services:marketinsights:start
+----
+
+When set, `MARKET_IMPORT_TOKEN` must be at least 32 bytes; keep it secret and
+terminate HTTPS at the deployment boundary. An empty value disables imports.
+
+Start the UI separately with `task ui:start`, then open
+`http://localhost:5173/#/market`. The Vite development proxy forwards
+`/market-api` to port 8084.
+
+Build and test:
+
+[source,shell]
+----
+go -C services/marketinsights test ./...
+task services:marketinsights:build
+----
+
+Docker Compose stores observations in the `market_data` volume at
+`/data/market.json`. Set `MARKET_IMPORT_TOKEN` in the deployment environment;
+keep the import endpoint behind a trusted network boundary even when protected
+by a bearer token. Aggregate read endpoints expose no offer text or user data.

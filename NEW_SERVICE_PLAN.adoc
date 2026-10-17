@@ -1,0 +1,818 @@
+= Market Demand Observatory
+:toc:
+:toclevels: 3
+:sectnums:
+:source-highlighter: rouge
+:icons: font
+
+== 1. Overview
+
+The *Market Demand Observatory* is a capability of CV-Platform that analyzes job advertisements over time to identify trends in technology demand, skill combinations, and role requirements.
+
+The existing platform understands individual job advertisements. The Observatory aggregates those advertisements to understand how the observed job market changes over time.
+
+=== 1.1. Objectives
+
+* Identify technologies and skills that appear most frequently in job advertisements.
+* Detect skills whose prevalence is increasing or decreasing.
+* Discover combinations of skills that frequently appear together.
+* Identify skills characteristic of specific role categories.
+* Provide evidence-backed market insights based on collected advertisements.
+* Enable future integration with candidate-facing features such as Career Pilot and Adaptive Interview Simulator.
+
+=== 1.2. MVP scope
+
+The initial release shall:
+
+. Collect job advertisements from a small number of permitted sources.
+. Normalize and deduplicate collected advertisements.
+. Reuse existing CV-Platform extraction and skill-matching functionality.
+. Persist normalized advertisements and historical observations.
+. Calculate daily market statistics.
+. Expose statistics through an API.
+. Present trends and supporting evidence in a React dashboard.
+
+=== 1.3. Non-goals
+
+The initial release will not attempt to:
+
+* Predict future job-market conditions.
+* Collect advertisements from every available job board.
+* Automatically apply for jobs.
+* Provide salary predictions.
+* Use an LLM as the primary source of market conclusions.
+* Introduce a dedicated analytics database before demonstrated need.
+
+== 2. Business Reports
+
+=== 2.1. Skill Popularity
+
+Identify technologies and skills most frequently mentioned in eligible job advertisements.
+
+Example:
+
+[quote]
+____
+Go appears in 18% of observed backend engineering advertisements in Poland during September.
+____
+
+Reports must include the observation period, sample size, market definition, and contributing sources.
+
+=== 2.2. Skill Momentum
+
+Compare skill prevalence across two periods of equal length.
+
+Example:
+
+[quote]
+____
+Go prevalence increased from 12% to 18% between consecutive observation periods, a change of 6 percentage points.
+____
+
+Display percentage-point changes separately from relative percentage growth.
+
+=== 2.3. Skill Combinations
+
+Identify technologies and skills that frequently appear together.
+
+Example combinations:
+
+* Go + distributed systems
+* Go + AI infrastructure
+* Kubernetes + platform engineering
+* Rust + embedded systems
+
+The system should distinguish frequently occurring combinations from combinations that are unusually associated with one another.
+
+=== 2.4. Role Fingerprints
+
+Calculate skill prevalence separately for role categories such as:
+
+* Backend Engineer
+* Platform Engineer
+* DevOps Engineer
+* Software Architect
+* Data Engineer
+* Machine Learning Engineer
+
+Identify skills that distinguish one role category from another.
+
+Role categories must be normalized and consistently applied across the historical dataset.
+
+== 3. Architecture
+
+=== 3.1. High-Level Processing Flow
+
+[source,text]
+----
+Job Sources
+    |
+    v
+Collectors / Source Adapters
+    |
+    v
+Raw Job Archive (Object Storage)
+    |
+    v
+Existing Processing Pipeline
+    |
+    +--> Extraction
+    +--> Normalization
+    +--> Skill Matching
+    +--> Role Classification
+    |
+    v
+Historical Job Store
+    |
+    v
+Market Analytics / Aggregation
+    |
+    v
+REST API
+    |
+    v
+React Dashboard
+----
+
+=== 3.2. Job Sources
+
+Potential source types include:
+
+* Public job APIs.
+* Sources explicitly permitting automated collection.
+* Permitted feeds and exports.
+* Employer career pages where automated access is allowed.
+
+Source selection must consider availability, coverage, data quality, rate limits, terms of service, and retention requirements.
+
+=== 3.3. Collectors
+
+Collectors are responsible for retrieving advertisements and converting source-specific responses into a normalized representation.
+
+Collectors must not independently implement skill extraction or market analytics.
+
+Responsibilities:
+
+* Source-specific fetching and pagination.
+* Incremental collection.
+* Normalization of source fields.
+* Source record identification.
+* Collection timestamps and provenance.
+* Rate limiting and retry handling.
+* Reporting collection errors.
+* Detecting source-level changes and disappearance.
+
+Each source adapter should be independently testable.
+
+=== 3.4. Existing Processing Pipeline
+
+Reuse the existing CV-Platform services wherever practical:
+
+* `extractor` — extract structured information from source documents.
+* `skillmatcher` — identify normalized skills.
+* `offermatcher` — reuse applicable job and offer matching logic.
+* `aiweighter` — reuse only where its weighting functionality is relevant.
+* `common` — reuse existing messaging, object storage, and observability integrations.
+
+Existing services should remain the authoritative implementation of their respective capabilities.
+
+=== 3.5. New Logical Components
+
+==== `jobcollector`
+
+Responsibilities:
+
+* Source adapters.
+* Collection scheduling or invocation.
+* Incremental fetching.
+* Raw advertisement normalization.
+* Collection metadata and error reporting.
+
+==== `marketinsights`
+
+Responsibilities:
+
+* Historical aggregation.
+* Skill prevalence calculations.
+* Skill co-occurrence calculations.
+* Role-specific statistics.
+* Period comparisons.
+* Market analytics API.
+
+These components may initially be packages or standalone Go binaries. Separate deployment should be justified by independent scaling, reliability, or operational requirements.
+
+== 4. Persistence Model
+
+=== 4.1. Database Selection
+
+MongoDB is a reasonable initial choice because advertisements are semi-structured documents and source-specific fields may vary.
+
+PostgreSQL is also suitable, particularly if relational queries, constraints, and SQL-based analytics become important.
+
+The initial implementation should use the database that best fits the existing operational environment.
+
+A dedicated time-series database is not required for the MVP.
+
+=== 4.2. `job_offers`
+
+Stores one canonical record per deduplicated advertisement.
+
+Suggested fields:
+
+[cols="1,2,3",options="header"]
+|===
+|Field |Type |Purpose
+
+|`_id`
+|Identifier
+|Canonical offer identifier.
+
+|`source_id`
+|String
+|Source that originally supplied the record.
+
+|`canonical_url`
+|String
+|Normalized advertisement URL, where available.
+
+|`title`
+|String
+|Job title.
+
+|`company_key`
+|String
+|Normalized employer identifier.
+
+|`location`
+|String
+|Job location.
+
+|`country`
+|String
+|Country or market identifier.
+
+|`description_hash`
+|String
+|Content fingerprint for change detection.
+
+|`first_seen_at`
+|Timestamp
+|First successful observation.
+
+|`last_seen_at`
+|Timestamp
+|Most recent successful observation.
+
+|`status`
+|Enum
+|Current observed lifecycle state.
+
+|`skill_ids`
+|Array of identifiers
+|Normalized skills extracted from the advertisement.
+
+|`role_category`
+|String
+|Normalized role classification.
+|===
+
+Additional fields may be added as the source adapters and extraction pipeline evolve.
+
+=== 4.3. `job_observations`
+
+Stores dated observations of advertisements.
+
+Suggested fields:
+
+[cols="1,2,3",options="header"]
+|===
+|Field |Type |Purpose
+
+|`offer_id`
+|Identifier
+|Reference to the canonical offer.
+
+|`source_id`
+|String
+|Source that was queried.
+
+|`observed_at`
+|Timestamp
+|Time the advertisement was observed.
+
+|`content_hash`
+|String
+|Content fingerprint at observation time.
+
+|`availability_status`
+|Enum
+|Observed availability or lifecycle status.
+
+|`source_updated_at`
+|Timestamp
+|Source-provided modification time, when available.
+|===
+
+An observation records what the collector actually saw. It must not be interpreted as proof that an advertisement was originally published on that date.
+
+Repeated identical observations may be coalesced according to a documented collection policy, provided meaningful lifecycle and content changes remain recoverable.
+
+=== 4.4. `market_daily_stats`
+
+Stores precomputed daily statistics for efficient dashboard queries.
+
+Suggested fields:
+
+[cols="1,2,3",options="header"]
+|===
+|Field |Type |Purpose
+
+|`date`
+|Date
+|Aggregation period.
+
+|`market_key`
+|String
+|Market definition, such as country and relevant filters.
+
+|`role_category`
+|String
+|Role category.
+
+|`skill_id`
+|Identifier
+|Normalized skill identifier.
+
+|`offer_count`
+|Integer
+|Number of eligible distinct advertisements.
+
+|`matching_offer_count`
+|Integer
+|Number of advertisements mentioning the skill.
+
+|`share`
+|Number
+|Skill prevalence.
+
+|`source_coverage`
+|Object
+|Sources and coverage information for the aggregation.
+|===
+
+Additional dimensions may include seniority, employment type, work arrangement, and industry.
+
+=== 4.5. `market_skill_pairs`
+
+Optional collection for precomputed skill co-occurrence statistics.
+
+Suggested fields:
+
+* `date`
+* `market_key`
+* `skill_a`
+* `skill_b`
+* `offer_count`
+* `pair_count`
+* `pair_share`
+
+Store each pair in a canonical order so that `(Go, Kubernetes)` and `(Kubernetes, Go)` cannot create duplicate records.
+
+=== 4.6. Raw Object Storage
+
+Large raw advertisements and source snapshots may be stored in object storage.
+
+Database records should retain:
+
+* Object reference.
+* Content hash.
+* Source identifier.
+* Collection timestamp.
+* Processing version.
+
+Raw content retention must comply with source permissions and applicable data-retention requirements.
+
+=== 4.7. Data Integrity Requirements
+
+* Use stable identifiers for normalized skills.
+* Enforce unique constraints for canonical records and logical observation keys.
+* Make collection retries idempotent.
+* Keep advertisements separate from their historical observations.
+* Preserve provenance and processing versions.
+* Avoid collecting unnecessary personal information.
+* Support consistent historical reporting.
+
+== 5. Statistical Engine
+
+=== 5.1. Skill Prevalence
+
+For a skill `s` and observation period `t`:
+
+[source,text]
+----
+prevalence(s, t) =
+    distinct eligible offers mentioning s
+    --------------------------------------- * 100
+         distinct eligible offers
+----
+
+Example:
+
+* Eligible advertisements: 1,000.
+* Advertisements mentioning Go: 180.
+* Go prevalence: 18%.
+
+The denominator must be explicitly defined and consistently applied.
+
+=== 5.2. Skill Momentum
+
+Compare prevalence between two periods of equal length.
+
+[source,text]
+----
+absolute_change =
+    recent_prevalence - previous_prevalence
+----
+
+Example:
+
+* Previous prevalence: 12%.
+* Recent prevalence: 18%.
+* Change: +6 percentage points.
+* Relative growth: +50%.
+
+Both measures may be reported, but percentage-point change should be the primary presentation.
+
+=== 5.3. Skill Co-occurrence
+
+For skills `A` and `B`:
+
+[source,text]
+----
+pair_share =
+    eligible offers mentioning both A and B
+    --------------------------------------- * 100
+             distinct eligible offers
+----
+
+This metric measures how often the combination appears in the observed market.
+
+=== 5.4. Skill Association
+
+Pair share alone does not establish that two skills are unusually associated.
+
+A useful additional metric is lift:
+
+[source,text]
+----
+lift(A, B) = P(A and B) / (P(A) * P(B))
+----
+
+Interpretation:
+
+* Lift greater than 1: the pair occurs more frequently than the independence baseline.
+* Lift approximately equal to 1: occurrence is consistent with independence.
+* Lift less than 1: the pair occurs less frequently than the independence baseline.
+
+Lift should be interpreted alongside sample size and the individual prevalence of each skill.
+
+=== 5.5. Role Fingerprints
+
+Calculate skill prevalence independently for each role category.
+
+Possible outputs:
+
+* Most common skills in a role.
+* Skills with unusually high prevalence relative to other roles.
+* Skill combinations associated with a role.
+* Changes in role requirements over time.
+
+Role classifications and skill mappings must remain consistent across comparison periods.
+
+=== 5.6. Source Coverage
+
+Every report must provide enough context to interpret its statistics.
+
+At minimum, report:
+
+* Observation period.
+* Number of distinct eligible advertisements.
+* Number of advertisements matching the selected skill or combination.
+* Contributing sources.
+* Source coverage changes.
+* Relevant methodology or processing-version changes.
+
+A change in source composition can create an apparent trend without a genuine change in the underlying market.
+
+=== 5.7. Interpretation Boundaries
+
+The Observatory measures advertisements collected under a defined collection strategy. It does not automatically measure the entire labor market.
+
+Reports must distinguish observed prevalence from claims about total market demand.
+
+Forecasting, causal explanations, and claims about future hiring demand are outside the initial statistical scope.
+
+== 6. Collector Requirements
+
+=== 6.1. Source Adapter Interface
+
+A preliminary Go interface could look like this:
+
+[source,go]
+----
+type JobSource interface {
+    Name() string
+    Fetch(ctx context.Context, cursor string) (FetchResult, error)
+}
+
+type FetchResult struct {
+    Offers     []RawOffer
+    NextCursor string
+    HasMore    bool
+}
+
+type RawOffer struct {
+    ExternalID  string
+    URL         string
+    Title       string
+    Company     string
+    Location    string
+    Description string
+    PublishedAt *time.Time
+}
+----
+
+This is an initial sketch rather than a finalized interface. The production contract should account for source-specific identifiers, pagination, metadata, and lifecycle behavior.
+
+=== 6.2. Collection Requirements
+
+Collectors must support:
+
+* Source adapters with independently configurable limits.
+* Incremental fetching and pagination.
+* Idempotent retries.
+* Request timeouts and bounded retries.
+* Exponential backoff where appropriate.
+* Rate limiting and concurrency limits.
+* Structured logs and operational metrics.
+* Collection run identifiers.
+* Source provenance and timestamps.
+* Partial failure isolation.
+* Detection of content changes.
+* Monitoring of successful and unsuccessful collection runs.
+
+=== 6.3. Lifecycle Detection
+
+An advertisement disappearing from a source must not immediately be interpreted as closed.
+
+The collector should distinguish:
+
+* Successfully observed.
+* Not observed during a successful subsequent scan.
+* Confirmed unavailable.
+* Source collection failed.
+* Reappeared after a period of absence.
+
+Lifecycle transitions should be recorded with their evidence and observation times.
+
+=== 6.4. Source Compliance
+
+* Prefer permitted APIs and feeds.
+* Respect source terms and applicable access restrictions.
+* Apply reasonable rate limits.
+* Follow relevant crawling policies.
+* Respect retention and redistribution constraints.
+* Avoid unnecessary personal-data collection.
+
+The initial release should prioritize one or two reliable, permitted sources over broad but unreliable coverage.
+
+== 7. Dashboard Requirements
+
+=== 7.1. Market Overview
+
+Display:
+
+* Number of distinct observed advertisements.
+* Selected market and role filters.
+* Selected observation period.
+* Skill prevalence.
+* Period-over-period change.
+* Source coverage.
+* Data freshness.
+
+=== 7.2. Skill Demand Over Time
+
+Display time-series charts for selected skills.
+
+Users should be able to:
+
+* Select skills.
+* Change the observation period.
+* Filter by market and role.
+* Compare prevalence.
+* Inspect sample sizes.
+* View source coverage changes.
+
+=== 7.3. Emerging Skill Combinations
+
+Display combinations with notable prevalence or changes in prevalence.
+
+Each combination should include:
+
+* Skill identifiers and display names.
+* Pair share.
+* Period-over-period change.
+* Number of supporting advertisements.
+* Relevant role categories.
+* Source coverage.
+* Links to supporting advertisements, subject to applicable access and privacy policies.
+
+=== 7.4. Evidence Inspection
+
+Users should be able to inspect the advertisements supporting a statistic.
+
+The evidence view should explain:
+
+* Which advertisements contributed to the numerator.
+* How the denominator was calculated.
+* Which filters were applied.
+* Which source supplied each advertisement.
+* Which extraction and matching versions were used.
+
+=== 7.5. Data Integrity Indicators
+
+Display warnings when:
+
+* Sample sizes are small.
+* Source coverage changes substantially.
+* A source has not been collected recently.
+* Historical records have been reprocessed.
+* Skill-matching methodology changes affect comparability.
+
+All example statistics shown during development must be clearly marked as illustrative rather than actual market observations.
+
+== 8. API Requirements
+
+The initial REST API should support:
+
+* Retrieving available markets and role categories.
+* Listing normalized skills.
+* Querying skill prevalence over a time range.
+* Comparing skill prevalence across periods.
+* Querying skill combinations.
+* Retrieving role fingerprints.
+* Retrieving source coverage and data freshness.
+* Inspecting supporting advertisements where permitted.
+
+API responses should include the selected market, observation period, denominator, matching count, and relevant methodology metadata.
+
+Aggregation should be performed in the analytics layer rather than independently in the React client.
+
+== 9. Processing Versions and Historical Consistency
+
+Skill extraction and normalization may improve over time. These changes can alter historical statistics even when the underlying advertisements have not changed.
+
+The system must record relevant processing versions, including:
+
+* Extractor version.
+* Skill matcher version.
+* Skill dictionary or ontology version.
+* Role classifier version.
+* Aggregation methodology version.
+
+When processing logic changes, historical data should either be reprocessed consistently or clearly marked as methodologically different.
+
+The system must not silently interpret increased extraction coverage as increased market demand.
+
+Historical reports should be reproducible from retained source observations and documented processing rules, subject to the available data and retention constraints.
+
+== 10. Implementation Plan
+
+=== Milestone 1: Collection and Normalization
+
+. Implement one permitted source adapter.
+. Normalize the advertisement fields.
+. Persist canonical offers and dated observations.
+. Add deduplication and idempotency constraints.
+. Preserve source provenance and content hashes.
+. Add collection metrics and structured error reporting.
+
+*Exit criteria:* Repeated collection runs do not create duplicate records, and collection failures are distinguishable from advertisement disappearance.
+
+=== Milestone 2: Existing Pipeline Integration
+
+. Send normalized advertisements through the existing processing pipeline.
+. Reuse the existing extractor and skill matcher.
+. Persist stable skill identifiers and role classifications.
+. Record processing versions.
+. Support reprocessing when extraction or matching logic changes.
+
+*Exit criteria:* Collected advertisements have normalized skills, traceable provenance, and identifiable processing versions.
+
+=== Milestone 3: Daily Statistics
+
+. Calculate skill prevalence.
+. Calculate skill co-occurrence.
+. Calculate period-over-period changes.
+. Generate role fingerprints.
+. Track source coverage.
+. Store precomputed daily statistics.
+. Add tests for denominators, deduplication, and historical consistency.
+
+*Exit criteria:* Reports can be reproduced and interpreted using counts, denominators, time windows, and source coverage.
+
+=== Milestone 4: API and Dashboard
+
+. Implement the analytics REST API.
+. Add the React market overview.
+. Add skill trend charts.
+. Add skill combination reports.
+. Add role filters and date ranges.
+. Add evidence inspection.
+. Display data freshness and sample sizes.
+
+*Exit criteria:* A user can explore a trend and inspect the advertisements and calculations supporting it.
+
+== 11. Acceptance Criteria
+
+The MVP is ready when:
+
+. Advertisements can be collected repeatedly without duplicate canonical records.
+. Failed collection runs do not incorrectly mark all advertisements as unavailable.
+. Historical observations remain distinguishable from publication dates.
+. Advertisements can be reprocessed after extraction or matching improvements.
+. Skill prevalence can be calculated for a selected market and observation period.
+. Skill co-occurrence can be calculated for a selected pair of skills.
+. Period-over-period changes are reproducible.
+. Every report exposes its numerator, denominator, sample size, and contributing sources.
+. Changes in source coverage are visible to users.
+. Changes in processing methodology are recorded.
+. Users can inspect the evidence behind a reported trend.
+. Example data is clearly distinguished from real collected statistics.
+
+== 12. Initial Technology Choices
+
+Recommended initial implementation:
+
+[cols="1,2",options="header"]
+|===
+|Component |Initial choice
+
+|Implementation language
+|Go
+
+|Collectors
+|Small source adapters behind a common interface
+
+|Persistence
+|MongoDB or PostgreSQL, selected according to operational fit
+
+|Raw advertisement archive
+|Existing object storage
+
+|Asynchronous processing
+|Existing RabbitMQ pipeline
+
+|Skill extraction
+|Existing CV-Platform services
+
+|Aggregation
+|Scheduled Go batch jobs
+
+|API
+|Go REST API
+
+|Dashboard
+|Existing React frontend
+
+|Observability
+|Existing Prometheus integration and operational metrics
+|===
+
+Avoid introducing a dedicated analytics database, streaming analytics platform, or forecasting model until the collected dataset and actual query workload justify the additional complexity.
+
+== 13. Future Extensions
+
+The Observatory can eventually support:
+
+* Salary and compensation intelligence.
+* Skill-demand forecasting.
+* Geographic and industry comparisons.
+* Seniority-specific market analysis.
+* Candidate-specific opportunity recommendations.
+* Personalized skill-gap analysis.
+* Adaptive Interview Simulator question generation.
+* Career Pilot opportunity discovery.
+* API access for third-party career platforms.
+* Historical analysis of how job requirements evolve.
+
+These extensions should build on reliable historical observations and transparent statistics rather than replacing them.
+
+== 14. Guiding Principle
+
+[quote]
+____
+Optimize for trustworthy market intelligence, not the volume of advertisements collected or the number of AI-generated insights produced.
+____
+
+The Observatory should help users understand what the collected evidence supports, what has changed, how reliable the conclusion is, and where uncertainty remains.

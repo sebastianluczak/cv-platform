@@ -87,6 +87,19 @@
   text-transform: uppercase;
 }
 
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.topbar-links > a {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .hero-section {
   width: min(1380px, 100%);
   min-height: 0;
@@ -971,6 +984,14 @@
     max-width: 150px;
     font-size: 8px;
     text-align: right;
+  }
+
+  .topbar-links {
+    gap: 10px;
+  }
+
+  .topbar-links > a {
+    font-size: 9px;
   }
 
   .hero-section {

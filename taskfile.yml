@@ -20,6 +20,7 @@ tasks:
       - cd services/offermatcher && gofmt -l -e -w .
       - cd services/common && gofmt -l -e -w .
       - cd services/roleinsights && gofmt -l -e -w .
+      - cd services/marketinsights && gofmt -l -e -w .
 
   # SECURITY SCANS #
   security:scan:
@@ -35,6 +36,7 @@ tasks:
       - cd uploader && gosec ./... || true
       - cd offermatcher && gosec ./... || true
       - cd roleinsights && gosec ./... || true
+      - cd marketinsights && gosec ./... || true
       - cd common && gosec ./... || true
   
   # UI THINGS #
@@ -89,6 +91,10 @@ tasks:
     desc: Start the datacleaner service
     cmds:
       - go -C services/datacleaner run .
+  services:marketinsights:start:
+    desc: Start the market insights service
+    cmds:
+      - go -C services/marketinsights run .
   docs:build-docs:
     dir: docs
     desc: Build the documentation
@@ -146,6 +152,12 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o datacleaner .
       - docker build -t datacleaner .
+  services:marketinsights:build:
+    dir: services/marketinsights
+    desc: Build production docker image
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o marketinsights .
+      - docker build -t marketinsights .
 
   
   # AI CODE REVIEW #

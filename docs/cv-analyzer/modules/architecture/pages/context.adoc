@@ -25,14 +25,17 @@ component Extractor
 component OfferMatcher
 component AIweighter
 component RoleInsights
+component MarketInsights
 
 database "S3-compatible Storage" as Storage
+database "Market Observation Store" as MarketStore
 
 Browser --> Uploader : POST /upload
 Browser --> Uploader : GET /events?job_id=...
 Browser --> OfferMatcher : POST /matches\nGET /matches/<match-id>
 Browser --> AIweighter : POST /weights after opt-in\nGET /weights/<weigh-id>
 Browser --> RoleInsights : POST /insights after opt-in\nGET /insights/<insight-id>
+Browser --> MarketInsights : GET /api/market/trends\nGET /api/market/roles
 
 Uploader --> Storage : Upload file\nuploads/<job-id>
 Uploader --> RabbitMQ : Publish extraction job
@@ -45,6 +48,7 @@ AIweighter --> Storage : Read redacted resume,\nskills and retained offer text\n
 RoleInsights --> RabbitMQ : Publish role insights job
 RabbitMQ --> RoleInsights : Consume role insights job
 RoleInsights --> Storage : Read redacted resume\nWrite role suggestions
+MarketInsights --> MarketStore : Read/write aggregate-safe observations
 
 RabbitMQ --> Extractor : Consume extraction job
 Extractor --> Storage : Download upload
@@ -64,6 +68,7 @@ The UI is a separate React application.
 
 . uses `/api/upload` and `/api/events`, so a deployment must route those browser paths to the uploader's `/upload` and `/events` handlers. 
 . uses `/offer-api`, `/ai-api`, and `/insights-api` for offer matching and optional AI features in local development; production gateways must route those paths to the corresponding service APIs.
+. uses `/market-api` for the aggregate market dashboard in local development; production gateways must route it to MarketInsights. MarketInsights does not access resume storage or the CV-processing queue.
 
 This repository does not define that reverse-proxy or gateway configuration yet, it is hardcoded and proxied.
 
@@ -87,6 +92,9 @@ This repository does not define that reverse-proxy or gateway configuration yet,
 
 |RoleInsights
 |After separate explicit user consent, sends only the redacted resume to the configured external model and stores occupation suggestions independent of technical scores.
+
+|MarketInsights
+|Aggregates authorized job-ad observations into skill trends. Stores derived patterns and hashed source references only; it is independent of personal resume processing.
 
 |RabbitMQ
 |Carries extraction jobs, status events, and terminal failed jobs in durable queues.

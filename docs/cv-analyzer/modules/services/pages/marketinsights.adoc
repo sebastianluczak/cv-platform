@@ -1,0 +1,69 @@
+= Market Insights
+
+`marketinsights` is an independent Go service that aggregates observed job
+advertisements for the Poland IT market. It does not process resumes and is not
+part of the uploader → extractor → piistripper → skillmatcher queue.
+
+== Current scope
+
+The service accepts normalized batches at an authenticated import endpoint,
+matches skill patterns using the shared deterministic vocabulary, and serves
+period prevalence and momentum to the React dashboard. The MVP reports the
+sample size, matching count, observation window, source coverage, freshness,
+and methodology version. It describes observed advertisements, not the entire
+labor market.
+
+No real or illustrative dataset is bundled. The dashboard shows an explicit
+empty state until observations from an authorized source are imported.
+
+== Source access and handling
+
+The official ePraca integrator instructions document a SOAP feed and require a
+partner name assigned by the ministry. They also document availability limits
+and a 20-request limit per sharing cycle in the 17:00–07:00 period. The
+response schema includes contact-related fields. This service therefore does
+not connect to that feed automatically; obtain authorized access and confirm
+reuse, display, attribution, privacy, and retention terms before adding a
+collector:
+
+* https://oferty.praca.gov.pl/portal/assets/for-integrators/instrukcja-pobierania-ofert-pracy-z-systemu-ePraca.pdf
+* https://oferty.praca.gov.pl/integration/services/v2/oferta?wsdl
+
+On import, titles and descriptions are processed in memory and are not
+persisted. The local MVP store contains source ID, hashed source-record
+reference, observation time, role category, detected skill patterns, and
+methodology version. It does not infer offer closure from an absent record.
+Re-importing a source offer on the same UTC date replaces that observation.
+
+== API
+
+* `GET /healthz`
+* `GET /api/market/roles`
+* `GET /api/market/trends?days=30&role=backend`
+* `POST /admin/import` (requires `Authorization: Bearer <MARKET_IMPORT_TOKEN>`)
+
+The period length is 7–90 days. The current and immediately preceding periods
+have equal length. Percentage-point change is shown separately from relative
+change; the report counts each source's offer reference once per period and
+returns per-source offer counts. The service does not identify duplicate
+postings across sources, and skill aliases are canonicalized only for the
+supported alias set; this is not a complete skill ontology.
+Samples under 30 advertisements and changes in contributing sources are
+returned as interpretation warnings; these are safeguards, not confidence
+intervals.
+
+`MARKET_IMPORT_TOKEN` must be configured to enable imports. Store persistence
+uses an atomically replaced JSON file (`MARKET_DATA_FILE`, default
+`data/market.json`). This is a single-instance MVP store; it is not designed
+for concurrent replicas or large-scale analytics. Configure storage lifecycle,
+backups, and access controls before production. Record-level expiration is not
+implemented; operators must delete the store according to source retention
+conditions.
+The import token must be at least 32 bytes. Terminate HTTPS at the deployment
+boundary and treat the stored hash as a deduplication reference, not as
+anonymization.
+
+Run with `task services:marketinsights:start`, test with
+`go -C services/marketinsights test ./...`, and build with
+`task services:marketinsights:build`. The UI dashboard is available at
+`/#/market`; local development proxies `/market-api` to port 8084.

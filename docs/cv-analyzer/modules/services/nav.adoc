@@ -7,6 +7,7 @@
 * xref:offermatcher.adoc[Offer matcher]
 * xref:aiweighter.adoc[AIweighter]
 * xref:roleinsights.adoc[Role insights]
+* xref:marketinsights.adoc[Market insights]
 * xref:contracts.adoc[Service contracts]
 * xref:configuration.adoc[Configuration]
 * xref:operations.adoc[Operations]

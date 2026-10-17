@@ -38,4 +38,9 @@
 |Suggests evidence-grounded occupations from a redacted resume after explicit user consent; independent of technical scores
 |Implemented; optional asynchronous role insights
 |xref:roleinsights.adoc[Role insights]
+
+|`marketinsights`
+|Aggregates observed Poland IT job advertisements into skill prevalence and period comparisons; independent of personal CV processing
+|Implemented as a source-neutral import and analytics slice; live ePraca ingestion requires authorized partner access
+|xref:marketinsights.adoc[Market insights]
 |===

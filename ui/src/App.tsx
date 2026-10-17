@@ -4,6 +4,7 @@ import Footer from './components/Footer'
 import PrivacyPolicy from './components/PrivacyPolicy'
 import DataRetentionPolicy from './components/DataRetentionPolicy'
 import ConsentCheckbox from './components/ConsentCheckbox'
+import MarketDashboard from './MarketDashboard'
 
 type ProgressEvent = {
   job_id: string
@@ -401,6 +402,8 @@ function App() {
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
   }
 
+  if (currentPath === '/market') return <MarketDashboard />
+
   return (
     <main
       className="page-shell"
@@ -419,7 +422,10 @@ function App() {
               <span className="brand-mark">d.</span>
               <span>draftline</span>
             </a>
-            <span className="topbar-note">Technical experience, in focus</span>
+            <div className="topbar-links">
+              <a href="#/market">Market demand</a>
+              <span className="topbar-note">Technical experience, in focus</span>
+            </div>
           </header>
 
           <section className="hero-section" id="top">

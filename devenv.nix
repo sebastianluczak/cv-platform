@@ -104,6 +104,14 @@
         ];
       }
       {
+        job_name = "marketinsights";
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:8059" ];
+          }
+        ];
+      }
+      {
         job_name = "uploader";
         static_configs = [
           {
@@ -137,6 +145,9 @@
     };
     roleinsights = {
       exec = "sleep 3 && task services:roleinsights:start";
+    };
+    marketinsights = {
+      exec = "sleep 3 && task services:marketinsights:start";
     };
     datacleaner = {
       exec = "sleep 8 && task services:datacleaner:start";
