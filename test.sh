@@ -30,7 +30,6 @@ fi
 DEVENV_RUNNING=false
 if ! devenv processes list >/dev/null 2>&1; then
     DEVENV_RUNNING=true
-    source .env.dist # just to be sure
     echo "Devenv is not running, starting it in the background..."
     devenv up -d >/dev/null 2>&1 &
     # Give it some time to start
