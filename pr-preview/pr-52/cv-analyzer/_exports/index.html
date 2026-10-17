@@ -1104,7 +1104,7 @@ This is serious and needs proper addressing.
 <div class="ulist">
 <ul>
 <li>
-<p><code>&lt;QUEUE_NAME&gt;.extraction.failed</code></p>
+<p><code>&lt;QUEUE_NAME&gt;.failed</code> (extraction)</p>
 </li>
 <li>
 <p><code>&lt;QUEUE_NAME&gt;.pii.failed</code></p>
@@ -1113,12 +1113,23 @@ This is serious and needs proper addressing.
 <p><code>&lt;QUEUE_NAME&gt;.skills.failed</code></p>
 </li>
 <li>
-<p>Other stage-specific failed queues</p>
+<p><code>&lt;QUEUE_NAME&gt;.offers.failed</code></p>
+</li>
+<li>
+<p><code>&lt;QUEUE_NAME&gt;.aiweight.failed</code></p>
+</li>
+<li>
+<p><code>&lt;QUEUE_NAME&gt;.roleinsights.failed</code></p>
 </li>
 </ul>
 </div>
 </li>
 </ol>
+</div>
+<div class="paragraph">
+<p>Work queues and the <code>&lt;QUEUE_NAME&gt;.events</code> status queue are not targeted.
+Per-queue failures are reported while cleanup continues with the remaining
+failed queues. Summaries distinguish actual deletions from dry-run candidates.</p>
 </div>
 <div class="paragraph">
 <p>Messages are deleted after <code>RETENTION_FAILED_QUEUE_DAYS</code> days, allowing operators time to inspect and manually requeue failures if needed.</p>
