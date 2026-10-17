@@ -68,6 +68,12 @@ function check_metric {
   fi
 }
 
+# FOR DEBUG ONLY
+# At this point I know for a fact, that Extractor has problem with starting due to unknown reasons.
+devenv shell -- go -C services/extractor run .
+# THIS IS JUST A DEBUG, I NEED TO SEE IT BEFORE MY OWN EYES...
+
+
 # Now, run the e2e tests...
 # First simple test, is to curl the metrics endpoints.
 # TODO - add healthz here as well if enabled for all microservices
