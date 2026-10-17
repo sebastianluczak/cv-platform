@@ -77,49 +77,83 @@ func run() error {
 }
 
 func runCleanupCycle(ctx context.Context, s3Client interface{}, conn *amqp.Connection, cfg Config) error {
-	cycleStart := time.Now()
-	s3Deleted := 0
-	mqPurged := 0
-
-	LogCleanupStart(time.Duration(cfg.CleanupInterval) * time.Minute)
-
-	// Cast s3Client to *s3.Client for S3 cleanup
 	s3Cli, ok := s3Client.(*s3.Client)
 	if !ok {
-		LogError("cleanup_s3", fmt.Errorf("invalid s3 client type"))
-		return fmt.Errorf("invalid s3 client type")
+		return runCleanupCycleWith(ctx, time.Duration(cfg.CleanupInterval)*time.Minute,
+			func(context.Context) (cleanupResult, error) {
+				return cleanupResult{failures: 1}, fmt.Errorf("invalid s3 client type")
+			},
+			func(ctx context.Context) (cleanupResult, error) {
+				return cleanupFailedQueues(ctx, conn, cfg)
+			},
+		)
 	}
 
-	// Run S3 cleanup
-	if err := CleanupS3(ctx, s3Cli, cfg.S3Bucket, cfg); err != nil {
-		LogError("s3_cleanup", err)
+	return runCleanupCycleWith(ctx, time.Duration(cfg.CleanupInterval)*time.Minute,
+		func(ctx context.Context) (cleanupResult, error) {
+			return CleanupS3(ctx, s3Cli, cfg.S3Bucket, cfg)
+		},
+		func(ctx context.Context) (cleanupResult, error) {
+			return cleanupFailedQueues(ctx, conn, cfg)
+		},
+	)
+}
+
+func runCleanupCycleWith(
+	ctx context.Context,
+	interval time.Duration,
+	cleanupS3 func(context.Context) (cleanupResult, error),
+	cleanupRabbitMQ func(context.Context) (cleanupResult, error),
+) error {
+	cycleStart := time.Now()
+	LogCleanupStart(interval)
+
+	s3Result, s3Err := cleanupS3(ctx)
+	if s3Err != nil {
+		LogError("s3_cleanup", s3Err)
+		if s3Result.failures == 0 {
+			s3Result.failures++
+		}
 	}
 
-	// TODO: Implement RabbitMQ failed queue cleanup logic
-	// - Connect to failed queues: <QUEUE_NAME>.*.failed
-	// - Process failed messages older than RetentionFailed
-	// - Archive or delete expired failed messages
-	if err := cleanupFailedQueues(ctx, conn, cfg); err != nil {
-		LogError("rabbitmq_cleanup", err)
+	rabbitMQResult, rabbitMQErr := cleanupRabbitMQ(ctx)
+	if rabbitMQErr != nil {
+		LogError("rabbitmq_cleanup", rabbitMQErr)
+		if rabbitMQResult.failures == 0 {
+			rabbitMQResult.failures++
+		}
 	}
 
-	duration := time.Since(cycleStart)
-	LogCleanupCycle(duration, s3Deleted, mqPurged)
+	LogCleanupCycle(time.Since(cycleStart), s3Result, rabbitMQResult)
+	if s3Err != nil || rabbitMQErr != nil {
+		return errors.Join(
+			wrapCleanupError("S3 cleanup", s3Err),
+			wrapCleanupError("RabbitMQ cleanup", rabbitMQErr),
+		)
+	}
 	return nil
 }
 
-func cleanupFailedQueues(ctx context.Context, conn *amqp.Connection, cfg Config) error {
+func wrapCleanupError(operation string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", operation, err)
+}
+
+func cleanupFailedQueues(ctx context.Context, conn *amqp.Connection, cfg Config) (cleanupResult, error) {
 	// Create a channel for RabbitMQ operations
 	channel, err := conn.Channel()
 	if err != nil {
-		return fmt.Errorf("open RabbitMQ channel for cleanup: %w", err)
+		return cleanupResult{failures: 1}, fmt.Errorf("open RabbitMQ channel for cleanup: %w", err)
 	}
 	defer channel.Close()
 
 	// Call the RabbitMQ cleanup orchestrator
-	if err := CleanupRabbitMQ(ctx, channel, cfg); err != nil {
-		return fmt.Errorf("RabbitMQ cleanup: %w", err)
+	result, err := CleanupRabbitMQ(ctx, channel, cfg)
+	if err != nil {
+		return result, fmt.Errorf("RabbitMQ cleanup: %w", err)
 	}
 
-	return nil
+	return result, nil
 }

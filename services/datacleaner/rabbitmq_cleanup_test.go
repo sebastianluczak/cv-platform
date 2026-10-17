@@ -39,15 +39,20 @@ func (a *acknowledgementRecorder) Reject(tag uint64, requeue bool) error {
 }
 
 type cleanupChannelStub struct {
-	declareErr error
-	consumeErr error
-	deliveries <-chan amqp.Delivery
-	declared   []string
-	consumed   []string
+	declareErr    error
+	consumeErr    error
+	declareErrors map[string]error
+	consumeErrors map[string]error
+	deliveries    <-chan amqp.Delivery
+	declared      []string
+	consumed      []string
 }
 
 func (c *cleanupChannelStub) QueueDeclare(name string, _, _, _, _ bool, _ amqp.Table) (amqp.Queue, error) {
 	c.declared = append(c.declared, name)
+	if err := c.declareErrors[name]; err != nil {
+		return amqp.Queue{}, err
+	}
 	if c.declareErr != nil {
 		return amqp.Queue{}, c.declareErr
 	}
@@ -56,6 +61,9 @@ func (c *cleanupChannelStub) QueueDeclare(name string, _, _, _, _ bool, _ amqp.T
 
 func (c *cleanupChannelStub) Consume(queue, _ string, _, _, _, _ bool, _ amqp.Table) (<-chan amqp.Delivery, error) {
 	c.consumed = append(c.consumed, queue)
+	if err := c.consumeErrors[queue]; err != nil {
+		return nil, err
+	}
 	if c.consumeErr != nil {
 		return nil, c.consumeErr
 	}
@@ -79,12 +87,12 @@ func TestCleanupFailedQueue_AcknowledgesExpiredAndRequeuesRecent(t *testing.T) {
 	close(deliveries)
 
 	channel := &cleanupChannelStub{deliveries: deliveries}
-	purged, err := cleanupFailedQueue(context.Background(), channel, "jobs.extraction.failed", 24*3600, false)
+	result, err := cleanupFailedQueue(context.Background(), channel, "jobs.extraction.failed", 24*3600, false)
 	if err != nil {
 		t.Fatalf("cleanupFailedQueue() error = %v", err)
 	}
-	if purged != 1 {
-		t.Errorf("cleanupFailedQueue() purged = %d, want 1", purged)
+	if result.deleted != 1 {
+		t.Errorf("cleanupFailedQueue() deleted = %d, want 1", result.deleted)
 	}
 	if !reflect.DeepEqual(expiredAck.actions, []recordedAcknowledgement{{action: "ack", tag: 1}}) {
 		t.Errorf("expired message acknowledgements = %#v, want ack for delivery 1", expiredAck.actions)
@@ -108,12 +116,12 @@ func TestCleanupFailedQueue_DryRunRetainsExpiredMessage(t *testing.T) {
 	}
 	close(deliveries)
 
-	purged, err := cleanupFailedQueue(context.Background(), &cleanupChannelStub{deliveries: deliveries}, "jobs.pii.failed", 24*3600, true)
+	result, err := cleanupFailedQueue(context.Background(), &cleanupChannelStub{deliveries: deliveries}, "jobs.pii.failed", 24*3600, true)
 	if err != nil {
 		t.Fatalf("cleanupFailedQueue() error = %v", err)
 	}
-	if purged != 1 {
-		t.Errorf("cleanupFailedQueue() purged = %d, want 1 would-be purge", purged)
+	if result.deleted != 0 || result.wouldDelete != 1 {
+		t.Errorf("cleanupFailedQueue() result = %#v, want 1 would-be purge and no deletion", result)
 	}
 	if !reflect.DeepEqual(acknowledger.actions, []recordedAcknowledgement{{action: "nack", tag: 7, requeue: true}}) {
 		t.Errorf("dry-run acknowledgements = %#v, want only a requeue nack", acknowledger.actions)
@@ -146,12 +154,12 @@ func TestCleanupFailedQueue_MissingOrInvalidTimestampIsRetained(t *testing.T) {
 			}
 			close(deliveries)
 
-			purged, err := cleanupFailedQueue(context.Background(), &cleanupChannelStub{deliveries: deliveries}, "jobs.skills.failed", 24*3600, false)
+			result, err := cleanupFailedQueue(context.Background(), &cleanupChannelStub{deliveries: deliveries}, "jobs.skills.failed", 24*3600, false)
 			if err != nil {
 				t.Fatalf("cleanupFailedQueue() error = %v", err)
 			}
-			if purged != 0 {
-				t.Errorf("cleanupFailedQueue() purged = %d, want 0", purged)
+			if result.deleted != 0 {
+				t.Errorf("cleanupFailedQueue() deleted = %d, want 0", result.deleted)
 			}
 			if !reflect.DeepEqual(acknowledger.actions, []recordedAcknowledgement{{action: "nack", tag: 9, requeue: true}}) {
 				t.Errorf("timestamp-less message acknowledgements = %#v, want requeue nack", acknowledger.actions)
@@ -203,12 +211,12 @@ func TestCleanupFailedQueue_Cancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	purged, err := cleanupFailedQueue(ctx, channel, "jobs.offers.failed", 24*3600, false)
+	result, err := cleanupFailedQueue(ctx, channel, "jobs.offers.failed", 24*3600, false)
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("cleanupFailedQueue() error = %v, want context.Canceled", err)
 	}
-	if purged != 0 {
-		t.Errorf("cleanupFailedQueue() purged = %d, want 0", purged)
+	if result.deleted != 0 || result.failures != 1 {
+		t.Errorf("cleanupFailedQueue() result = %#v, want one failure and no deletions", result)
 	}
 	if !reflect.DeepEqual(channel.consumed, []string{"jobs.offers.failed"}) {
 		t.Errorf("consumed queues = %v, want [jobs.offers.failed]", channel.consumed)
@@ -256,7 +264,7 @@ func TestCleanupRabbitMQ_SelectsFailedQueues(t *testing.T) {
 	channel := &cleanupChannelStub{deliveries: deliveries}
 	config := Config{QueueName: "jobs", RetentionFailed: 1}
 
-	if err := CleanupRabbitMQ(context.Background(), channel, config); err != nil {
+	if _, err := CleanupRabbitMQ(context.Background(), channel, config); err != nil {
 		t.Fatalf("CleanupRabbitMQ() error = %v", err)
 	}
 
@@ -266,8 +274,64 @@ func TestCleanupRabbitMQ_SelectsFailedQueues(t *testing.T) {
 		"jobs.skills.failed",
 		"jobs.offers.failed",
 		"jobs.aiweight.failed",
+		"jobs.roleinsights.failed",
 	}
 	if !reflect.DeepEqual(channel.declared, want) || !reflect.DeepEqual(channel.consumed, want) {
 		t.Errorf("broker queue selection: declared=%v consumed=%v, want %v", channel.declared, channel.consumed, want)
+	}
+}
+
+func TestCleanupRabbitMQ_ContinuesAfterQueueFailure(t *testing.T) {
+	deliveries := make(chan amqp.Delivery)
+	close(deliveries)
+	channel := &cleanupChannelStub{
+		deliveries:    deliveries,
+		declareErrors: map[string]error{"jobs.pii.failed": errors.New("declare failed")},
+	}
+	config := Config{QueueName: "jobs", RetentionFailed: 1}
+
+	result, err := CleanupRabbitMQ(context.Background(), channel, config)
+	if err == nil || !strings.Contains(err.Error(), "jobs.pii.failed") {
+		t.Fatalf("CleanupRabbitMQ() error = %v, want failed queue in error", err)
+	}
+	if result.failures != 1 {
+		t.Errorf("CleanupRabbitMQ() failures = %d, want 1", result.failures)
+	}
+	wantDeclared := []string{
+		"jobs.failed",
+		"jobs.pii.failed",
+		"jobs.skills.failed",
+		"jobs.offers.failed",
+		"jobs.aiweight.failed",
+		"jobs.roleinsights.failed",
+	}
+	wantConsumed := []string{
+		"jobs.failed",
+		"jobs.skills.failed",
+		"jobs.offers.failed",
+		"jobs.aiweight.failed",
+		"jobs.roleinsights.failed",
+	}
+	if !reflect.DeepEqual(channel.declared, wantDeclared) || !reflect.DeepEqual(channel.consumed, wantConsumed) {
+		t.Errorf("cleanup after queue error: declared=%v consumed=%v", channel.declared, channel.consumed)
+	}
+}
+
+func TestCleanupFailedQueue_AcknowledgementFailureIsReturned(t *testing.T) {
+	acknowledger := &acknowledgementRecorder{err: errors.New("ack failed")}
+	deliveries := make(chan amqp.Delivery, 1)
+	deliveries <- amqp.Delivery{
+		Acknowledger: acknowledger,
+		DeliveryTag:  3,
+		Timestamp:    time.Now().Add(-48 * time.Hour),
+	}
+	close(deliveries)
+
+	result, err := cleanupFailedQueue(context.Background(), &cleanupChannelStub{deliveries: deliveries}, "jobs.failed", 24*3600, false)
+	if err == nil || !strings.Contains(err.Error(), "acknowledge expired message") {
+		t.Fatalf("cleanupFailedQueue() error = %v, want acknowledgement error", err)
+	}
+	if result.deleted != 0 || result.failures != 1 {
+		t.Errorf("cleanupFailedQueue() result = %#v, want one failure and no deletion", result)
 	}
 }

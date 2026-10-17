@@ -90,31 +90,33 @@ func LogS3ObjectDeleted(key string, age time.Duration, dryRun bool) {
 }
 
 // LogS3CleanupSummary logs a summary of S3 cleanup pass.
-func LogS3CleanupSummary(deleted int, failed int, duration time.Duration, dryRun bool) {
+func LogS3CleanupSummary(result cleanupResult, duration time.Duration, dryRun bool) {
 	writeLog(LogEntry{
 		Level:     "INFO",
 		Operation: "s3_cleanup_summary",
 		Message:   "S3 cleanup pass completed",
 		Details: map[string]interface{}{
-			"objects_deleted":  deleted,
-			"failures":         failed,
-			"duration_seconds": duration.Seconds(),
-			"dry_run":          dryRun,
+			"objects_deleted":      result.deleted,
+			"objects_would_delete": result.wouldDelete,
+			"failures":             result.failures,
+			"duration_seconds":     duration.Seconds(),
+			"dry_run":              dryRun,
 		},
 	})
 }
 
 // LogRabbitMQCleanupSummary logs a summary of RabbitMQ cleanup.
-func LogRabbitMQCleanupSummary(purged int, failed int, duration time.Duration, dryRun bool) {
+func LogRabbitMQCleanupSummary(result cleanupResult, duration time.Duration, dryRun bool) {
 	writeLog(LogEntry{
 		Level:     "INFO",
 		Operation: "rabbitmq_cleanup_summary",
 		Message:   "RabbitMQ cleanup pass completed",
 		Details: map[string]interface{}{
-			"messages_purged":  purged,
-			"failures":         failed,
-			"duration_seconds": duration.Seconds(),
-			"dry_run":          dryRun,
+			"messages_purged":      result.deleted,
+			"messages_would_purge": result.wouldDelete,
+			"failures":             result.failures,
+			"duration_seconds":     duration.Seconds(),
+			"dry_run":              dryRun,
 		},
 	})
 }
@@ -132,15 +134,18 @@ func LogError(operation string, err error) {
 }
 
 // LogCleanupCycle logs overall cycle summary with metrics.
-func LogCleanupCycle(duration time.Duration, s3Deleted int, mqPurged int) {
+func LogCleanupCycle(duration time.Duration, s3, rabbitMQ cleanupResult) {
 	writeLog(LogEntry{
 		Level:     "INFO",
 		Operation: "cleanup_cycle_complete",
 		Message:   "Cleanup cycle completed",
 		Details: map[string]interface{}{
-			"total_duration_seconds":   duration.Seconds(),
-			"s3_objects_deleted":       s3Deleted,
-			"rabbitmq_messages_purged": mqPurged,
+			"total_duration_seconds":        duration.Seconds(),
+			"s3_objects_deleted":            s3.deleted,
+			"s3_objects_would_delete":       s3.wouldDelete,
+			"rabbitmq_messages_purged":      rabbitMQ.deleted,
+			"rabbitmq_messages_would_purge": rabbitMQ.wouldDelete,
+			"failures":                      s3.failures + rabbitMQ.failures,
 		},
 	})
 }
