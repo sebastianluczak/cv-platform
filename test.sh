@@ -3,6 +3,13 @@ set -eu
 
 echo "This is a test script for CV Platform."
 echo ""
+
+if [ -z "$DEVENV_ROOT" ] || [ ! -d "$DEVENV_ROOT" ]; then
+  echo "DEVENV_ROOT is not set or not valid."
+  echo "Did you started this script inside a devenv shell?"
+  exit 1
+fi
+
 go -C services/uploader test -v
 go -C services/extractor test -v
 go -C services/piistripper test -v
@@ -17,7 +24,6 @@ task review:install
 reviewer/.venv/bin/python  -m unittest reviewer.test_issue_agent
 reviewer/.venv/bin/python  -m unittest reviewer.test_check_limits
 reviewer/.venv/bin/python  -m unittest reviewer.test_reviewer
-
 
 function poll_for_devenv_up_status {
   local max_attempts=30
@@ -67,12 +73,6 @@ function check_metric {
     FAILED_METRICS_COUNT=$((FAILED_METRICS_COUNT + 1))
   fi
 }
-
-# FOR DEBUG ONLY
-# At this point I know for a fact, that Extractor has problem with starting due to unknown reasons.
-devenv shell -- go -C services/extractor run .
-# THIS IS JUST A DEBUG, I NEED TO SEE IT BEFORE MY OWN EYES...
-
 
 # Now, run the e2e tests...
 # First simple test, is to curl the metrics endpoints.
