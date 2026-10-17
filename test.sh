@@ -20,7 +20,7 @@ reviewer/.venv/bin/python  -m unittest reviewer.test_reviewer
 
 
 function poll_for_devenv_up_status {
-  local max_attempts=10
+  local max_attempts=30
   local attempt=1
   while [ $attempt -le $max_attempts ]; do
       if devenv processes list >/dev/null 2>&1; then
@@ -32,6 +32,8 @@ function poll_for_devenv_up_status {
           attempt=$((attempt + 1))
       fi
   done
+  SECONDS_WAITED=$((max_attempts * 5))
+  echo "Waited $SECONDS_WAITED seconds for devenv to start."
   echo "Devenv did not start within the expected time."
   return 1
 }
@@ -49,26 +51,27 @@ DEVENV_RUNNING=false
 if ! devenv processes list >/dev/null 2>&1; then
     DEVENV_RUNNING=true
     echo "Devenv is not running, starting it in the background..."
-    devenv up -d &
+    devenv up -d 2>/dev/null &
     # Give it some time to start
     echo "Devenv is starting right now... waiting 20 seconds for it to be ready."
     poll_for_devenv_up_status
 fi
 
+FAILED_METRICS_COUNT=0
 function check_metric {
-    local port=$1
-    # do not print output
-    CURL_CHECK=$(curl -s "http://localhost:$port/metrics" >/dev/null 2>&1)
-    if [ $? -ne 0 ]; then
-        echo "Failed to fetch metrics from port $port"
-    else
-        echo "Successfully fetched metrics from port $port"
-    fi
+  local port=$1
+  if curl -s "http://localhost:$port/metrics" >/dev/null 2>&1; then
+    echo "Successfully fetched metrics from port $port"
+  else
+    echo "Failed to fetch metrics from port $port"
+    FAILED_METRICS_COUNT=$((FAILED_METRICS_COUNT + 1))
+  fi
 }
 
 # Now, run the e2e tests...
 # First simple test, is to curl the metrics endpoints.
-# TODO - change that to healthz if enabled for all microservices
+# TODO - add healthz here as well if enabled for all microservices
+# as a health check of sorts
 check_metric $METRICS_PORT_AIWEIGHTER
 check_metric $METRICS_PORT_EXTRACTOR
 check_metric $METRICS_PORT_PIISTRIPPER
@@ -81,6 +84,11 @@ check_metric $METRICS_PORT_DATACLEANER
 if [ "$DEVENV_RUNNING" = true ]; then
     echo "Devenv was started by this script, stopping it now..."
     devenv down >/dev/null 2>&1
+fi
+
+if [ "$FAILED_METRICS_COUNT" -ne 0 ]; then
+    echo "Some metrics checks failed: $FAILED_METRICS_COUNT"
+    exit 1
 fi
 
 # I just did smoke tests, not e2e tests... I'm ok with this for now.
