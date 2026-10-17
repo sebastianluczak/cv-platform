@@ -12,60 +12,76 @@ import (
 	smithy "github.com/aws/smithy-go"
 )
 
+type expiredS3Object struct {
+	key string
+	age time.Duration
+}
+
 // CleanupS3 is the main S3 cleanup orchestrator.
 // It lists all objects in the bucket, filters by retention periods,
-// and deletes expired objects. Returns error only for critical failures;
-// partial failures are logged and cleanup continues.
-func CleanupS3(ctx context.Context, client *s3.Client, bucket string, config Config) error {
+// and deletes expired objects. It returns partial results and any errors.
+func CleanupS3(ctx context.Context, client *s3.Client, bucket string, config Config) (cleanupResult, error) {
 	start := time.Now()
-	var totalDeleted int
-	var totalFailed int
-
-	LogCleanupStart(time.Duration(config.CleanupInterval) * time.Minute)
+	var result cleanupResult
+	var cleanupErrors []error
 
 	// Handle uploads/ prefix (RetentionUploads)
 	uploadsMaxAgeSeconds := int64(config.RetentionUploads) * 24 * 60 * 60
-	uploadKeys, err := listExpiredObjects(ctx, client, bucket, "uploads/", uploadsMaxAgeSeconds)
+	uploadObjects, err := listExpiredObjects(ctx, client, bucket, "uploads/", uploadsMaxAgeSeconds)
 	if err != nil {
 		LogError("s3_list_uploads", err)
-		return fmt.Errorf("list expired uploads: %w", err)
-	}
-
-	for _, key := range uploadKeys {
-		if err := deleteObject(ctx, client, bucket, key, config.DryRun); err != nil {
-			totalFailed++
-			LogError("s3_delete_object", fmt.Errorf("delete %s: %w", key, err))
-		} else {
-			totalDeleted++
+		result.failures++
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("list expired uploads: %w", err))
+	} else {
+		for _, object := range uploadObjects {
+			if err := deleteObject(ctx, client, bucket, object.key, config.DryRun); err != nil {
+				result.failures++
+				wrappedErr := fmt.Errorf("delete %s: %w", object.key, err)
+				LogError("s3_delete_object", wrappedErr)
+				cleanupErrors = append(cleanupErrors, wrappedErr)
+			} else if config.DryRun {
+				LogS3ObjectDeleted(object.key, object.age, true)
+				result.wouldDelete++
+			} else {
+				LogS3ObjectDeleted(object.key, object.age, false)
+				result.deleted++
+			}
 		}
 	}
 
 	// Handle results/*.redacted.txt prefix (RetentionRedacted)
 	redactedMaxAgeSeconds := int64(config.RetentionRedacted) * 24 * 60 * 60
-	redactedKeys, err := listExpiredObjectsWithFilter(ctx, client, bucket, "results/", redactedMaxAgeSeconds, ".redacted.txt")
+	redactedObjects, err := listExpiredObjectsWithFilter(ctx, client, bucket, "results/", redactedMaxAgeSeconds, ".redacted.txt")
 	if err != nil {
 		LogError("s3_list_redacted", err)
-		return fmt.Errorf("list expired redacted objects: %w", err)
-	}
-
-	for _, key := range redactedKeys {
-		if err := deleteObject(ctx, client, bucket, key, config.DryRun); err != nil {
-			totalFailed++
-			LogError("s3_delete_object", fmt.Errorf("delete %s: %w", key, err))
-		} else {
-			totalDeleted++
+		result.failures++
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("list expired redacted objects: %w", err))
+	} else {
+		for _, object := range redactedObjects {
+			if err := deleteObject(ctx, client, bucket, object.key, config.DryRun); err != nil {
+				result.failures++
+				wrappedErr := fmt.Errorf("delete %s: %w", object.key, err)
+				LogError("s3_delete_object", wrappedErr)
+				cleanupErrors = append(cleanupErrors, wrappedErr)
+			} else if config.DryRun {
+				LogS3ObjectDeleted(object.key, object.age, true)
+				result.wouldDelete++
+			} else {
+				LogS3ObjectDeleted(object.key, object.age, false)
+				result.deleted++
+			}
 		}
 	}
 
 	duration := time.Since(start)
-	LogS3CleanupSummary(totalDeleted, totalFailed, duration, config.DryRun)
-	return nil
+	LogS3CleanupSummary(result, duration, config.DryRun)
+	return result, errors.Join(cleanupErrors...)
 }
 
 // listExpiredObjects lists all objects under a given prefix that are older than maxAgeSeconds.
 // Returns a list of object keys that should be deleted.
-func listExpiredObjects(ctx context.Context, client *s3.Client, bucket string, prefix string, maxAgeSeconds int64) ([]string, error) {
-	var expiredKeys []string
+func listExpiredObjects(ctx context.Context, client *s3.Client, bucket string, prefix string, maxAgeSeconds int64) ([]expiredS3Object, error) {
+	var expiredObjects []expiredS3Object
 	cutoffTime := time.Now().Add(-time.Duration(maxAgeSeconds) * time.Second)
 
 	paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
@@ -81,20 +97,18 @@ func listExpiredObjects(ctx context.Context, client *s3.Client, bucket string, p
 
 		for _, obj := range page.Contents {
 			if obj.LastModified != nil && obj.LastModified.Before(cutoffTime) {
-				expiredKeys = append(expiredKeys, *obj.Key)
-				age := objectAge(obj.LastModified)
-				LogS3ObjectDeleted(*obj.Key, age, false)
+				expiredObjects = append(expiredObjects, expiredS3Object{key: *obj.Key, age: objectAge(obj.LastModified)})
 			}
 		}
 	}
 
-	return expiredKeys, nil
+	return expiredObjects, nil
 }
 
 // listExpiredObjectsWithFilter is like listExpiredObjects but also filters by suffix.
 // Used for results/*.redacted.txt pattern matching.
-func listExpiredObjectsWithFilter(ctx context.Context, client *s3.Client, bucket string, prefix string, maxAgeSeconds int64, suffix string) ([]string, error) {
-	var expiredKeys []string
+func listExpiredObjectsWithFilter(ctx context.Context, client *s3.Client, bucket string, prefix string, maxAgeSeconds int64, suffix string) ([]expiredS3Object, error) {
+	var expiredObjects []expiredS3Object
 	cutoffTime := time.Now().Add(-time.Duration(maxAgeSeconds) * time.Second)
 
 	paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
@@ -112,22 +126,19 @@ func listExpiredObjectsWithFilter(ctx context.Context, client *s3.Client, bucket
 			// Only include objects matching the suffix pattern
 			if len(*obj.Key) > len(suffix) && (*obj.Key)[len(*obj.Key)-len(suffix):] == suffix {
 				if obj.LastModified != nil && obj.LastModified.Before(cutoffTime) {
-					expiredKeys = append(expiredKeys, *obj.Key)
-					age := objectAge(obj.LastModified)
-					LogS3ObjectDeleted(*obj.Key, age, false)
+					expiredObjects = append(expiredObjects, expiredS3Object{key: *obj.Key, age: objectAge(obj.LastModified)})
 				}
 			}
 		}
 	}
 
-	return expiredKeys, nil
+	return expiredObjects, nil
 }
 
 // deleteObject deletes a single S3 object or logs what would be deleted if dryRun is true.
 // Returns error only for actual failures (404 is considered success, object already gone).
 func deleteObject(ctx context.Context, client *s3.Client, bucket, key string, dryRun bool) error {
 	if dryRun {
-		LogS3ObjectDeleted(key, 0, true)
 		return nil
 	}
 

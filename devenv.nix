@@ -119,27 +119,59 @@
     };
     uploader = {
       exec = "sleep 3 && task services:uploader:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     extractor = {
       exec = "sleep 3 && task services:extractor:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     piistripper = {
       exec = "sleep 3 && task services:piistripper:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     skillmatcher = {
       exec = "sleep 3 && task services:skillmatcher:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     offermatcher = {
       exec = "sleep 3 && task services:offermatcher:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     aiweighter = {
       exec = "sleep 3 && task services:aiweighter:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     roleinsights = {
       exec = "sleep 3 && task services:roleinsights:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     datacleaner = {
       exec = "sleep 8 && task services:datacleaner:start";
+      restart = {
+        on = "always";
+        max = 60;
+      };
     };
     frontend = {
       exec = "task ui:install && task ui:start";

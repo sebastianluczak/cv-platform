@@ -28,11 +28,19 @@ The datacleaner processes messages in failed queues matching the pattern `<QUEUE
 3. Deletes messages older than `RETENTION_FAILED_QUEUE_DAYS`
 4. Logs cleanup metrics
 
-Failed queues include:
+Failed queues cleaned by datacleaner include:
 
-- `<QUEUE_NAME>.extraction.failed`
+- `<QUEUE_NAME>.failed` (extraction)
 - `<QUEUE_NAME>.pii.failed`
 - `<QUEUE_NAME>.skills.failed`
+- `<QUEUE_NAME>.offers.failed`
+- `<QUEUE_NAME>.aiweight.failed`
+- `<QUEUE_NAME>.roleinsights.failed`
+
+Work queues and the `<QUEUE_NAME>.events` status queue are not targeted.
+Cleanup summaries distinguish messages actually purged from messages that
+would be purged in dry-run mode. Queue failures are reported to the cleanup
+cycle while processing continues for the remaining failed queues.
 
 == Configuration
 

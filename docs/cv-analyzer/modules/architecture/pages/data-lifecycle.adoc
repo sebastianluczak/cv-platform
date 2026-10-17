@@ -167,10 +167,16 @@ The datacleaner service performs two primary functions:
    - Redacted text results (`results/<job-id>.redacted.txt`) after `RETENTION_REDACTED_DAYS` days
 
 2. **RabbitMQ failed queue cleanup**: Purges expired messages from failed queues:
-   - `<QUEUE_NAME>.extraction.failed`
+   - `<QUEUE_NAME>.failed` (extraction)
    - `<QUEUE_NAME>.pii.failed`
    - `<QUEUE_NAME>.skills.failed`
-   - Other stage-specific failed queues
+   - `<QUEUE_NAME>.offers.failed`
+   - `<QUEUE_NAME>.aiweight.failed`
+   - `<QUEUE_NAME>.roleinsights.failed`
+
+Work queues and the `<QUEUE_NAME>.events` status queue are not targeted.
+Per-queue failures are reported while cleanup continues with the remaining
+failed queues. Summaries distinguish actual deletions from dry-run candidates.
 
 Messages are deleted after `RETENTION_FAILED_QUEUE_DAYS` days, allowing operators time to inspect and manually requeue failures if needed.
 

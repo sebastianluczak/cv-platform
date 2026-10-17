@@ -233,13 +233,12 @@ func TestLogS3ObjectDeleted_Format(t *testing.T) {
 
 func TestLogS3CleanupSummary_Format(t *testing.T) {
 
-	deleted := 50
-	failed := 2
+	result := cleanupResult{wouldDelete: 50, failures: 2}
 	duration := 30 * time.Second
-	dryRun := false
+	dryRun := true
 
 	output := captureStderr(func() {
-		LogS3CleanupSummary(deleted, failed, duration, dryRun)
+		LogS3CleanupSummary(result, duration, dryRun)
 	})
 
 	if !strings.Contains(output, "s3_cleanup_summary") {
@@ -252,12 +251,16 @@ func TestLogS3CleanupSummary_Format(t *testing.T) {
 	}
 
 	details, _ := logData["details"].(map[string]interface{})
-	if objDeleted, ok := details["objects_deleted"].(float64); !ok || objDeleted != float64(deleted) {
-		t.Errorf("Expected objects_deleted to be %d, got: %v", deleted, objDeleted)
+	if objDeleted, ok := details["objects_deleted"].(float64); !ok || objDeleted != 0 {
+		t.Errorf("Expected objects_deleted to be %d, got: %v", result.deleted, objDeleted)
 	}
 
-	if failures, ok := details["failures"].(float64); !ok || failures != float64(failed) {
-		t.Errorf("Expected failures to be %d, got: %v", failed, failures)
+	if wouldDelete, ok := details["objects_would_delete"].(float64); !ok || wouldDelete != float64(result.wouldDelete) {
+		t.Errorf("Expected objects_would_delete to be %d, got: %v", result.wouldDelete, wouldDelete)
+	}
+
+	if failures, ok := details["failures"].(float64); !ok || failures != float64(result.failures) {
+		t.Errorf("Expected failures to be %d, got: %v", result.failures, failures)
 	}
 
 	if dur, ok := details["duration_seconds"].(float64); !ok || dur != 30.0 {
@@ -267,13 +270,12 @@ func TestLogS3CleanupSummary_Format(t *testing.T) {
 
 func TestLogRabbitMQCleanupSummary_Format(t *testing.T) {
 
-	purged := 25
-	failed := 1
+	result := cleanupResult{wouldDelete: 25, failures: 1}
 	duration := 15 * time.Second
 	dryRun := true
 
 	output := captureStderr(func() {
-		LogRabbitMQCleanupSummary(purged, failed, duration, dryRun)
+		LogRabbitMQCleanupSummary(result, duration, dryRun)
 	})
 
 	if !strings.Contains(output, "rabbitmq_cleanup_summary") {
@@ -286,8 +288,16 @@ func TestLogRabbitMQCleanupSummary_Format(t *testing.T) {
 	}
 
 	details, _ := logData["details"].(map[string]interface{})
-	if msgPurged, ok := details["messages_purged"].(float64); !ok || msgPurged != float64(purged) {
-		t.Errorf("Expected messages_purged to be %d, got: %v", purged, msgPurged)
+	if msgPurged, ok := details["messages_purged"].(float64); !ok || msgPurged != 0 {
+		t.Errorf("Expected messages_purged to be 0, got: %v", msgPurged)
+	}
+
+	if wouldPurge, ok := details["messages_would_purge"].(float64); !ok || wouldPurge != float64(result.wouldDelete) {
+		t.Errorf("Expected messages_would_purge to be %d, got: %v", result.wouldDelete, wouldPurge)
+	}
+
+	if failures, ok := details["failures"].(float64); !ok || failures != float64(result.failures) {
+		t.Errorf("Expected failures to be %d, got: %v", result.failures, failures)
 	}
 
 	if dryRunVal, ok := details["dry_run"].(bool); !ok || dryRunVal != dryRun {
@@ -298,11 +308,11 @@ func TestLogRabbitMQCleanupSummary_Format(t *testing.T) {
 func TestLogCleanupCycle_Format(t *testing.T) {
 
 	duration := 45 * time.Second
-	s3Deleted := 100
-	mqPurged := 50
+	s3 := cleanupResult{deleted: 100, failures: 1}
+	rabbitMQ := cleanupResult{deleted: 50, failures: 2}
 
 	output := captureStderr(func() {
-		LogCleanupCycle(duration, s3Deleted, mqPurged)
+		LogCleanupCycle(duration, s3, rabbitMQ)
 	})
 
 	if !strings.Contains(output, "cleanup_cycle_complete") {
@@ -317,6 +327,15 @@ func TestLogCleanupCycle_Format(t *testing.T) {
 	details, _ := logData["details"].(map[string]interface{})
 	if totalDuration, ok := details["total_duration_seconds"].(float64); !ok || totalDuration != 45.0 {
 		t.Errorf("Expected total_duration_seconds to be 45, got: %v", totalDuration)
+	}
+	if deleted, ok := details["s3_objects_deleted"].(float64); !ok || deleted != float64(s3.deleted) {
+		t.Errorf("Expected s3_objects_deleted to be %d, got: %v", s3.deleted, deleted)
+	}
+	if purged, ok := details["rabbitmq_messages_purged"].(float64); !ok || purged != float64(rabbitMQ.deleted) {
+		t.Errorf("Expected rabbitmq_messages_purged to be %d, got: %v", rabbitMQ.deleted, purged)
+	}
+	if failures, ok := details["failures"].(float64); !ok || failures != float64(s3.failures+rabbitMQ.failures) {
+		t.Errorf("Expected failures to be %d, got: %v", s3.failures+rabbitMQ.failures, failures)
 	}
 }
 

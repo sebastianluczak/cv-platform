@@ -29,5 +29,9 @@ jobs:
           name: devenv
       - name: Install devenv.sh
         run: nix profile add nixpkgs#devenv
+      - name: Install PDF tool "pdftotext"
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - name: Copy distribution environment file
+        run: cp .env.dist .env
       - name: Build the devenv shell and run any git hooks
         run: devenv test
