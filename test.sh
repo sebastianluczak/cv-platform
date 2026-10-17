@@ -19,12 +19,18 @@ reviewer/.venv/bin/python  -m unittest reviewer.test_check_limits
 reviewer/.venv/bin/python  -m unittest reviewer.test_reviewer
 
 # Crazy idea - start e2e tests here...
+if ! devenv version >/dev/null 2>&1; then
+    echo "Devenv is not installed or not working properly in this environment."
+    echo "Cannot continue without a working devenv installation."
+    exit 1
+fi
 # First, check if devenv is working in the background.
 # `devenv processes list` should exit 1 if devenv is not running
 # If that's the case, we should just... start it in background, why not..
 DEVENV_RUNNING=false
 if ! devenv processes list >/dev/null 2>&1; then
     DEVENV_RUNNING=true
+    source .env.dist # just to be sure
     echo "Devenv is not running, starting it in the background..."
     devenv up -d >/dev/null 2>&1 &
     # Give it some time to start
