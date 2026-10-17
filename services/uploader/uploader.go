@@ -208,7 +208,7 @@ func newJobID() (string, error) {
 
 func main() {
 	go func() {
-		if err := prometheus.StartMetricsServer("METRICS_PORT_AIWEIGHTER"); err != nil &&
+		if err := prometheus.StartMetricsServer("METRICS_PORT_UPLOADER"); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
 			log.Printf("Metrics server failed: %v", err)
 		}
