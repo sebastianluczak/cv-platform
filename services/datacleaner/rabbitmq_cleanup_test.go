@@ -1,311 +1,273 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
+	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/streadway/amqp"
 )
 
-// MockAMQPDelivery wraps amqp.Delivery for testing
-type MockAMQPDelivery struct {
-	amqp.Delivery
+type recordedAcknowledgement struct {
+	action  string
+	tag     uint64
+	requeue bool
 }
 
-// MockAMQPChannel mocks amqp.Channel for testing
-type MockAMQPChannel struct {
-	QueueDeclareErr    error
-	QueueDeclareResult amqp.Queue
-	ConsumeErr         error
-	DeliveryChan       chan amqp.Delivery
-	ConsumeCalls       int
-	QueueDeclareCalls  int
-	NackCalls          int
-	AckCalls           int
+type acknowledgementRecorder struct {
+	actions []recordedAcknowledgement
+	err     error
 }
 
-func (m *MockAMQPChannel) QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error) {
-	m.QueueDeclareCalls++
-	if m.QueueDeclareErr != nil {
-		return amqp.Queue{}, m.QueueDeclareErr
+func (a *acknowledgementRecorder) Ack(tag uint64, _ bool) error {
+	a.actions = append(a.actions, recordedAcknowledgement{action: "ack", tag: tag})
+	return a.err
+}
+
+func (a *acknowledgementRecorder) Nack(tag uint64, _ bool, requeue bool) error {
+	a.actions = append(a.actions, recordedAcknowledgement{action: "nack", tag: tag, requeue: requeue})
+	return a.err
+}
+
+func (a *acknowledgementRecorder) Reject(tag uint64, requeue bool) error {
+	a.actions = append(a.actions, recordedAcknowledgement{action: "reject", tag: tag, requeue: requeue})
+	return a.err
+}
+
+type cleanupChannelStub struct {
+	declareErr error
+	consumeErr error
+	deliveries <-chan amqp.Delivery
+	declared   []string
+	consumed   []string
+}
+
+func (c *cleanupChannelStub) QueueDeclare(name string, _, _, _, _ bool, _ amqp.Table) (amqp.Queue, error) {
+	c.declared = append(c.declared, name)
+	if c.declareErr != nil {
+		return amqp.Queue{}, c.declareErr
 	}
-	return m.QueueDeclareResult, nil
+	return amqp.Queue{Name: name}, nil
 }
 
-func (m *MockAMQPChannel) Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error) {
-	m.ConsumeCalls++
-	if m.ConsumeErr != nil {
-		return nil, m.ConsumeErr
+func (c *cleanupChannelStub) Consume(queue, _ string, _, _, _, _ bool, _ amqp.Table) (<-chan amqp.Delivery, error) {
+	c.consumed = append(c.consumed, queue)
+	if c.consumeErr != nil {
+		return nil, c.consumeErr
 	}
-	return m.DeliveryChan, nil
+	return c.deliveries, nil
 }
 
-func (m *MockAMQPChannel) Close() error {
-	return nil
-}
-
-// Helper to create delivery with custom timestamp
-func createDelivery(timestamp time.Time, headers amqp.Table, body []byte) amqp.Delivery {
-	return amqp.Delivery{
-		Timestamp: timestamp,
-		Headers:   headers,
-		Body:      body,
+func TestCleanupFailedQueue_AcknowledgesExpiredAndRequeuesRecent(t *testing.T) {
+	expiredAck := &acknowledgementRecorder{}
+	recentAck := &acknowledgementRecorder{}
+	deliveries := make(chan amqp.Delivery, 2)
+	deliveries <- amqp.Delivery{
+		Acknowledger: expiredAck,
+		DeliveryTag:  1,
+		Timestamp:    time.Now().Add(-48 * time.Hour),
 	}
-}
+	deliveries <- amqp.Delivery{
+		Acknowledger: recentAck,
+		DeliveryTag:  2,
+		Timestamp:    time.Now().Add(-time.Hour),
+	}
+	close(deliveries)
 
-func TestParseMessageTimestamp_DirectTimestamp(t *testing.T) {
-
-	expectedTime := time.Now().Add(-48 * time.Hour).UTC()
-	delivery := createDelivery(expectedTime, nil, []byte{})
-
-	result, err := parseMessageTimestamp(delivery)
+	channel := &cleanupChannelStub{deliveries: deliveries}
+	purged, err := cleanupFailedQueue(context.Background(), channel, "jobs.extraction.failed", 24*3600, false)
 	if err != nil {
-		t.Errorf("parseMessageTimestamp() failed: %v", err)
+		t.Fatalf("cleanupFailedQueue() error = %v", err)
 	}
-
-	// Allow small time difference due to Go time precision
-	if result.Sub(expectedTime).Abs() > 1*time.Second {
-		t.Errorf("Timestamp mismatch: got %v, want %v", result, expectedTime)
+	if purged != 1 {
+		t.Errorf("cleanupFailedQueue() purged = %d, want 1", purged)
+	}
+	if !reflect.DeepEqual(expiredAck.actions, []recordedAcknowledgement{{action: "ack", tag: 1}}) {
+		t.Errorf("expired message acknowledgements = %#v, want ack for delivery 1", expiredAck.actions)
+	}
+	if !reflect.DeepEqual(recentAck.actions, []recordedAcknowledgement{{action: "nack", tag: 2, requeue: true}}) {
+		t.Errorf("recent message acknowledgements = %#v, want requeue nack for delivery 2", recentAck.actions)
+	}
+	if !reflect.DeepEqual(channel.declared, []string{"jobs.extraction.failed"}) ||
+		!reflect.DeepEqual(channel.consumed, []string{"jobs.extraction.failed"}) {
+		t.Errorf("broker queue selection: declared=%v consumed=%v", channel.declared, channel.consumed)
 	}
 }
 
-func TestParseMessageTimestamp_HeaderTimestamp(t *testing.T) {
+func TestCleanupFailedQueue_DryRunRetainsExpiredMessage(t *testing.T) {
+	acknowledger := &acknowledgementRecorder{}
+	deliveries := make(chan amqp.Delivery, 1)
+	deliveries <- amqp.Delivery{
+		Acknowledger: acknowledger,
+		DeliveryTag:  7,
+		Timestamp:    time.Now().Add(-48 * time.Hour),
+	}
+	close(deliveries)
 
+	purged, err := cleanupFailedQueue(context.Background(), &cleanupChannelStub{deliveries: deliveries}, "jobs.pii.failed", 24*3600, true)
+	if err != nil {
+		t.Fatalf("cleanupFailedQueue() error = %v", err)
+	}
+	if purged != 1 {
+		t.Errorf("cleanupFailedQueue() purged = %d, want 1 would-be purge", purged)
+	}
+	if !reflect.DeepEqual(acknowledger.actions, []recordedAcknowledgement{{action: "nack", tag: 7, requeue: true}}) {
+		t.Errorf("dry-run acknowledgements = %#v, want only a requeue nack", acknowledger.actions)
+	}
+}
+
+func TestCleanupFailedQueue_MissingOrInvalidTimestampIsRetained(t *testing.T) {
+	tests := []struct {
+		name    string
+		headers amqp.Table
+		body    []byte
+	}{
+		{name: "missing timestamp"},
+		{
+			name:    "invalid timestamp",
+			headers: amqp.Table{"x-publish-time": "not-a-time"},
+			body:    []byte(`{"timestamp":`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			acknowledger := &acknowledgementRecorder{}
+			deliveries := make(chan amqp.Delivery, 1)
+			deliveries <- amqp.Delivery{
+				Acknowledger: acknowledger,
+				DeliveryTag:  9,
+				Headers:      tt.headers,
+				Body:         tt.body,
+			}
+			close(deliveries)
+
+			purged, err := cleanupFailedQueue(context.Background(), &cleanupChannelStub{deliveries: deliveries}, "jobs.skills.failed", 24*3600, false)
+			if err != nil {
+				t.Fatalf("cleanupFailedQueue() error = %v", err)
+			}
+			if purged != 0 {
+				t.Errorf("cleanupFailedQueue() purged = %d, want 0", purged)
+			}
+			if !reflect.DeepEqual(acknowledger.actions, []recordedAcknowledgement{{action: "nack", tag: 9, requeue: true}}) {
+				t.Errorf("timestamp-less message acknowledgements = %#v, want requeue nack", acknowledger.actions)
+			}
+		})
+	}
+}
+
+func TestParseMessageTimestamp_ExtractsTimestamp(t *testing.T) {
+	want := time.Date(2024, time.January, 15, 10, 30, 0, 0, time.FixedZone("offset", 3600))
+	tests := []struct {
+		name     string
+		delivery amqp.Delivery
+	}{
+		{
+			name:     "delivery timestamp",
+			delivery: amqp.Delivery{Timestamp: want},
+		},
+		{
+			name: "header timestamp",
+			delivery: amqp.Delivery{
+				Headers: amqp.Table{"x-publish-time": want.Format(time.RFC3339)},
+			},
+		},
+		{
+			name: "body timestamp",
+			delivery: amqp.Delivery{
+				Body: []byte(fmt.Sprintf(`{"timestamp":%q}`, want.Format(time.RFC3339))),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseMessageTimestamp(tt.delivery)
+			if err != nil {
+				t.Fatalf("parseMessageTimestamp() error = %v", err)
+			}
+			if !got.Equal(want) {
+				t.Errorf("parseMessageTimestamp() = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestCleanupFailedQueue_Cancellation(t *testing.T) {
+	deliveries := make(chan amqp.Delivery)
+	channel := &cleanupChannelStub{deliveries: deliveries}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	purged, err := cleanupFailedQueue(ctx, channel, "jobs.offers.failed", 24*3600, false)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("cleanupFailedQueue() error = %v, want context.Canceled", err)
+	}
+	if purged != 0 {
+		t.Errorf("cleanupFailedQueue() purged = %d, want 0", purged)
+	}
+	if !reflect.DeepEqual(channel.consumed, []string{"jobs.offers.failed"}) {
+		t.Errorf("consumed queues = %v, want [jobs.offers.failed]", channel.consumed)
+	}
+}
+
+func TestCleanupFailedQueue_BrokerOperationFailures(t *testing.T) {
 	tests := []struct {
 		name       string
-		headerKey  string
-		headerVal  string
-		wantParsed bool
+		declareErr error
+		consumeErr error
+		wantOp     string
 	}{
-		{"x-publish-time header", "x-publish-time", time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339), true},
-		{"timestamp header", "timestamp", time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339), true},
-		{"x-timestamp header", "x-timestamp", time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339), true},
-		{"published-at header", "published-at", time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339), true},
+		{name: "queue declaration", declareErr: errors.New("declare failed"), wantOp: "declare queue"},
+		{name: "consume", consumeErr: errors.New("consume failed"), wantOp: "consume from queue"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			headers := amqp.Table{
-				tt.headerKey: tt.headerVal,
+			channel := &cleanupChannelStub{
+				declareErr: tt.declareErr,
+				consumeErr: tt.consumeErr,
 			}
-			delivery := createDelivery(time.Time{}, headers, []byte{})
-
-			result, err := parseMessageTimestamp(delivery)
-			if err != nil {
-				t.Errorf("parseMessageTimestamp() failed: %v", err)
+			_, err := cleanupFailedQueue(context.Background(), channel, "jobs.aiweight.failed", 24*3600, false)
+			if err == nil || !strings.Contains(err.Error(), tt.wantOp) {
+				t.Errorf("cleanupFailedQueue() error = %v, want operation context %q", err, tt.wantOp)
 			}
-
-			if result.IsZero() && tt.wantParsed {
-				t.Errorf("Expected to parse %s header, got zero time", tt.headerKey)
+			if !reflect.DeepEqual(channel.declared, []string{"jobs.aiweight.failed"}) {
+				t.Errorf("declared queues = %v, want [jobs.aiweight.failed]", channel.declared)
+			}
+			wantConsumed := []string{"jobs.aiweight.failed"}
+			if tt.declareErr != nil {
+				wantConsumed = nil
+			}
+			if !reflect.DeepEqual(channel.consumed, wantConsumed) {
+				t.Errorf("consumed queues = %v, want %v", channel.consumed, wantConsumed)
 			}
 		})
 	}
 }
 
-func TestParseMessageTimestamp_JSONBodyTimestamp(t *testing.T) {
+func TestCleanupRabbitMQ_SelectsFailedQueues(t *testing.T) {
+	deliveries := make(chan amqp.Delivery)
+	close(deliveries)
+	channel := &cleanupChannelStub{deliveries: deliveries}
+	config := Config{QueueName: "jobs", RetentionFailed: 1}
 
-	expectedTime := time.Now().UTC().Add(-36 * time.Hour)
-	bodyMap := map[string]interface{}{
-		"timestamp": expectedTime.Format(time.RFC3339),
-		"data":      "test",
-	}
-	bodyJSON, _ := json.Marshal(bodyMap)
-
-	delivery := createDelivery(time.Time{}, nil, bodyJSON)
-
-	result, err := parseMessageTimestamp(delivery)
-	if err != nil {
-		t.Errorf("parseMessageTimestamp() failed: %v", err)
+	if err := CleanupRabbitMQ(context.Background(), channel, config); err != nil {
+		t.Fatalf("CleanupRabbitMQ() error = %v", err)
 	}
 
-	if result.Sub(expectedTime).Abs() > 1*time.Second {
-		t.Errorf("JSON body timestamp: got %v, want %v", result, expectedTime)
+	want := []string{
+		"jobs.failed",
+		"jobs.pii.failed",
+		"jobs.skills.failed",
+		"jobs.offers.failed",
+		"jobs.aiweight.failed",
 	}
-}
-
-func TestParseMessageTimestamp_NoTimestamp(t *testing.T) {
-
-	delivery := createDelivery(time.Time{}, nil, []byte{})
-
-	beforeCall := time.Now()
-	result, err := parseMessageTimestamp(delivery)
-	afterCall := time.Now()
-
-	if err != nil {
-		t.Errorf("parseMessageTimestamp() failed: %v", err)
-	}
-
-	// Should fallback to current time
-	if result.Before(beforeCall) || result.After(afterCall.Add(1*time.Second)) {
-		t.Errorf("Expected fallback to current time, got %v (between %v and %v)", result, beforeCall, afterCall)
-	}
-}
-
-func TestParseMessageTimestamp_InvalidTimestampFormat(t *testing.T) {
-
-	// Invalid RFC3339 format in headers
-	headers := amqp.Table{
-		"x-publish-time": "not-a-valid-timestamp",
-	}
-	delivery := createDelivery(time.Time{}, headers, []byte{})
-
-	result, err := parseMessageTimestamp(delivery)
-	if err != nil {
-		t.Errorf("parseMessageTimestamp() should not error on invalid format, got: %v", err)
-	}
-
-	// Should fallback to current time
-	if result.IsZero() {
-		t.Errorf("Expected fallback to current time for invalid timestamp format")
-	}
-}
-
-func TestCleanupFailedQueue_MessageAgeCutoff(t *testing.T) {
-
-	// Test the age calculation logic without full mock
-	maxAgeSeconds := int64(7 * 24 * 3600) // 7 days
-	maxAgeTime := time.Now().Add(-time.Duration(maxAgeSeconds) * time.Second)
-
-	tests := []struct {
-		name        string
-		msgTime     time.Time
-		shouldPurge bool
-	}{
-		{"Message 3 days old (within retention)", time.Now().Add(-3 * 24 * time.Hour), false},
-		{"Message 8 days old (exceeds retention)", time.Now().Add(-8 * 24 * time.Hour), true},
-		{"Message 30 days old (well past retention)", time.Now().Add(-30 * 24 * time.Hour), true},
-		{"Message 1 hour old (recent)", time.Now().Add(-1 * time.Hour), false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shouldPurge := tt.msgTime.Before(maxAgeTime)
-			if shouldPurge != tt.shouldPurge {
-				t.Errorf("Message age check: got %v, want %v for time %v", shouldPurge, tt.shouldPurge, tt.msgTime)
-			}
-		})
-	}
-}
-
-func TestCleanupRabbitMQ_Summary(t *testing.T) {
-
-	// Test that cleanup summary metrics are calculated correctly
-	tests := []struct {
-		name       string
-		purged     int
-		failures   int
-		expectedOk bool
-	}{
-		{"All successful", 100, 0, true},
-		{"Some failures", 50, 2, true},
-		{"No messages", 0, 0, true},
-		{"Only failures", 0, 5, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Verify summary can be created
-			total := tt.purged + tt.failures
-			if total == 0 {
-				total = 1 // Avoid division by zero in percentage
-			}
-			successRate := (tt.purged * 100) / total
-			if successRate < 0 || successRate > 100 {
-				t.Errorf("Invalid success rate: %d%%", successRate)
-			}
-		})
-	}
-}
-
-func TestParseMessageTimestamp_MissingTimestampHandling(t *testing.T) {
-
-	// Test various missing/invalid timestamp scenarios
-	tests := []struct {
-		name                 string
-		timestamp            time.Time
-		headers              amqp.Table
-		body                 []byte
-		expectValidTimestamp bool
-	}{
-		{"Zero timestamp, no headers, empty body", time.Time{}, nil, []byte{}, false},
-		{"Valid timestamp", time.Now(), nil, []byte{}, true},
-		{"Invalid JSON body", time.Time{}, nil, []byte("not json"), false},
-		{"Valid headers with timestamp", time.Time{}, amqp.Table{"x-publish-time": time.Now().Format(time.RFC3339)}, []byte{}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			delivery := createDelivery(tt.timestamp, tt.headers, tt.body)
-			result, err := parseMessageTimestamp(delivery)
-
-			if err != nil {
-				t.Errorf("parseMessageTimestamp() error: %v", err)
-			}
-
-			if tt.expectValidTimestamp {
-				if result.IsZero() {
-					t.Errorf("Expected valid timestamp, got zero time")
-				}
-			}
-		})
-	}
-}
-
-func TestFailedQueueSuffixes(t *testing.T) {
-
-	// Verify the failedQueueSuffixes are defined
-	if len(failedQueueSuffixes) == 0 {
-		t.Errorf("failedQueueSuffixes should not be empty")
-	}
-
-	// Verify they all end with .failed
-	for _, suffix := range failedQueueSuffixes {
-		if len(suffix) < 7 || suffix[len(suffix)-7:] != ".failed" {
-			t.Errorf("Suffix %q does not end with .failed", suffix)
-		}
-	}
-}
-
-func TestCleanupFailedQueue_ContextCancellation(t *testing.T) {
-
-	// Test context cancellation handling
-	// The function should handle context cancellation gracefully
-	t.Logf("Context cancellation handled by cleanupFailedQueue")
-}
-
-func TestTimestampParsing_RFC3339Compliance(t *testing.T) {
-
-	// Test RFC3339 parsing compliance
-	tests := []struct {
-		name      string
-		timestamp string
-		valid     bool
-	}{
-		{"RFC3339 with Z", "2024-01-15T10:30:00Z", true},
-		{"RFC3339 with offset", "2024-01-15T10:30:00+01:00", true},
-		{"RFC3339 with microseconds", "2024-01-15T10:30:00.123456Z", true},
-		{"Invalid format", "2024-01-15 10:30:00", false},
-		{"Unix timestamp", "1705320600", false},
-		{"Empty string", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parsedTime, err := time.Parse(time.RFC3339, tt.timestamp)
-
-			if tt.valid {
-				if err != nil {
-					t.Errorf("Expected valid RFC3339 timestamp, got error: %v", err)
-				}
-				if parsedTime.IsZero() {
-					t.Errorf("Parsed time should not be zero for %q", tt.timestamp)
-				}
-			} else {
-				if err == nil && tt.timestamp != "" {
-					t.Logf("Timestamp %q parsed despite expected failure", tt.timestamp)
-				}
-			}
-		})
+	if !reflect.DeepEqual(channel.declared, want) || !reflect.DeepEqual(channel.consumed, want) {
+		t.Errorf("broker queue selection: declared=%v consumed=%v, want %v", channel.declared, channel.consumed, want)
 	}
 }

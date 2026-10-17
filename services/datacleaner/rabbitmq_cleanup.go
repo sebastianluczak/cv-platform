@@ -19,10 +19,15 @@ var failedQueueSuffixes = []string{
 	".aiweight.failed", // AI weighting failures
 }
 
+type rabbitMQCleanupChannel interface {
+	QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
+	Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error)
+}
+
 // CleanupRabbitMQ orchestrates cleanup of failed message queues in RabbitMQ.
 // It processes each failed queue, removes messages older than the configured
 // retention period, and tracks metrics.
-func CleanupRabbitMQ(ctx context.Context, channel *amqp.Channel, config Config) error {
+func CleanupRabbitMQ(ctx context.Context, channel rabbitMQCleanupChannel, config Config) error {
 	startTime := time.Now()
 	totalPurged := 0
 	totalErrors := 0
@@ -52,13 +57,10 @@ func CleanupRabbitMQ(ctx context.Context, channel *amqp.Channel, config Config) 
 // cleanupFailedQueue processes messages in a single failed queue, purging those
 // older than maxAge. It uses a non-destructive consume approach with requeue in
 // dry-run mode and ack in normal mode.
-func cleanupFailedQueue(ctx context.Context, channel *amqp.Channel, queueName string, maxAgeSeconds int64, dryRun bool) (int, error) {
-	// Attempt to declare the queue; if it doesn't exist, skip it gracefully
+func cleanupFailedQueue(ctx context.Context, channel rabbitMQCleanupChannel, queueName string, maxAgeSeconds int64, dryRun bool) (int, error) {
 	_, err := channel.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
-		// Queue doesn't exist, which is fine; skip it
-		log.Printf("Queue %q does not exist or could not be declared, skipping: %v", queueName, err)
-		return 0, nil
+		return 0, fmt.Errorf("declare queue %q: %w", queueName, err)
 	}
 
 	// Start consuming from the queue with auto-ack disabled
