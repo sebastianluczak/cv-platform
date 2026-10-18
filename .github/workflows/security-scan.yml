@@ -8,9 +8,7 @@ on:
       - "services/**"
   pull_request:
     branches: [main]
-    paths:
-      - ".github/workflows/security-scan.yml"
-      - "services/**"
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
@@ -24,8 +22,9 @@ concurrency:
 
 jobs:
   prepare-gosec:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'test-ready')
     name: Prepare gosec
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -52,7 +51,7 @@ jobs:
 
   gosec:
     name: Scan ${{ matrix.service }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: prepare-gosec
     strategy:
       fail-fast: false

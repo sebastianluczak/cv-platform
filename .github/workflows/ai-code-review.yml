@@ -2,7 +2,7 @@ name: AI code review process
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
 
 permissions:
   contents: read
@@ -15,8 +15,10 @@ concurrency:
 
 jobs:
   review:
-    if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'test-ready')
+    runs-on: self-hosted
     steps:
       - name: Check out pull request
         uses: actions/checkout@v5

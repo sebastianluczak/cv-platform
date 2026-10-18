@@ -4,10 +4,7 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'services/**'
-      - 'test.sh'
-      - '.github/workflows/continuos-integration.yml'
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches:
       - main
@@ -26,7 +23,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'test-ready')
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v5
         with:
