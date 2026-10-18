@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 MAX_ISSUE_CHARS = 12_000
 MAX_FILE_CHARS = 80_000
-MAX_RESPONSE_CHARS = 12_000
-MAX_TOOL_CALLS = 100
+MAX_RESPONSE_CHARS = 20_000
 MAX_DIFF_CHARS = 250_000
-MAX_COMPLETION_TOKENS = 4_096
-RETRY_COMPLETION_TOKENS = 8_192
+MAX_TOOL_CALLS = 20
+MAX_COMPLETION_TOKENS = 8_192
+RETRY_COMPLETION_TOKENS = 16_384
 
 READ_ONLY_PATHS = {".github/copilot-instructions.md"}
 WRITABLE_ROOTS = {"services", "ui", "docs", "reviewer"}

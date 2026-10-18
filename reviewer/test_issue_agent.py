@@ -27,7 +27,7 @@ class OpenRouterRequestTests(unittest.TestCase):
             result = issue_agent.openrouter_request("test-key", "provider/model", [])
 
         request = urlopen.call_args.args[0]
-        self.assertEqual(json.loads(request.data)["max_tokens"], 4_096)
+        self.assertEqual(json.loads(request.data)["max_tokens"], 8_192)
         self.assertEqual(result["_finish_reason"], "length")
 
     def test_diagnostics_include_metadata_but_exclude_model_reasoning(self):
