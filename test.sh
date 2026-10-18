@@ -27,7 +27,7 @@ reviewer/.venv/bin/python  -m unittest reviewer.test_reviewer
 
 ## This is the end of tests if the script was run from agentic-workflow suite
 ## or when script was run in standalone mode.
-if [ -z "$METRICS_PORT_AIWEIGHTER" ]; then
+if [ -z "${METRICS_PORT_AIWEIGHTER:-}" ]; then
   echo "METRICS_PORT_AIWEIGHTER is not set. Further tests are not possible."
   echo "Skipping further tests. Treating as successful."
   ## This is questionable, I know.
