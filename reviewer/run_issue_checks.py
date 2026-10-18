@@ -96,12 +96,10 @@ def main() -> int:
 
     if failed:
         print(f"Failed checks: {', '.join(failed)}", file=sys.stderr)
-        try:
-            feedback = LOG_PATH.read_text(encoding="utf-8")[-12_000:]
-        except OSError:
-            feedback = "(The validation log could not be read.)"
-        print("\nValidation output for the agent repair attempt:\n")
-        print(feedback)
+        print(
+            "Detailed validation output was saved to "
+            f"{LOG_PATH} and will be supplied to the repair attempt."
+        )
         return 1
     print("All applicable repository checks passed.")
     return 0

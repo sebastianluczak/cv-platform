@@ -21,3 +21,4 @@ grafana
 # one microservice on localhost is my personal playground for go
 # i do not want it to leak in between crunches
 services/playground
+services/playworld

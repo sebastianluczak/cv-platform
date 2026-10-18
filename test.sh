@@ -44,7 +44,10 @@ function poll_for_devenv_up_status {
   return 1
 }
 
-# Crazy idea - start e2e tests here...
+echo "Unit tests of CV Platform services are done."
+echo "----------------------------------------"
+echo "Proceeding with Smoke Tests for services..."
+
 if ! devenv version >/dev/null 2>&1; then
     echo "Devenv is not installed or not working properly in this environment."
     echo "Cannot continue without a working devenv installation."
@@ -59,7 +62,7 @@ if ! devenv processes list >/dev/null 2>&1; then
     echo "Devenv is not running, starting it in the background..."
     devenv up -d 2>/dev/null &
     # Give it some time to start
-    echo "Devenv is starting right now... waiting 20 seconds for it to be ready."
+    echo "Devenv is starting right now... waiting for it to be ready."
     poll_for_devenv_up_status
 fi
 
@@ -74,10 +77,6 @@ function check_metric {
   fi
 }
 
-# Now, run the e2e tests...
-# First simple test, is to curl the metrics endpoints.
-# TODO - add healthz here as well if enabled for all microservices
-# as a health check of sorts
 check_metric $METRICS_PORT_AIWEIGHTER
 check_metric $METRICS_PORT_EXTRACTOR
 check_metric $METRICS_PORT_PIISTRIPPER
@@ -86,7 +85,6 @@ check_metric $METRICS_PORT_OFFERMATCHER
 check_metric $METRICS_PORT_ROLEINSIGHTS
 check_metric $METRICS_PORT_DATACLEANER
 
-# omg, this will not work at all...
 if [ "$DEVENV_RUNNING" = true ]; then
     echo "Devenv was started by this script, stopping it now..."
     devenv down >/dev/null 2>&1
@@ -96,5 +94,3 @@ if [ "$FAILED_METRICS_COUNT" -ne 0 ]; then
     echo "Some metrics checks failed: $FAILED_METRICS_COUNT"
     exit 1
 fi
-
-# I just did smoke tests, not e2e tests... I'm ok with this for now.

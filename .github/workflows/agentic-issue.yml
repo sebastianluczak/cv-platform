@@ -141,6 +141,15 @@ jobs:
         continue-on-error: true
         run: python reviewer/run_issue_checks.py
 
+      - name: Upload detailed validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-validation-${{ github.event.issue.number }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/agent-validation.log
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Require successful validation
         shell: devenv shell -- bash -e {0}
         if: always()
