@@ -42,6 +42,20 @@
     enable = true;
     managementPlugin.enable = true;
   };
+  services.postgres = {
+    enable = false;
+  } // lib.optionalAttrs (!config.devenv.isTesting) {
+    enable = true;
+    port = 5432;
+    listen_addresses = "127.0.0.1";
+    initialDatabases = [ 
+      { 
+        name = "cv_platform";
+        user = "cv_platform";
+        pass = "cv_platform";
+      }
+    ];
+  };
   services.prometheus = {
     enable = false;
   } // lib.optionalAttrs (!config.devenv.isTesting) {
