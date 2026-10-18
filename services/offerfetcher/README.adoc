@@ -1,0 +1,5 @@
+= offerfetcher
+
+Small microservice that periodically fetches offers from various sources.
+
+THIS IS EARLY STAGE SOFTWARE AND MAY CHANGE FREQUENTLY.
