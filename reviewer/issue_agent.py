@@ -334,31 +334,52 @@ def openrouter_request(
             raise AgentError("OpenRouter returned invalid JSON") from exc
 
     if not isinstance(payload, dict):
-        raise AgentError(f"OpenRouter returned no completion choices: {describe_payload(payload)}")
+        raise AgentError(
+            f"OpenRouter returned no completion choices: {describe_response(payload)}"
+        )
     choices = payload.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-        raise AgentError(f"OpenRouter returned no completion choices: {describe_payload(payload)}")
+        raise AgentError(
+            f"OpenRouter returned no completion choices: {describe_response(payload)}"
+        )
     choice = choices[0]
     message = choice.get("message")
     if not isinstance(message, dict):
         raise AgentError(
-            f"OpenRouter returned a malformed completion message: {describe_payload(payload)}"
+            "OpenRouter returned a malformed completion message: "
+            f"{describe_response(payload, choice)}"
         )
     return {
         **message,
         "_finish_reason": choice.get("finish_reason"),
-        "_diagnostics": describe_payload(payload),
+        "_diagnostics": describe_response(payload, choice),
     }
 
 
-def describe_payload(payload: object, limit: int = 3000) -> str:
-    try:
-        text = json.dumps(payload, ensure_ascii=False, default=str)
-    except (TypeError, ValueError):
-        text = repr(payload)
-    if len(text) > limit:
-        text = text[:limit] + f"... [truncated, {len(text)} chars total]"
-    return text
+def describe_response(payload: object, choice: dict | None = None) -> str:
+    if not isinstance(payload, dict):
+        return f"response_type={type(payload).__name__}"
+
+    metadata = {
+        key: payload[key][:160] if isinstance(payload[key], str) else payload[key]
+        for key in ("id", "model", "provider")
+        if isinstance(payload.get(key), (str, int, float))
+    }
+    if choice:
+        finish_reason = choice.get("finish_reason")
+        if isinstance(finish_reason, str):
+            metadata["finish_reason"] = finish_reason[:160]
+    usage = payload.get("usage")
+    if isinstance(usage, dict):
+        metadata["usage"] = {
+            key: usage[key]
+            for key in ("prompt_tokens", "completion_tokens", "total_tokens")
+            if isinstance(usage.get(key), (int, float))
+        }
+    metadata["choice_count"] = len(payload.get("choices", [])) if isinstance(
+        payload.get("choices"), list
+    ) else 0
+    return json.dumps(metadata, ensure_ascii=True, separators=(",", ":"))
 
 
 def execute_tool(name: str, arguments_json: str) -> str:
@@ -421,13 +442,7 @@ def run_agent() -> None:
     while True:
         max_tokens = MAX_COMPLETION_TOKENS
         message = openrouter_request(api_key, model, messages)
-        tool_calls = message.get("tool_calls") or []
-        final = message.get("content")
-        if (
-            not tool_calls
-            and (not isinstance(final, str) or not final.strip())
-            and message.get("_finish_reason") == "length"
-        ):
+        if message.get("_finish_reason") == "length":
             max_tokens = RETRY_COMPLETION_TOKENS
             message = openrouter_request(
                 api_key,
@@ -435,8 +450,18 @@ def run_agent() -> None:
                 messages,
                 max_tokens=max_tokens,
             )
-            tool_calls = message.get("tool_calls") or []
-            final = message.get("content")
+            if message.get("_finish_reason") == "length":
+                raise AgentError(
+                    "OpenRouter truncated the response at the completion-token limit "
+                    f"on both attempts (model={model}, retry_max_tokens={max_tokens}, "
+                    f"tool_calls_so_far={tool_call_count}, messages={len(messages)}). "
+                    "Choose a model/provider that reliably supports tool calling, or "
+                    "reduce the issue and repository context. "
+                    f"Response metadata: {message.get('_diagnostics', '<unavailable>')}"
+                )
+
+        tool_calls = message.get("tool_calls") or []
+        final = message.get("content")
 
         if not tool_calls:
             if not isinstance(final, str) or not final.strip():
@@ -446,7 +471,7 @@ def run_agent() -> None:
                     f"messages={len(messages)}, content_type={type(final).__name__}, "
                     f"finish_reason={message.get('_finish_reason')}, "
                     f"max_tokens={max_tokens}). "
-                    f"Raw response: {message.get('_diagnostics', '<unavailable>')}"
+                    f"Response metadata: {message.get('_diagnostics', '<unavailable>')}"
                 )
             summary = final[:MAX_RESPONSE_CHARS]
             print(summary)

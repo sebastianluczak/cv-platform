@@ -30,6 +30,34 @@ class OpenRouterRequestTests(unittest.TestCase):
         self.assertEqual(json.loads(request.data)["max_tokens"], 4_096)
         self.assertEqual(result["_finish_reason"], "length")
 
+    def test_diagnostics_include_metadata_but_exclude_model_reasoning(self):
+        payload = {
+            "id": "request-123",
+            "model": "provider/model",
+            "provider": "Provider",
+            "usage": {"prompt_tokens": 12, "completion_tokens": 4096},
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {
+                        "content": None,
+                        "reasoning": "sensitive reasoning " * 1000,
+                    },
+                }
+            ],
+        }
+        response = io.BytesIO(json.dumps(payload).encode("utf-8"))
+        with patch.object(
+            issue_agent.urllib.request, "urlopen", return_value=response
+        ):
+            result = issue_agent.openrouter_request("test-key", "provider/model", [])
+
+        diagnostics = result["_diagnostics"]
+        self.assertIn("request-123", diagnostics)
+        self.assertIn('"completion_tokens":4096', diagnostics)
+        self.assertNotIn("sensitive reasoning", diagnostics)
+        self.assertLess(len(diagnostics), 500)
+
 
 class PathPolicyTests(unittest.TestCase):
     def setUp(self):
@@ -173,10 +201,10 @@ class PathPolicyTests(unittest.TestCase):
             "(No repository-specific guidance file is available.)", user_message
         )
 
-    def test_agent_retries_empty_length_truncation_with_larger_budget(self):
+    def test_agent_retries_length_truncation_with_larger_budget(self):
         responses = [
             {
-                "content": None,
+                "content": "This response was incomplete.",
                 "_finish_reason": "length",
                 "_diagnostics": "first response truncated",
             },
@@ -230,7 +258,7 @@ class PathPolicyTests(unittest.TestCase):
         truncated = {
             "content": None,
             "_finish_reason": "length",
-            "_diagnostics": "response exhausted output budget",
+            "_diagnostics": "model=provider/model finish_reason=length usage=8192",
         }
         with (
             patch.dict(
@@ -249,8 +277,8 @@ class PathPolicyTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(
                 issue_agent.AgentError,
-                "finish_reason=length, max_tokens=8192",
-            ):
+                "truncated the response at the completion-token limit",
+            ) as raised:
                 issue_agent.run_agent()
 
         self.assertEqual(request.call_count, 2)
@@ -258,6 +286,8 @@ class PathPolicyTests(unittest.TestCase):
             request.call_args_list[1].kwargs["max_tokens"],
             issue_agent.RETRY_COMPLETION_TOKENS,
         )
+        self.assertIn("usage=8192", str(raised.exception))
+        self.assertNotIn("raw response", str(raised.exception).lower())
 
 
 class ValidationEnvironmentTests(unittest.TestCase):
@@ -273,6 +303,37 @@ class ValidationEnvironmentTests(unittest.TestCase):
             clear=True,
         ):
             self.assertEqual(run_issue_checks.test_environment(), {"PATH": "/usr/bin"})
+
+    def test_failed_checks_do_not_print_the_validation_log(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "agent-validation.log"
+
+            def fail_check(name, command, directory):
+                log_path.write_text("large diagnostic output", encoding="utf-8")
+                return False
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with (
+                patch.object(run_issue_checks, "LOG_PATH", log_path),
+                patch.object(
+                    run_issue_checks,
+                    "validate_changes",
+                    return_value={"backend": True, "ui": False, "docs": False},
+                ),
+                patch.object(run_issue_checks, "run_check", side_effect=fail_check),
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(stderr),
+            ):
+                result = run_issue_checks.main()
+
+            self.assertEqual(result, 1)
+            self.assertIn("backend", stderr.getvalue())
+            self.assertIn(str(log_path), stdout.getvalue())
+            self.assertNotIn("large diagnostic output", stdout.getvalue())
+            self.assertEqual(
+                log_path.read_text(encoding="utf-8"), "large diagnostic output"
+            )
 
 
 if __name__ == "__main__":
