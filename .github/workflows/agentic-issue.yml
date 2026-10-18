@@ -17,7 +17,7 @@ jobs:
     if: >-
       github.event.label.name == 'agent:run' &&
       !github.event.issue.pull_request
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Require a trusted maintainer to trigger the agent
         uses: actions/github-script@v7
@@ -51,7 +51,7 @@ jobs:
 
   implement:
     needs: authorize
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 45
     permissions:
       contents: read
@@ -198,7 +198,7 @@ jobs:
 
   create-pull-request:
     needs: [authorize, implement]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     permissions:
       contents: read
@@ -334,7 +334,7 @@ jobs:
       always() &&
       needs.authorize.result == 'success' &&
       (needs.implement.result == 'failure' || needs.create-pull-request.result == 'failure')
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       issues: write
     steps:
